@@ -1,0 +1,61 @@
+name: Win Mac Linux Mothball App
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            artifact_name: Mothball-Linux
+            icon: images/cube.png
+            add_data: "--add-data=Mothball_Pages/*:Mothball_Pages --add-data=images/*:images --add-data=Minigame_Files/*:Minigame_Files"
+            output: dist/Mothball
+          - os: macos-latest
+            artifact_name: Mothball-Macos
+            icon: images/cube.png
+            add_data: "--add-data=Mothball_Pages/*:Mothball_Pages --add-data=images/*:images --add-data=Minigame_Files/*:Minigame_Files"
+            output: dist/Mothball
+          - os: windows-latest
+            artifact_name: Mothball-Windows
+            icon: images/cube.ico
+            add_data: "--add-data=Mothball_Pages/*;Mothball_Pages --add-data=images/*;images --add-data=Minigame_Files/*;Minigame_Files"
+            output: dist/Mothball.exe
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 pytest
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      shell: bash
+
+    - name: Lint with flake8
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      shell: bash
+
+    - name: Build app with PyInstaller
+      run: |
+        pip install pyinstaller
+        pyinstaller --onefile ${{ matrix.add_data }} --noconsole --i "${{ matrix.icon }}" Mothball.py
+      shell: bash
+
+    - name: Upload executable
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: ${{ matrix.output }}
