@@ -1,0 +1,4 @@
+numpy==1.23.3
+pyinstaller==6.11.1
+PyQt5==5.15.11
+QScintilla==2.14.1
