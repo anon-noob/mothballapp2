@@ -1,0 +1,146 @@
+# Setter Functions
+We obviously would like to be able to control some parameters of our simulation, which is what setter functions do. Like the name says, they set values for cerain things. Below are the setter functions Mothball has to offer.
+
+`x` - set the player's x position
+`z` - set the player's z position
+`vx` - set the player's x velocity
+`vz` - set the player's z velocity
+`face` or `f` - set the player's default facing
+`turn` - add an angle to the player's default facing and set the new facing as default
+`anglequeue` or `aq` - queues angles so that every subsequent tick, the player turns to the next angle in queue. In other words, it runs `face()` on each tick
+`turnqueue` or `tq` - queues angles so that every subsequent tick, the player's facing is added by the next angle in queue. In other words, it runs `turn()` on each tick
+`inertia` - set the simulation's inertia threshold (0.005 in Minecraft 1.8, 0.003 in later versions) as well as whether inertia is calculated per axis or multi-axis (1.21.4 and below is per axis, 1.21.5+ is multi-axis)
+`sprintairdelay` or `sdel` - toggles air sprint delay
+`sneakdelay` or `sndel` - toggles sneak delay
+`version` or `v` - set the simulation's version, accounting for differences in physics
+`slip` - set the default ground slipperiness (default 0.6)
+`speed` - set the default speed potion effect amplifier
+`slow` - set the default slow potion effect amplifier
+`precision` or `pre` - sets how many decimals should outputs be rounded to
+`var` - assign a value to a variable
+`function` or func - define a new function
+Lastly, the pipeline `|` is an alias for `x(0) z(0)`, or in words, resetting the player's position to (0,0).
+
+## Player Attributes
+You can use setter functions can change player attributes for the rest of the simulation. For example, you can simulate `sj(12, slip=0.98) sj45(12, slip=0.98) s45(slip=0.98) ` just like `slip(0.98) sj(12) sj45(12) s45`. The `slip(0.8)` makes the ground slip default to `0.8`.
+
+Almost all movement functions take a 2nd argument called rotation. Instead of writing `wj(2, 4) sa(10, 4) s sj(1,4)`, we can write `f(4) wj(2) sa(10) s(1,0) sj`. Note that the default facing in this case was `f(4)`, but we can override it for a specific movement function by passing a number in the 2nd argument, as shown in `s(1,0)`.
+
+Player attributes that can be changed with setter functions include `f`, `inertia`, `slip`, `speed`, `slow`, `sdel`, `sndel`, `inertia`, and `v`.
+
+## X, Z, Vx, Vz
+This is the simplest of them all. Set the X/Z position with `x()` and `z()`. Set the x/z velocity with `vx()` and `vz()`.
+
+## Face and Turn
+Every simulation starts facing straight (0 degrees) by default. You can change the player's default facing by using `face` (or `f`), or `turn`. Use `face(angle)` to set the player's facing to `angle`. Use `turn(angle)` to add `angle` to your player's default facing, and set that as default.
+
+```mothball
+face(10) # player now faces 10 #
+face(3) # player now faces 3 #
+turn(-25) # player now faces -22 #
+turn(7) # player now faces -15 #
+```
+
+## Anglequeue and Turnqueue
+These functions accept any number of angles. It puts them in a queue, and each subsequent tick, the next angle is used. `anglequeue` acts like `face` and `turnqueue` acts like `turn`.
+
+```mothball
+aq(1,2,3,4) # equivalent to f(1) f(2) f(3) f(4) #
+tq(-3,-1,1,2) # equivalent to turn(-3) tunr(-1) turn(1) turn(2) #
+```
+
+To avoid confusion, we highly recommend not using both of these functions simutaneously.
+
+## Speed and Slow
+These functions set the speed and slow potion effect, ranging from 0 (no effect) to 256 (max effect). The speed multiplier from potions is calculated as MAX((1 + 0.2 * speed)(1 - 0.15 * slow), 0). If the multiplier were to be negative, it is set to 0.
+
+These potions directly affects ground movement, but not air movement. If the multiplier is 0, then the player cannot move while on the ground, but is still able to move while airborne.
+
+## Slip
+Each block has a ground slipperiness value. The greater the value, the slipperier the block. For example, ice should be slipperier than a normal block.
+
+By default, a block's slipperiness is set to `0.6`. In Minecraft 1.8+, the slipperiness of ice and packed ice is `0.98`, and slime is `0.8`. In Minecraft 1.13+, the slipperiness of blue ice is `0.989`. We also define the slipperiness of air to be `1`.
+
+Block slipperiness is also related to accelerating on the block. If a block has a lower slip value, the player has more control, and can accelerate faster than a high slip value block. You will always be able to accelerate faster on a normal block than on an ice block. The acceleration gained on the ground is proportional to (0.6/s)^3 where s is the slip value. If s = 0.6 is a normal block, then the acceleation is proportional to 1, otherwise, (0.6/s)^3 < 1. For more information, see the [mcpk wiki on slipperiness](https://www.mcpk.wiki/wiki/Slipperiness).
+
+You can use the `slip` function to set the default ground slipperiness for the rest of the simulation. By default, it is always set to 0.6.
+
+```mothball
+w(2,slip=0.98) sj(12,slip=0.98) s(slip=0.98)
+# is equivalent to #
+slip(0.98) w(2) sj(12) s
+```
+
+## Inertia
+In Minecraft, inertia is when the player's speed is sufficiently low that its momentum becomes set to 0. It does this in order to prevent meaningless calculations. In particular for extremely small speeds, Minecraft avoids doing these calculations in order to improve performance. 
+
+There is an inertia threshold, which is the minimum speed required to not hit inertia. Let `i` be the inertia threshold, `sₜ` be the slipperiness at tick `t`, and `vₜ` be the velocity at tick `t`. If
+
+```mothball
+|0.91 × sₜ × vₜ| < i
+```
+
+then at tick `t+1`, momentum is cancelled. In Minecraft 1.8, `i = 0.005`; in later versions, `i = 0.003`. 
+In Minecraft 1.8 - 1.21.4, inertia is calculated on separate axis meaning if `vxₜ` and `vzₜ` is the player's x and z velocity at tick `t` respectfully, then
+
+```mothball
+if |0.91 × sₜ × vxₜ| < i   →   x momentum is cancelled.
+if |0.91 × sₜ × vzₜ| < i   →   z momentum is cancelled.
+```
+
+In Minecraft 1.21.5+, inertia instead considers the player's total speed `vₜ = sqrt(vxₜ² + vzₜ²)` and
+
+```mothball
+if |0.91 × sₜ × vₜ| = |0.91 × sₜ × sqrt(vxₜ² + vzₜ²)| < i    →   all momentum is cancelled.
+```
+
+Use the `inertia` function to change the inertia threshold and set whether it should behave as 1.8 - 1.21.4 inertia, or 1.21.5 inertia.
+
+## Sprint Air Delay
+In Minecraft 1.8 to 1.19.3, activating sprint while midair is delayed by 1 tick. In versions 1.19.4+, the delay is removed. By default, Mothball sets it to 1.8 - 1.19.3 behavior. Use the `sdel` function to toggle this to false for 1.19.4+ behavior.
+
+```mothball
+version(1.8) wj(4) sa(8) s
+# is equivalent to #
+version(1.21) wj(5) sa(7) s
+```
+
+## Sneak Delay
+In Minecraft 1.8 to 1.13, sneaking is not delayed, but in 1.14+, sneaking is delayed by 1 tick. By default, Mothball sets it to 1.8 - 1.13 behavior. Use the `sndel` function to toggle this to true for 1.14+ behavior.
+
+```mothball
+version(1.8) w(4) sn(2) s(3)
+# is equivalent to #
+version(1.21) w(3) sn(2) w s(3)
+```
+
+## Version
+Use `version` or `v` to set the Minecraft version for the simulation. This will automatically adjust `inertia`, `sdel`, and `sndel` accordingly. By default, Mothball is set to version 1.8. Use `v(1.12)` to set the simulation to 1.12, `v(1.21.3)` for 1.21.3, etc.
+
+## Precision
+Use `precision` or `pre` to set how many decimals to output results. By default, Mothball is set to `pre(7)`. You can adjust this to show up to 16 decimal places. Realistically, you should need no more than 7 decimals for 99.99% of cases.
+
+## Var
+Use `var` to define variables. A variable can be set to a string (text) or a number. This new variable can be used for the rest of the simulation. For example, here is how to print the first few Fibonacci numbers.
+
+```mothball
+var(a, 0) var(b,1) var(index,2)
+repeat(
+    var(c, a + b) var(a,b) var(b,c)
+    var(index, index + 1)
+    print({index}: {c}),
+    10 # iterate 10 times #
+)
+```
+
+As of right now, variables defined in one cell does not carry over to other cells.
+
+## Function (currently unstable)
+Use `function` or `func` to define a new function with parameters. A
+
+```mothball
+function(slimebounce, code = s(slip=0.8) )
+sj(12) slimebounce sa(4)
+```
+
+As of right now, functions defined in one cell does not carry over to other cells.

@@ -1,0 +1,2 @@
+# Documentation
+Here, you will find information for each built-in function that Mothball has to offer, including the function signature, what it represents in game, and version differences if applicable. To learn how to use these functions to accurately simulate a parkour jump, see the advanced tutorial.

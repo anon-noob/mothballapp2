@@ -1,0 +1,168 @@
+# Output Functions
+In order to be able to extract useful information from Mothball, output functions are used. These functions output (duh) information at a specific tick.
+
+`outz` - outputs the player's z position
+`outx` - outputs the player's x position
+`outvz` - outputs the player's z velocity
+`outvx` - outputs the player's x velocity
+`zb` - outputs the player's z position in terms of blocks
+`xb` - outputs the player's x position in terms of blocks
+`zmm` - outputs the player's z position in terms of momentum
+`xmm` - outputs the player's x position in terms of momentum
+`vec` - outputs the player's total speed and angle of velocity
+`effects` - outputs the base speed modifier for potion effects speed and slow
+`outangle` or `outa` - outputs the player's current facing
+`outturn` or `outt` - outputs the player's last turn
+`print` - I think you know what this does
+
+These functions can be used anytime for as many times as you need. Let's first talk about each function's arguments.
+
+## Function Arguments
+With the exception of `vec`, `effects`, and `print`, all other output functions share the same two parameters, which take an offset and label in that order. The first parameter, offset, is a positional only argument. The offset is a number where, if nonzero, will output an expression containing that number. Take `outz` for example, and suppose `outz = 2`. Then `outz(1) = 1 + 1`, and `outz(-3.5) = -3.5 + 5.5`.
+
+```mothball/output
+z(2) # This sets the player's position to z = 2 #
+outz
+outz(1)
+outz(-3.5)
+```
+
+The second pararmeter `label` will change the label in the output. It is a positional or keyword argument. For example
+
+```mothball/output
+s(5)
+outz(1, hello world)
+zmm(0.25, label=i love parkour)
+```
+
+Notice that Mothball has 3 ways to output the player's x and z position. What is the difference between `xb`, `outx`, and `xmm`?
+
+## Outx and Outz
+The functions `outx` and `outz` measures the player's x and z position respectively. This can be measured in game by directly looking at your coordinates, which you can observe by pressing F3. For example, if your initial x coordinate was `0.25` and your final x coordinate was `1.5`, then your displacement is `1.5 - 0.25 = 1.25`. On Mothball, your x and z coordinate starts at 0, so if you were to simulate this strat and add `outx` at the end, it will show `outx: 1.25`.
+
+These functions are particularly useful for momentums or jumps with a single backwall or frontwall. Here are some examples.
+
+[diagram of jumps containing backwalls and frontwalls on momentum](outzdiagram.png)
+
+For a concrete example, let's consider the rightmost jump and check how much momentum the following strat uses on the: face 45, max pessi run 1t.
+
+```mothball/output
+sa45(11) s45 outz(1.25)
+```
+
+Wow, so we only have 0.0011454 unused momentum, so this is a very good strat!
+
+## Xmm and Zmm
+The functions `xmm` and `zmm` measures the player's x and z in terms of momentum. Mathematically, 
+
+```mothball
+xmm = outx - 0.6       if outx > 0
+xmm = outx + 0.6       if outx < 0
+```
+
+Likewise for `zmm`.
+
+These functions are particularly useful for stratfinding momentums that have no frontwall and backwall, and jumps that go from frontwall to backwall landing, in other words, a neo. This is what it looks like in game.
+
+[diagram of 1bm and triple neo](zmmdiagram.png)
+
+Note that for a triple neo (rightmost jump), we want to travel more than `zmm(3)`. If instead we have 3 blocks of momentum (we are on top of the triple neo), we want to be less than `zmm(3)`. You can think of them as opposites. Notice that for the triple neo, the block we jump off has a frontwall, and we land on a block with a backwall. The opposite of that is the 3 blocks of momentum (top of triple neo) which has no frontwall or backwall.
+
+For a concrete example, let's check how much momentum 4t c4.5 uses (minecraft version 1.8-1.19.3).
+
+```mothball/output
+wj(4) sa(8) s zmm(1)
+```
+
+We see that it leaves 0.00615 unused.
+
+## Xb and Zb
+The functions `xb` and `zb` measures the player's x and z in terms of blocks. Mathematically, 
+
+```mothball
+xb = outx + 0.6       if outx > 0
+xb = outx - 0.6       if outx < 0
+```
+
+Likewise for `zb`.
+
+These functions are particularly useful for stratfinding momentums with both a frontwall and backwall, and jumps that go from block to block, or in other words, neither the starting or landing block has a wall. This is what it looks like in game.
+
+[diagram of 4b and 3bm frontwall and backwall](zbdiagram.png)
+
+Let's look at the rightmost momentum. If the 3 blocks between the walls is momentum, then want to travel less than `zb(3)` (orange line). If instead we want to jump a 3 block distance, we want to be more than `zb(3)` (black line). You can think of them as opposites. Notice that the momentum has a frontwall and backwall. The opposite of that is the 3 block jump on top, which has no frontwall or backwall.
+
+For a concrete example, let's check if running 2t can make a 4 block jump.
+
+```mothball/output
+s(2) | # the | means to reset position #
+sj(12) zb(4)
+```
+
+Unfortunately, we cannot land a 4 block jump by just running 2t. We miss by 0.0737156.
+
+## Summary of Xmm/Zmm, Outx/Outz, Xb/Zb
+```mothball
+When do i use these functions?
+            Momentum has ___ wall       Jump has ___ wall
+xmm/zmm     None                        Front and Back
+outx/outz   Front or Back, not both     Front or Back, not both
+xb/zb       Front and Back              None
+```
+
+## Outvz and Outvx
+These functionis output the player's x/z velocity. Here's a random example.
+
+```mothball/output
+sj(12) s outvz
+```
+
+## Vec
+This function outputs the player's total speed and angle of velocity. Total speed means it takes in the x and z speed and calculate the  norm, or in math equations, sqrt(vz^2 + vx^2). Here's an example.
+
+```mothball/output
+sj.wa(12) w.sa vec
+```
+
+## Outangle
+Output the player's current facing on that tick. This is particularly useful if for example you are using a long `turnqueue` sequence.
+
+```mothball/output
+f(3) turnqueue(5,-3,8,6,-2) w(5) outangle
+# Expect 17 = 3 + 5 - 3 + 8 + 6 - 2
+```
+
+## Outturn
+Output the angle that the player turned on that tick. This is particularly useful if for example you are using a long `anglequeue` sequence.
+
+```mothball/output
+f(3) anglequeue(8,5,13,19,17) repeat(w outturn, 5)
+```
+
+## Effects
+This function will display the base speed modification given a speed and slowness amplifier. The formula is MAX((1 + 0.2 * speed)(1 - 0.15 * slow), 0). For example,
+
+```mothball/output
+effects(speed=4, slow=3)
+```
+
+If the result would be negative, then the base speed is set to 0. This means that you cannot move on ground at all. You can still move in air, as potions don't affect your air movement.
+
+## Print
+Use `print` to print any text you want. This could be useful for tracking parts of a simulation and organizing the outputs. Here's an example of how `print` might be used in a real Mothball application.
+
+```mothball/output
+f(7.05) print(on momentum) w.d(2) s.wd(4) xmm(-0.25) x(0) 
+sj outz(0.625) z(0) print(on neo) sa.wa outx(-0.375, label=x blockage 1)
+
+f(-42.95) sa.wa(6) outx(-0.375, label=x blockage 2) zmm(1, z neo) print(after neo)
+sa.wa(4) outx(0.0625, offset)
+```
+
+You can also print expressions which will be evaluated. To do this, put your expression inside curly brackets `{}`. For example, all Mothball simulations have `px` as a variable which equals 0.0625, or 1/16. This means...
+
+```mothball/output
+print(A pixel is {px} blocks\, and 8 pixels is {8*px} blocks)
+```
+
+Notice the backslash `\` placed before the comma. A backslash acts just like any programming language would, which escapes the next character. In Mothball, a comma is used to separate arguments, and since strings have no delimiters, backslashes are used to indicate that the comma is part of the string. The backslash can also escape other characters, mainly `{}(),=#`.

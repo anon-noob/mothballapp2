@@ -1,0 +1,29 @@
+# How to Use the IDE
+The IDE functions similarly to a coding notebook. The IDE has code cells. In each cell is where you type Mothball code. Click the `Run` button to run the code. The output will be shown below. You can also press `Ctrl R` to run the code.
+
+This IDE also comes with syntax highlighting. As you type, it will color code the code you're writing.
+
+[image of a code cell](GUIsample.png)
+
+## Two Kinds of cells
+To create a new "xz" cell, click on the `Add Cell XZ` button. To create a new "y" cell, click on the `Add Cell Y` button. The difference is whether you want to perform horizontal movement calculations (xz), or vertical movement calculations (y).
+
+## Deleting cells
+Click the `Delete` button to delete the cell. As of right now, if you delete it, it is final and is not undoable.
+
+## Changing the Cell's Title
+You can double click on the cell's title to change it.
+
+## Resizing the IDE
+Press `Ctrl +`/`Ctrl -` to increase/decrease the font size respectively.
+
+Resizing the window will cause the cells to resize as well.
+
+## Top Menu
+On the top left corner is the `File` menu. This is where you can load, save, and make new notebooks.
+
+Next to it is `Options`, which is where you can customize settings, especially the color code.
+
+Next to it is `Help`. You clicked on it to be able to see this documentation!
+
+Lastly, the `Update` menu shows the last changelog and checks if there's a new version available. As of right now, you have to manually download the new version to update it.

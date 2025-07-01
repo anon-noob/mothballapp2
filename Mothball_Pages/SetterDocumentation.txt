@@ -1,0 +1,142 @@
+# Default Player Attributes
+Each simulation starts off with default attributes. These inclde:
+1. default `slip`
+2. default `inertia` threshold
+3. default `speed` effect
+4. default `slow` effect
+5. default `facing`
+6. default `sprintairdelay`
+7. default `sneakdelay`
+8. default `precision`
+
+# Setters Documentation
+Here, we go over all setters and what they do.
+
+## X/Z
+```mothball/signature
+x
+```
+```mothball/signature
+z
+```
+
+Sets the player's current x/z position.
+
+## VX/VZ
+```mothball/signature
+vx
+```
+```mothball/signature
+vz
+```
+
+Sets the player's current x/z speed.
+
+## Face
+```mothball/signature
+f
+```
+
+Sets the player's default facing. 
+
+## Anglequeue
+```mothball/signature
+aq
+```
+
+On each subsequent tick, take the next number and run `face`
+
+## Turn
+```mothball/signature
+turn
+```
+
+First, add to the player's default facing, then sets it to be default.
+
+## Turnqueue
+```mothball/signature
+aq
+```
+
+On each subsequent tick, take the next number and run `turn`
+
+## Speed
+```mothball/signature
+speed
+```
+
+Set the player's speed potion effect to be some amplifier between 0 (no speed) to 256 (max)
+
+## Slow
+```mothball/signature
+slow
+```
+
+Set the player's slow potion effect to be some amplifier between 0 (no slow) to 256 (max slow, although anything past `slow(7)` is equivalent)
+
+## Slip
+```mothball/signature
+slip
+```
+
+Set the player's default ground slip (default 0.6, slime is 0.8, ice is 0.98, blue ice is 0.989, air is effectively 1.0)
+
+## Inertia
+```mothball/signature
+inertia
+```
+
+Set the player's inertia threshold and decide if inertia is calculated single-axis or multi-axis.
+Version 1.8 - threshold = 0.005, single-axis
+Version 1.9 to 1.21.4 - threshold = 0.003, single-axis
+Version 1.21.5+ - threshold = 0.003, multi-axis
+
+The threshold can be thought of (loosely) as the minimum speed needed to cancel your momentum.
+Single-axis means inertia is calculated based on x speed and z speed. "Hitting" inertia (meaning when your speed is low enough) on one axis does not affect the other.
+Multi-axis means inertia is calculated based on total speed, meaning it considers the norm of x and z speed; in math, `sqrt(vx^2 + vz^2)`
+
+## Sprint Air Delay
+```mothball/signature
+sdel
+```
+
+Toggles the player's sprint air delay. When activated, activating sprint while midair takes 1 tick instead of instantaneous.
+Version 1.19.3 and below - toggled on 
+Version 1.19.4 and above - toggled off
+
+## Sneak Delay
+```mothball/signature
+sdel
+```
+
+Toggles the player's sprint air delay. When activated, activating sprint while midair takes 1 tick instead of instantaneous.
+Version 1.13 and below - toggled off
+Version 1.14 and above - toggled on
+
+## Version
+```mothball/signature
+version
+```
+
+Set's the game version to emulate. For example, `version(1.8)` is default. `version(1.21.5)` is another version. This function toggles sprint air delay, sneak delay, and inertia accordingly.
+
+## Precision
+```mothball/signature
+pre
+```
+
+Set's the number of decimals shown in the outputs
+
+## Var
+```mothball/signature
+var
+```
+
+Create a new variable which can take a number or some text.
+
+## Function
+```mothball/signature
+function
+```
+
+Create a new function with parameters and a docstring, with the main functionality in the `code` argument.

@@ -1,0 +1,120 @@
+# Welcome to Mothball
+Welcome to Mothball, a powerful lightweight tool for efficiently stratfinding minecraft parkour! While not required, proficiency in basic stratfinding is highly recommended. This tutorial will introduce Mothball syntax, and then the common use cases for Minecraft version 1.8, since the main version of advanced parkour (currently) is 1.8, although Mothball also supports modern versions. From here on, this tutorial will be for Minecraft version 1.8.
+
+# Obligatory Hello World Tutorial
+Let's learn your first function! Can you guess what `print(hello world)` does?
+Yep, it prints "hello world"! Who would've guessed!
+
+# Getting Started - Basic Minecraft Movement
+There are 7 movement keys in Minecraft. They are: W (forward), A (left), S (backward), D (right), Sprint (default key: Ctrl), Sneak (default key: Left Shift), and Jump (default key: Space). The way Mothball calculates movement is the following:
+        1. Add current velocity to your position
+        2. Calculate the acceleration
+        3. Add the acceleration to velocity
+
+Note that this is different from how Minecraft calculates movement in game, where position is calculated last. Mothball chooses to calculate it first to make the common parkour notions more intuitive. You should also be familiar enough with ticks, the in game unit of time Minecraft uses. 1 tick = 0.05 seconds, or 20 ticks = 1 second. Jumping in place is 12 ticks or 0.6 seconds. From here on, we'll abbreviate tick as 't', so 20t = 1s
+
+## A Running Example
+Let's simulate sprinting. To simulate sprinting for 1t, we just write `sprint`. The code and output looks like this:
+```mothball/output
+sprint
+```
+
+Great! Now `sprint` sprints for 1t, then if we want to sprint for 5t, we do
+
+```mothball/output
+sprint sprint sprint sprint sprint
+```
+
+Yea that is quite the hassle. Luckily, you don't need to write the same function 5 times. To sprint for multiple ticks, we add parenthesis after the function and put the number of ticks between the parenthesis. It looks like this:
+
+```mothball/output
+sprint(5)
+```
+
+Notice that it gives the same output as writing `sprint` 5 times.
+
+For the nerdy programmers (and also math nerds), they would recognize that this is how a function is normally called. In general, to repeat the same movement for multiple ticks, we write `movement(duration)` where duration is a nonnegative integer. Mothball will check if this number is nonnegative, otherwise you get this error.
+
+```mothball/output
+sprint(-3)
+```
+
+But we be even more concise! Typing `sprint(5)` is pretty fast, but we can be faster. Many functions in Mothball has aliases, which are alternative names to invoke the same function. For example, `sprint` is the same as `s`, so `s(5)` should be equivalent to `sprint(5)`; indeed it is!
+
+```mothball/output
+s(5)
+```
+
+The idea behind aliases is because some functions are very common, so we make the common case faster, reducing the time it takes to type it out. Some function's full name can get very long, for example `sneaksprintjump` vs `snsj`. Aliases are almost always abbreviations (such as SNeakSprintJump) so they won't be a totally new thing to have to learn. And even if you forgot, Mothball's error message will provide suggestions, or you can use the help() function.
+
+Now you know how to simulate sprinting. To check your understanding, use Mothball to approximate the max speed that you can reach by just sprinting. You should get approximately `0.2806167`.
+
+## The First Leap - An Example with Jumping
+Recall that a jump normally lasts 12t, but it can last longer or shorter. Let's suppose you want to jump forward without sprinting for 15t. We will use the function `walkjump` ("without sprinting" implies walking). The simulation would be
+
+```mothball/output
+walkjump(15)
+```
+
+And as a bonus, `wj` is an alias of `walkjump`.
+
+# Reading the Documentation
+BEWARE!!! There will be some advanced notions up ahead (unless you're a programming nerd)! There are so many functions in Mothball, it's hard to memorize all of them. You will often times need to read the documentation to figure out what function you need and what does the function do. First, we'll talk about what a function actually is.
+
+## What is a Function?
+A function takes some inputs, does things, and sometimes outputs them. What the function does and what it outputs depend on the inputs. We typically write functions like `face(10)`. In this case, the function is called `face` and we input `10`. If a function takes multiple inputs, they are separated by commas. For example, `walk(20,3)` means that the `walk` function takes two inputs `20` and `3`.
+
+But how do I know what to input to the function? This is where we look at the function signature.
+
+## What is a Function Signature?
+The function signature tells you what inputs the function takes. It also provides useful information such what what kinds of inputs does it take and in what order. Let's first talk about the types of inputs.
+
+### Types of Inputs (Datatypes)
+Mothball has three datatypes. They are an integer, a float (in other words, a decimal number), and strings (in other words, text). For example, `4` is an integer, `-0.25` is a a float, and `hello world` is a string.
+
+### Positional and Keyword Arguments
+The inputs of a function can also be called its "arguments". There are three kinds of arguments that Mothball functions can have. If you are familiar with Python, you will most likely know this.
+
+A positional argument means that the order of the arguement matters. For example, the `repeat` function has two positional arguments: the code to repeat, and how many times to repeat, in this specific order. `repeat(sprint, 5)` is equivalent to `sprint(5)`, but `repeat(5, sprint)` is nonsensical. The order of the arguments matter here.
+
+A keyword argument means that you must explicitly tell the function what argument you are inputting for. This is done by typing `name_of_argument=argument` in the function. An example, the `sprint` function takes keyword arguments `slip, slow, speed`. To set the `slip` input to `0.98`, `slow` to `3`, and `speed` to `1`, you would type `sprint(slip=0.98, slow=3, speed=1)`. The order of keyword arguments does not matter because you are explicitly telling Mothball what argument you are inputting for. So `sprint(speed=1, slip=0.98, slow=3)` is equivalent to the previous example. 
+
+An argument can be both positional and keyword. This means that you can input as a positional argument, or as a keyword argument.
+
+### Var-Positional Arguments
+The last scenario needed to understand Mothball is var-positional arguments. It simply means that the function takes any amount of positional arguments as necessary. The function `anglequeue` has one var-positional argument called `angles`. This function puts angles in a queue which Mothball will use for each subsequent tick. Do you only need to update the next 3 ticks? `anglequeue(3,4,5)` will do. The next 5 ticks? `anglequeue(1, -2, 3.24, 11.01, -20.67)`.
+
+### Order of Positional and Keyword Arguments
+Positional arguments always go before keyword arguments. For example, the first argument of `sprint` is the duration, which is positional. The `speed` argument is a keyword argument. `sprint(3, speed=2)` means to sprint for 3t with the speed 2 potion effect. Swapping the arguments gives you this error.
+
+```mothball/output
+sprint(speed=2, 3)
+```
+
+Now, we can start reading the function signature.
+
+## Reading the Function Signature
+We'll look at two examples. Let's look at the signature of the `sprint` function.
+
+```mothball/signature
+s
+```
+
+First, we see that it has aliases. In this case, `s` is the only other alias of `sprint`.
+
+Next, we see the function's arguments, which shows the name, datatype, and default value. For example, we see he `duration` argument is type `int` (stands for integer) and defaults to `1`. Default means that if no duration argument is passed, then it will set it to `1`. In general, the format is `name: datatype = default`. Default of `None` will be discussed in the documentation for Mothball movement functions.
+
+The last thing to notice is the special symbols `/` and `*`. These indicate if a parameter is positional, keyword, or could be both. Anything before `/` is positional only. Anything after `*` is keyword only. Anything in between can be positional or keyword. If `/` is not present, then anything to the left of `*` is positional or keyword. Similarly, if `*` is not present, then anything to the right of `/` is positional or keyword. If both symbols are not present, then everything is positional or keyword.
+
+For the `sprint` function, `duration` and `rotation` are positional only, while `slip`, `speed`, and `slow` are keyword only.
+
+Now let's look at a more complicated function called `function`.
+
+```mothball/signature
+function
+```
+
+The `*args` indicate that the `arg` argument is var-positional, meaning it can take 0 to infinite positional arguments. `name` is positional only while `code` and `docstring` is keyword only because they are after a `*` symbol, which is present in `*args`.
+
+# Mothball to Minecraft Parkour Stratfinding
+As the main purpose is to quickly stratfind parkour jumps, a basic intuition on in-game stratfinding is highly recommended, but not totally necessary. If you have read and understood everything in this page, you can continue your journey by looking at the available functions, or looking at the tutorials. Wish you a pleasant stratfinding journey!

@@ -1,0 +1,2 @@
+# Learn the Basics!
+New to Mothball? Start your journey here! Learn the key functions to create simple simulations and extract information from them.

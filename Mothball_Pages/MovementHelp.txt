@@ -1,0 +1,232 @@
+# Movement in Mothball
+There are a lot of ways to combine the standard 7 inputs (WASD Jump Sneak Sprint). Mothball provides functions for simulating these combinations. Below are the list of basic movements that a player can do under normal circumstances.
+
+1. `walk` - Walk on the ground, has alias `w`.
+2. `sprint` - Sprint on the ground, has alias `s`.
+3. `sneak` - Sneak on the ground, has alias `sn`.
+4. `sneaksprint` - Sprint and sneak on the ground (Versions 1.14 - 1.21.3 and 1.21.5+), has alias `sns`.
+5. `stop` - No movement input while on the ground, has alias `st`.
+6. `walkjump` - Just a normal jump, has alias `wj`.
+7. `sprintjump` - Jump but with sprint, has alias `sj`.
+8. `sneakjump` - Jump but with sneak, has alias `snj`.
+9. `sneaksprintjump` - Jump but with sprint and sneak (Versions 1.14 - 1.21.3 and 1.21.5+), has alias `snsj`.
+10. `stopjump` - Jump in place with no other movement input, has alias `stj`.
+11. `walkair` - Moving while airborne, has alias `wa`.
+12. `sprintair` - Moving while airborne and sprinting, has alias `sa`.
+13. `sneakair` - Moving while airborne and sneaking, has alias `sna`.
+14. `sneaksprintair` - Moving while airborne, sneaking, and sprinting (Versions 1.14 - 1.21.3 and 1.21.5), has alias `snsa`.
+15. `stopair` - No movement input while midair, has alias `sta`.
+
+Of course there are other possible movements such as while inside water, cobwebs, sword blocks or shielding, and so on, as well as additional unique functions, such as `sprintstrafejump` but we will talk about that later. The aliases mentioned just mean that you can simulate the same movement using different names, so `walk` is equivalent to `w`.
+
+## Movement Durations
+In mothball, typing the function alone will simulate 1 tick of that movement. For example, we can write `sprint` to sprint for 1 tick. We can specify how many ticks of movement we would like, for example `sprint(4) sneakair(5)` sprints for 4 ticks, then sneaks while midair for 5 ticks.
+
+While something like `sprint(4)` is identical to `sprint sprint sprint sprint`, this does not apply with jump functions. For jump functions, all ticks following the first are replaced with the respective air movement. For example, a `sprintjump` (we'll use its shorter alias `sj`) becomes `sprintair` on the following ticks (we'll use its shorter alias `sa`). Observe that
+
+```mothball/output
+sj(5)
+```
+
+is equivalent to
+
+```mothball/output
+sj sa(4)
+```
+
+and not equivalent to
+
+```mothball/output
+sj sj sj sj sj
+```
+
+So in general, any jump function follows this formuula: `jump(t) = jump air(t-1)`.
+
+## Setting Inputs
+So far, we have only simulated movement going forward, equivalent to pressing W in game. What if instead of walking forward, we wanted to walk while pressing D?
+
+10 of the listed movement functions can have inputs attached to them. The only functions that can't are `stop` functions. To add inputs, we use the syntax `movement.keys` where `movement` is the movement function and `keys` are the inputs. So how do we walk 10 ticks with A?
+
+```mothball/output
+w.a(10)
+```
+
+Previously there has been no X movement, as you face 0 degrees by default, which in game points in the positive Z direction. In this case, we are moving directly to the side, resulting in only X movement, specifically towards negative X. The Minecraft coordinate system is different then the usual coordinate system you might know in math class.
+
+We are not limited to only specifying one input per function. We can specify two inputs! What if we want to sprint jump with W and A for 12 ticks?
+
+```mothball/output
+sj.wa(10)
+```
+
+There are only 8 combinations of valid inputs, which are `.w .s .a .d .wa .wd .sa .sd.` Any other input given will raise an error. We enforce strictly the use these 8 inputs to make readability as consistent as possible, so even while `.ds` is functionally equivalent to `.sd` in game, when it comes to discussing and sharing strategies, we typically mention w/s before a/d.
+
+## Reversing Inputs
+We can reverse inputs by placing a negative sign (`-`) directly before a movement function. For example, `-wa`. This effectively reverses the input for that function. Since movement functions by default goes forward with W, then `-wa` reverses the W into S, so this is equivalent to `wa.s`. Similarly, `-wj.wd` reverses the W into S and D into A, so this is equivalent to `wj.sa`. This does mean that you could have nonsensical movement in Mothball which would otherwise be impossible in game. We can see that `-sj.wa` is equivalent to `sj.sd`, both of which are valid to write in Mothball, but how do you sprint going backwards?
+
+For the sake of readability, the general consensus is to use the negative sign `-` only if its equivalent is the same as adding S in the inputs. Most people prefer appending the input manually for clarity. Basically,
+
+```mothball
+# Do this # wj.sa(12) w.sa sj.wd(12)
+# Not this # -wj.wd(12) -w.wd sj.wd(12)
+```
+
+## Some Input Examples
+Let's simulate some more complex common parkour strategies. It's also good to note here, a jump on flat ground lasts 12 ticks total. These examples will assume that we are on flat ground.
+
+1. Max Force Momentum (abbr. "max fmm" or "1t fmm") - jump forward without sprint, then sprint immediately after (you activate sprint midair).
+```mothball
+wj sa(11)
+```
+
+2. Carpet 4.5 (abbr. "c4.5") - jump forward without sprint, then 4 ticks later, activatet sprint. Sprint 1 more tick once you land.
+```mothball
+wj(4) sa(8) s
+```
+
+3. Rex Backwards Momentum (abbr. "rex bwmm") - jump back with s, then walk 1 tick back with s, sprint jump forward with strafe, then sprint in air forward until we land.
+```mothball
+wj.s(12) w.s sj.wd sa(11)
+# Note that sj.wa is also valid in this example
+```
+
+## Movement Modifiers (Uncommon Movement)
+Movement functions can be modified by placing them inside square brackets `[]`. The valid modifiers are `water lava web block` (block stands for sword blocking). These go right after inputs, like `walk.wd[web, block]`, or right after the main function, like `sprint[lava](3)`.
+
+# Angles
+Until now, everything has been done facing 0, but of course we can change that. To set the facing, we can add an additional number in the function's arguments. The first argument is the duration, and the second is the angle or rotation. So the syntax is `movement.keys(duration, rotation)`.
+
+So to sprint with W and D for 4 ticks at a 36.7 degree angle,
+
+```mothball/output
+s.wd(4, 36.7)
+```
+
+In the above example, we sprinted for 4 ticks with W and D while facing 36.7 degrees. However,
+
+```mothball/output
+s.wd(4, 36.7) sj(3)
+```
+
+is not equivalent to
+
+```mothball/output
+s.wd(4, 36.7) sj(3, 36.7)
+```
+
+and that is because the angle specified only applies for that specific movement. What if we wanted it to apply to all movements?
+
+## Facing
+Introducing the `face` function (alias `f`)! The facing function sets the default facing for the rest of the simulation. The way to do this is to write `f(number)`.
+
+In the last example, we can rewrite the simulated sequence as
+
+```mothball/output
+f(36.7) s.wd(4) sj(3)
+```
+
+Of course, if we want to change the default facing later on, we can!
+
+```mothball
+f(20) sj(12) s(2) f(-14.1) sj(6)
+# is equivalent to #
+sj(12, 20) s(2, 20) sj(6, -14.1)
+```
+
+## Turn
+Another function used to change the default facing is `turn`. This function will add the angle that you provide to the default facing and set that new facing as default.
+
+```mothball
+f(20) sj(12) s(2) f(-14.1) sj(6)
+# is equivalent to #
+turn(20) sj(12) s(2) turn(-34.1) sj(6)
+```
+
+# Queueing Angles
+If you want to simulate movement but the angle changes every tick, there is a function for that, and it comes in 2 variants. Suppose you want to simulate the sequence `sj(3) sa.wd(2)` with the rotation being `1, 3, 6, 10, 15`. We could set each tick's facing manually...
+
+```mothball
+sj(1, 1) sa(1, 3) sa(1, 6) sa.wd(1, 10) sa.wd(1, 15)
+```
+
+but that is way too tedious to do.
+
+## Angle Queue
+Introducing the `anglequeue`, or `aq` for short. This queues angles so that each tick, the default facing is set to the next angle in queue. Another way to put it is that every tick, it takes the next angle in the queue and executes `face(angle)`. The function takes as many angles as you wish. So if we want to simulate `sj(3) sa.wd(2)` with the rotation being `1, 3, 6, 10, 15`, then the code is
+
+```mothball
+aq(1,3,6,10,15) sj(3) sa.wd(2)
+```
+
+## Turn Queue
+Now introducing `turnqueue`, or `tq` for short. This queues angles so that each tick, the default facing is added with the next angle in queue. Another way to put it is that every tick, it takes the next angle in the queue and executes `turn(angle)`. The function takes as many angles as you wish. Following the previous example, we can simulate the same thing using `tq`.
+
+```mothball
+tq(1,2,3,4,5) s(3) sa.wd(2)
+```
+
+# 45 Strafes
+A 45 strafe is when you face diagonally and counterstrafe in order to gain a speed boost. For example, sprinting 5 ticks gives
+
+```mothball/output
+s(5)
+```
+
+but with 45 strafes,
+
+```mothball/output
+s.wa(5, 45)
+```
+
+The 45 strafe has more speed and therefore more distance! Almost all movement functions have a 4 ttrafe counterpart, of course the only ones that dont are `stop` functions. To make a movement function 45 strafed, append `45` at the end of the function, for example `s45 wj45 sna45`. You cannot append inputs on a 45 function. Doing so will give you this error
+
+```mothball/output
+s45.wa
+```
+
+But you can prepend a negative sign `-` to 45 strafe backward, for example `-w45`.
+
+It can be hard to describe in words how 45s work for different movements, so below shows, using the language of Mothball, how 45s are defined.
+
+```mothball
+# 45 function       Equivalent #
+w45                 w.wa(1, 45)
+wa45                wa.wa(1, 45)
+wj45                wj.wa(1, 45)
+wj45(t)             wj.wa(t, 45)
+
+s45                 s.wa(1, 45)
+sa45                sa.wa(1, 45)
+sj45                sj
+sj45(t)             sj sa.wa(t-1, 45)
+
+sn45                sn.wa(1, 45)
+sna45               sna.wa(1, 45)
+snj45               snj.wa(1, 45)
+snj45(t)            snj.wa(t, 45)
+```
+
+In general, for any movement that is not sprinted, the 45 strafe is equivalent to always moving diagonally while facing 45 and counterstrafing. For normal sprint movement, the 45 strafe equivalent is to jump while facing 0, and then face 45 any other time. But not all sprinted movement follows this behavior. Unless you require `sneaksprintjump45`, then this is all you will need. If you do require `sneaksprintjump45` then see the next section.
+
+# Bonus Notes and Exceptions
+This section is entirely optional and is not required to be proficient in Mothball, in particular for Minecraft 1.8. You can safely skip this section. Information here is also provided in the full documentation of each function.
+
+## The SneakSprintJump45 (snsj45) Function
+This section is completely optional as this deals with Minecraft 1.14+ movement. This function behaves a little differently than normal sprint jump 45s. It turns out that `snsj45` is equivalent to `snsj.wa(1, 9.115)` because that is the input and angle that gives the most speed. Otherwise, `sns45` and `snsa45` both behave like you would expect with `s45` and `sa45`. 
+
+The angle `9.115` is optimal if we have no potion effects and are jumping on normal blocks. The optimal angle changes if you stand on certain blocks or have speed/slow potion effects. Mothball will adjust the angle accordingly so that `snsj45` will always be as optimal as possible.
+
+## The SprintStrafeJump (stfj) Function
+This section is completely optional and is not required to be proficient with Mothball. As a last main movement related tool, and probably the most confusing, we introduce `stfj`. This function sprint jumps with W and A at an angle that gives the most forward speed. Under normal circumstances, `stfj` is equivalent to `sj.wa(1, 17.478)`. 
+
+The angle `17.478` is optimal if we have no potion effects and are jumping on normal blocks. The optimal angle changes if you stand on certain blocks or have speed/slow potion effects. Mothball will adjust the angle accordingly so that `stfj` will always be as optimal as possible.
+
+Also, `stfj45` is equivalent to `stfj`, `stfj(t)` is equivalent to `stfj sa(t-1)`, and `stfj45(t)` is equivalent to `stfj sa45(t-1)`.
+
+It's worth noting that `stfj` is weaker than `sj`, so it is unlikely that you will need to use this function, but it could help calculate theoretical strategies.
+
+## Left vs. Right 45 Strafes
+Is `s.wa(1, 45)` the same as `s.wd(1, -45)`? It seems normal to think that they are, and in fact they basically are the same, but the keyword is basically. It turns out that these two can be slightly different, a difference of no more than 5 decimal places. This is because of how Minecraft significant angles are distributed, see the [mcpk.wiki](mcpk.wiki) for more informaiton. To maintain consistency, Mothball's implementation of 45 strafe movement is always equivalent to 45 strafing with W and A.
+
+## What happened to 1.21.4
+If you're wondering why version 1.21.4 is not included for `sneaksprint`, `sneaksprintair`, and `sneaksprintjump`, that's because version 1.21.4 removed sneak sprint, but it was "readded" in version 1.21.5 after major backlash. In fact, 45 strafing was removed in earlier snapshots of 1.21.5, but after major backslash, those changes were reverted.
