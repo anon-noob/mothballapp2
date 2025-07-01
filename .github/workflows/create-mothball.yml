@@ -24,7 +24,7 @@ jobs:
           - os: windows-latest
             artifact_name: Mothball-Windows
             icon: images/cube.ico
-            add_data: "--add-data=Mothball_Pages/*;Mothball_Pages --add-data=images/*;images --add-data=Minigame_Files/*;Minigame_Files"
+            add_data: "--add-data Mothball_Pages/*;Mothball_Pages --add-data images/*;images --add-data Minigame_Files/*;Minigame_Files"
             output: dist/Mothball.exe
 
     steps:
