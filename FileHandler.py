@@ -1,7 +1,7 @@
 import os, platform, json
 from DataStorage import CodeCell, TextCell, File
 
-VERSION = "v1.0.3"
+VERSION = "v1.1.0"
 
 default_code_colors = {
     "Code": {
@@ -184,7 +184,7 @@ def loadFile(filepath):
     return File(f['fileName'], f['version'], entries)
 
 def reindexFiles():
-    "Reindex cells to start at 0 instead of 1, for versions 1.0.4 and above"
+    "Reindex cells to start at 0 instead of 1, for versions 1.1.0 and above"
     notebooks_path = getNotebooks()
     files = [f for f in os.listdir(notebooks_path) if os.path.isfile(os.path.join(notebooks_path, f))]
 
@@ -193,7 +193,12 @@ def reindexFiles():
             with open(os.path.join(notebooks_path,file), "r") as f:
                 data = json.load(f)
             
-            new_data = {"fileName": "The curse of the 45s", "version": "v1.0.4",}
+            if data["version"] == VERSION:
+                continue
+            if str(0) in data: # already reindexed
+                continue
+
+            new_data = {"fileName": data["fileName"], "version": VERSION}
 
             i = 1
             while str(i) in data:

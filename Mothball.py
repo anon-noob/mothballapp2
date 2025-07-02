@@ -164,6 +164,9 @@ class MainWindow(QMainWindow):
         self.user = FileHandler.user_path
         FileHandler.createDirectories()
         self.version = FileHandler.VERSION
+
+        FileHandler.reindexFiles() # For update purposes only!
+
         self.codecell_colors = FileHandler.getCodeColorSettings()
         self.textcell_colors = FileHandler.getTextColorSettings()
         self.settings = FileHandler.getGeneralSettings()
@@ -371,7 +374,7 @@ class MainWindow(QMainWindow):
                 "type": "text",
                 "raw_text": self.CELLS[index].input_field.text(),
                 "mode": self.CELLS[index].mode,
-                "has_changed": True
+                "has_changed": False
             }
         return data
 
