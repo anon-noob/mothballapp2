@@ -226,6 +226,7 @@ class CodeEdit(QsciScintilla):
         self.setWrapMode(QsciScintilla.WrapWord)
         self.setLexer(self.mainLexer)
         self.textChanged.connect(self.adjustHeight)
+        self.setEolMode(QsciScintilla.EolUnix)
 
     def resizeEvent(self, e):
         self.adjustHeight()

@@ -81,7 +81,7 @@ class CodeLinter:
         """
         Parses `text` and tokenizes. Returns a list of tuples for linting. See `self.toColorTokens()`
         """
-        self.text = text
+        self.text = text.replace("\r","") # Only have newlines \n (might solve issue of position and buffer size not matching)
         tokens = self.parseText()
         return self.toColorTokens(tokens)
         
@@ -373,7 +373,7 @@ class CodeLinter:
                 results.append(item)
                 item = ""
             elif not follows_backslash:
-                if char in "(){}[]\\ .,/|-=+*#\n\r":
+                if char in "(){}[]\\ .,/|-=+*#\n":
                     if item:
                         results.append(item)
                     item = ""
@@ -548,6 +548,7 @@ class MDLinter:
                             show_code_output = True
                         elif len(args) == 2 and args[1]=="signature":
                             show_func_sig = True
+                            # TODO (not implemented yet)
                 else:
                     tokens += self.lineParse(line + "\n")
             elif code_block:
