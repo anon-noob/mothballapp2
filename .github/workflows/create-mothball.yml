@@ -51,7 +51,7 @@ jobs:
     - name: Build app with PyInstaller
       run: |
         pip install pyinstaller
-        pyinstaller --onefile ${{ matrix.add_data }} --noconsole --i "${{ matrix.icon }}" Mothball.py
+        pyinstaller --onefile ${{ matrix.add_data }} --i "${{ matrix.icon }}" Mothball.py
       shell: bash
 
     - name: Upload executable
