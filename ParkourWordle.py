@@ -6,9 +6,6 @@ from PyQt5.QtCore import Qt, QTimer, QVariantAnimation
 from PyQt5.QtGui import QColor
 import random
 
-with open("Minigame_Files/Five Letter Words.txt") as f:
-    l = f.read().split()
-
 if getattr(sys, "frozen", False):
     base_path = sys._MEIPASS
 else:
