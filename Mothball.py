@@ -24,8 +24,8 @@ import FileHandler
 import json
 import ParkourWordle
 
-# TODO: Fix resizing scintilla height
 # Comments and docstring
+# Reorganize the help page
 
 class ActionStack:
     """

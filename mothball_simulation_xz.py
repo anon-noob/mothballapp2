@@ -24,10 +24,16 @@ class OverwriteError(Exception):
 class Player:
     pi = 3.14159265358979323846
 
-    _fortyfive_methods = ["walk45", "walkair45", "walkjump45", "sprint45", "sprintair45", "sprintjump45", "sneak45", "sneakair45", "sneakjump45", "sneaksprint45", "sneaksprintair45", "sneaksprintjump45", "walkwater45", "sprintwater45", "sneakwater45", "sword45", "swordair45", "swordsneak45", "swordsneakair45", "swordwater45", "swordsneakwater45", "swordjump45", "swordsneakjump45", "web45", "webair45", "sprintwebair45", "sprintweb45", "webjump45", "sprintwebjump45", "sneakweb45", "sneakwebair45", "sneaksprintweb45", "sneaksprintwebjump45", "sneaksprintwebair45", "sneakwebjump45", "snwebj45"]
+    # These are 45-strafe movement, and cannot have an input appended (WASD)
+    _fortyfive_methods = ["walk45", "walkair45", "walkjump45", "sprint45", "sprintair45", "sprintjump45", "sneak45", "sneakair45", "sneakjump45", "sneaksprint45", "sneaksprintair45", "sneaksprintjump45"]
 
-    _can_have_input = ["walk", "walkair", "walkjump", "sprint", "sprintair", "sprintjump", "sneak", "sneakair", "sneakjump", "sneaksprint", "sneaksprintair", "sneaksprintjump", "walkwater", "sprintwater", "sneakwater", "lava", "sword", "swordair", "swordsneak", "swordsneakair", "swordwater", "swordsneakwater", "swordjump", "swordsneakjump", "web", "webair", "sprintweb", "sprintwebair", "webjump", "sprintwebjump", "sneakweb", "sneakwebair", "sneaksprintweb", "sneaksprintwebjump", "sneaksprintwebair", "sneakwebjump", "snwebj"]
+    # These movement CAN have inputs
+    _can_have_input = ["walk", "walkair", "walkjump", "sprint", "sprintair", "sprintjump", "sneak", "sneakair", "sneakjump", "sneaksprint", "sneaksprintair", "sneaksprintjump"]
+
+    # These allow modifiers
     _can_have_modifiers = _fortyfive_methods + _can_have_input + ["stop", "stopjump", "stopair", "sneakstop", "sneakstopair", "sneakstopjump"]
+    
+    MODIFIERS = ["water", "web", "lava", "block", "ladder", "vine"]
 
     mm_to_dist = dist_to_block = lambda mm: (mm + copysign(f32(0.6), mm))
     dist_to_mm = block_to_dist = lambda dist: (dist - copysign(f32(0.6), dist))
@@ -37,8 +43,6 @@ class Player:
     JUMP = "jump"
     GROUND = "ground"
     AIR = "air"
-
-    MODIFIERS = ["water", "web", "lava", "block", "ladder", "vine"]
 
     ALIAS_TO_MODIFIER = {"water": "water",
                          "wt": "water",
@@ -51,8 +55,6 @@ class Player:
                          "ld": "ladder",
                          "vine": "ladder"
                          }
-
-    FUNCTIONS = {}
 
     FUNCTIONS_BY_TYPE = {"fast-movers": [
         "sprint", "s", "sprint45", "s45", "sprintjump", "sprintjump45", "sj", "sj45", "sprintair", "sa", "sprintair45", "sa45", "sprintstrafejump", "sprintstrafejump45", "strafejump", "strafejump45", "stfj", "stfj45", "sneaksprint", "sneaksprintair", "sneaksprintjump", "sns", "snsa", "snsj", "sneaksprint45", "sneaksprintair45", "sneaksprintjump45", "sns45", "snsa45", "snsj45"
@@ -67,6 +69,8 @@ class Player:
     ], "setters": [
         "face", "facing", "f", "turn", "setposz", "z", "setvz", "vz", "setposx", "x", "setvx", "vx", "setslip", "slip", "setprecision", "precision", "pre", "inertia", "sprintairdelay", "sdel", "version", "v", "anglequeue", "aq", "tq", "turnqueue", "speed", "slow", "slowness", "sndel", "sneakdelay", "var", "function", "func", "alias", "toggle", "singleaxisinertia",
     ]}
+
+    
 
     def __init__(self) -> None:
         self.x = 0.0
@@ -131,12 +135,6 @@ class Player:
             return True
         except ValueError: 
             return False
-
-    @staticmethod
-    def add_alias(func: object, *alias, dictionary: dict = FUNCTIONS):
-        "Creates a new key, value pair whose keys are `*alias` and its value is `func`"
-        for a in alias:
-            dictionary[a] = func
     
     @staticmethod
     def clean_backslashes(string: str):
@@ -1339,7 +1337,7 @@ class Player:
 
     # We need to fix nested functions
 
-    def function(self, name: str, *args: str, code: str, docstring: str = ''):
+    def function(self, name: str, *args: str, code: str, docstring: str):
         # `name` has to be checked which will be done later
 
         name = self.formatted(name)
@@ -1398,117 +1396,6 @@ self.local_funcs['{name}'] = {name}
     """
         
         exec(code_string, globals() | {'self': self})
-    
-    
-    def alias(self, func_name: str, *names: str):
-        "New alias"
-        # check names
-        func = Player.FUNCTIONS.get(func_name)
-        if func is None:
-            func = self.local_funcs.get(func_name)
-            if func is None:
-                raise NameError(f"function '{func_name}' not found")
-            else:
-                self.add_alias(func, *names, dictionary=self.local_funcs)
-
-        self.add_alias(func, *names)
-
-
-    # ALIASES
-    # MOVEMENT
-    add_alias(walk, "w", "walk")
-    add_alias(sprint, "s", "sprint")
-    add_alias(walkair, "wa", "walkair")
-    add_alias(sprintair, "sa", "sprintair")
-    add_alias(walkjump, "wj", "walkjump")
-    add_alias(sprintjump, "sj", "sprintjump")
-    add_alias(sneak, "sn", "sneak")
-    add_alias(sneakair, "sna", "sneakair")
-    add_alias(sneakjump, "snj", "sneakjump")
-    add_alias(sneaksprint, "sns", "sneaksprint")
-    add_alias(sneaksprintair, "snsa", "sneaksprintair")
-    add_alias(sneaksprintjump, "snsj", "sneaksprintjump")
-    add_alias(sprintstrafejump, "sprintstrafejump", "strafejump", "stfj")
-    add_alias(stop, "stopground", "stop", "st")
-    add_alias(stopair, "stopair", "sta")
-    add_alias(stopjump, "stopjump", "stj")
-    add_alias(sneakstop, "sneakstop", "snst")
-    add_alias(sneakstopair, "sneakstopair", "snsta")
-    add_alias(sneakstopjump, "sneakstopjump", "snstj")
-    
-    # WITH 45
-    add_alias(walk45, "w45", "walk45")
-    add_alias(sprint45, "s45", "sprint45")
-    add_alias(walkair45, "wa45", "walkair45")
-    add_alias(sprintair45, "sa45", "sprintair45")
-    add_alias(walkjump45, "wj45", "walkjump45")
-    add_alias(sprintjump45, "sj45", "sprintjump45")
-    add_alias(sneak45, "sn45", "sneak45")
-    add_alias(sneakair45, "sna45", "sneakair45")
-    add_alias(sneakjump45, "snj45", "sneakjump45")
-    add_alias(sprintstrafejump45, "sprintstrafejump45", "strafejump45", "stfj45")
-    add_alias(sneaksprint45, "sns45", "sneaksprint45")
-    add_alias(sneaksprintair45, "snsa45", "sneaksprintair45")
-    add_alias(sneaksprintjump45, "snsj45", "sneaksprintjump45")
-    
-    # RETURNERS
-    add_alias(outz, "outz")
-    add_alias(zmm, "zmm")
-    add_alias(zb, "zb")
-    add_alias(outvz, "outvz")
-    add_alias(outx, "outx")
-    add_alias(xmm, "xmm")
-    add_alias(xb, "xb")
-    add_alias(outvx, "outvx")
-    add_alias(vec, "vec")
-    add_alias(outangle, "outangle", "outa", "outfacing", "outf")
-    add_alias(outturn, "outturn", "outt")
-    add_alias(effectsmultiplier, "effectsmultiplier", "effects")
-    add_alias(printdisplay, "print", "printdisplay")
-
-    # SETTERS
-    add_alias(face, "f", "face", "facing")
-    add_alias(turn, "turn")
-    add_alias(setposz, "setposz", "z")
-    add_alias(setvz, "setvz", "vz")
-    add_alias(setposx, "setposx", "x")
-    add_alias(setvx, "setvx", "vx")
-    add_alias(setslip, "setslip", "slip")
-    add_alias(setprecision, "setprecision", "precision", "pre")
-    add_alias(inertia, "inertia")
-    add_alias(sprintairdelay, "sprintairdelay", "sdel")
-    add_alias(sneakdelay, "sneakdelay", "sndel")
-    add_alias(singleaxisinertia, "singleaxisinertia", "sai")
-    add_alias(version, "version", "v")
-    add_alias(speed, "speed")
-    add_alias(slowness, "slowness", "slow")
-    add_alias(var, "var")
-    add_alias(function, "function", "func")
-    add_alias(alias, "alias")
-    # add_alias(toggle, "toggle") # broken
-
-    add_alias(anglequeue, "anglequeue", "aq")
-    add_alias(turnqueue, "turnqueue", "tq")
-
-    add_alias(repeat, "repeat", "r")
-    add_alias(possibilities, "possibilities", "poss")
-    add_alias(xpossibilities, "xpossibilities", "xposs")
-    add_alias(xzpossibilities, "xzpossibilities", "xzposs")
-    
-
-    add_alias(ballhelp, "help", "ballhelp")
-    
-    add_alias(dimensions, "dimensions", "dim")
-    # Fix this for displaying (multilines)
-
-    # OPTIMIZERS
-    add_alias(taps, "taps")
-    add_alias(bwmm, "bwmm")
-    add_alias(xbwmm, "xbwmm")
-    add_alias(wall, "wall", "inv")
-    add_alias(xwall, "xwall", "xinv")
-    add_alias(blocks, "blocks")
-    add_alias(xblocks, "xblocks")
 
     def get_suggestions(self, string: str):
         """
@@ -1928,6 +1815,92 @@ self.local_funcs['{name}'] = {name}
         else:
             index = int(1 / (2 * Player.pi) * self.total_angles * rad + self.total_angles / 4) & (self.total_angles - 1)
         return f32(sin(index * self.pi * 2.0 / self.total_angles))
+    
+    FUNCTIONS = {"w":walk,"walk":walk,
+            "sprint":sprint, "s": sprint,
+            "walkair": walkair, "wa": walkair,
+            "sprintair": sprintair, "sa": sprintair,
+            "walkjump": walkjump, "wj": walkjump,
+            "sprintjump": sprintjump, "sj": sprintjump,
+            "sneak": sneak, "sn": sneak,
+            "sneakair": sneakair, "sna": sneakair,
+            "sneakjump": sneakjump, "snj": sneakjump,
+            "sneaksprint": sneaksprint, "sns": sneaksprint,
+            "sneaksprintair": sneaksprintair, "snsa": sneaksprintair,
+            "sneaksprintjump": sneaksprintjump, "snsj": sneaksprintjump,
+            "sprintstrafejump": sprintstrafejump, "strafejump": sprintstrafejump, "stfj": sprintstrafejump,
+            "stopground": stop, "stop": stop, "st": stop,
+            "stopair": stopair, "sta": stopair,
+            "stopjump": stopjump, "stj": stopjump,
+            "sneakstop": sneakstop, "snst": sneakstop,
+            "sneakstopair": sneakstopair, "snsta": sneakstopair,
+            "sneakstopjump": sneakstopjump, "snstj": sneakstopjump,
+            "walk45": walk45, "w45": walk45,
+            "sprint45": sprint45, "s45": sprint45,
+            "walkair45": walkair45, "wa45": walkair45,
+            "sprintair45": sprintair45, "sa45": sprintair45,
+            "walkjump45": walkjump45, "wj45": walkjump45,
+            "sprintjump45": sprintjump45, "sj45": sprintjump45,
+            "sneak45": sneak45, "sn45": sneak45,
+            "sneakair45": sneakair45, "sna45": sneakair45,
+            "sneakjump45": sneakjump45, "snj45": sneakjump45,
+            "sprintstrafejump45": sprintstrafejump45, "strafejump45": sprintstrafejump45, "stfj45": sprintstrafejump45,
+            "sneaksprint45": sneaksprint45, "sns45": sneaksprint45,
+            "sneaksprintair45": sneaksprintair45, "snsa45": sneaksprintair45,
+            "sneaksprintjump45": sneaksprintjump45, "snsj45": sneaksprintjump45,
+            "outz": outz,
+            "zmm": zmm,
+            "zb": zb,
+            "outvz": outvz,
+            "outx": outx,
+            "xmm": xmm,
+            "xb": xb,
+            "outvx": outvx,
+            "vec": vec,
+            "outangle": outangle, "outa": outangle, "outfacing": outangle, "outf": outangle,
+            "outturn": outturn, "outt": outturn,
+            "effectsmultiplier": effectsmultiplier, "effects": effectsmultiplier,
+            "print": printdisplay, "printdisplay": printdisplay,
+            "f": face, "face": face, "facing": face,
+            "turn": turn,
+            "setposz": setposz, "z": setposz,
+            "setvz": setvz, "vz": setvz,
+            "setposx": setposx, "x": setposx,
+            "setvx": setvx, "vx": setvx,
+            "setslip": setslip, "slip": setslip,
+            "setprecision": setprecision, "precision": setprecision, "pre": setprecision,
+            "inertia": inertia,
+            "sprintairdelay": sprintairdelay, "sdel": sprintairdelay,
+            "sneakdelay": sneakdelay, "sndel": sneakdelay,
+            "singleaxisinertia": singleaxisinertia, "sai": singleaxisinertia,
+            "version": version, "v": version,
+            "speed": speed,
+            "slowness": slowness, "slow": slowness,
+            "var": var,
+            "function": function, "func": function,
+            "anglequeue": anglequeue, "aq": anglequeue,
+            "turnqueue": turnqueue, "tq": turnqueue,
+            "repeat": repeat, "r": repeat,
+            "possibilities": possibilities, "poss": possibilities,
+            "xpossibilities": xpossibilities, "xposs": xpossibilities,
+            "xzpossibilities": xzpossibilities, "xzposs": xzpossibilities,
+            "help": ballhelp, "ballhelp": ballhelp,
+            "dimensions": dimensions, "dim": dimensions,
+            "taps": taps,
+            "bwmm": bwmm,
+            "xbwmm": xbwmm,
+            "wall": wall, "inv": wall,
+            "xwall": xwall, "xinv": xwall,
+            "blocks": blocks,
+            "xblocks": xblocks
+            }
+    ALIASES = {}
+    for alias, func in FUNCTIONS.items():
+        if func.__name__ in ALIASES: 
+            ALIASES[func.__name__].append(alias)
+        else:
+            ALIASES[func.__name__] = [alias]
+
 
 
 
