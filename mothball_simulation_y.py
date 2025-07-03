@@ -12,15 +12,27 @@ class Player:
     JUMP = "jump"
     GROUND = "ground"
     AIR = "air"
-    WATER = "water"
-    LAVA = "lava"
     SLIME = "slime"
 
-    FUNCTIONS = {}
+    ALIAS_TO_MODIFIER = {"water": "water",
+                         "wt": "water",
+                         "lv": "lava",
+                         "lava": "lava",
+                         "web": "web",
+                         "block": "block",
+                         "bl": "block",
+                         "ladder": "ladder",
+                         "ld": "ladder",
+                         "vine": "ladder"
+                         }
+    
+    _can_have_modifiers = ["up", "down", "jump", "air"]
+
+    MODIFIERS = ["water", "web", "lava", "ladder", "vine", "webjump"]
 
     FUNCTIONS_BY_TYPE = {
         "fast-movers": ["jump", "j", "air", "a", "slime"],
-        "slow-movers": ["waterup", "waterdown", "wtu", "wtd", "web", "webjump", "wj"],
+        "slow-movers": ["up", "down"],
         "setters": ["sety", "y", "setvy", "vy", "inertia","setceiling", "ceil"],
         "calculators": ["repeat", "r", "poss", "print"],
         "returners": ["ty", "sty", "outy", "outvy", "help"]
@@ -30,8 +42,6 @@ class Player:
         self.y = 0.0
         self.vy = 0.0
 
-        self.total_angles = 65536
-
         self.precision = 7
 
         self.inertia_threshold = 0.005
@@ -40,9 +50,11 @@ class Player:
 
         self.state = self.GROUND
 
+        self.modifiers = []
+
         self.record = {}
         
-        self.local_vars = {"px": 0.0625, "blocks": 0.6, "zneo": -0.6, "ladder":0.3, "vine":0.3}
+        self.local_vars = {"px": 0.0625}
         self.local_funcs = {}
 
         self.output: list[tuple[str | Literal['normal', 'z-expr', 'x-expr', 'expr']]] = []
@@ -52,13 +64,6 @@ class Player:
         self.ceiling = None
         self.hit_ceiling = False
 
-
-    @staticmethod
-    def add_alias(func: object, *alias, dictionary: dict = FUNCTIONS):
-        "Creates a new key, value pair whose keys are `*alias` and its value is `func`"
-        for a in alias:
-            dictionary[a] = func
-    
     @staticmethod
     def clean_backslashes(string: str):
         "Replaces backslashes if possible. Anything with `\` followed by a char will be replaced."
@@ -171,7 +176,7 @@ class Player:
 
         return formatted_string
     
-    def move(self, duration, web = False, jump_boost = 0, waterup = False, waterdown = False, state = "GROUND"):
+    def move(self, duration, jump_boost = 0, up = False, down = False, state = "GROUND"):
         
         for _ in range(duration):
             
@@ -189,37 +194,50 @@ class Player:
                 self.vy = 0.42 + 0.1 * jump_boost
                 # self.y = 0.0
 
-            elif state == self.WATER:
+            elif "water" in self.modifiers:
                 a = self.vy * 0.8 - 0.02
                 if abs(a) < self.inertia_threshold:
                     a = 0
-                if waterup:
+                if up:
                     self.vy = a + 0.04 # Going up
-                if waterdown:
+                if down:
                     self.vy = a # Going down
-                
+            
+            elif "lava" in self.modifiers:
+                a = self.vy * 0.5 - 0.02
+                if abs(a) < self.inertia_threshold:
+                    a = 0
+                if up:
+                    self.vy = a + 0.04 # Going up
+                if down:
+                    self.vy = a # Going down
+            
             else:
                 if state == self.SLIME:
                     self.vy = -self.vy
                 self.vy = (self.vy - 0.08) * 0.98
+                if "ladder" in self.modifiers:
+                    if up:
+                        self.vy = 0.12 * 0.98
+                    elif down:
+                        self.vy = max(-0.15, self.vy)
             
             # idk
 
-            if abs(self.vy) < self.inertia_threshold and state != self.WATER:
+            if abs(self.vy) < self.inertia_threshold and "water" not in self.modifiers:
                 self.vy = 0
 
-            if web:
+            if "web" in self.modifiers:
                 self.vy = self.vy / 20
 
-            self.previously_in_web = web
-            self.previously_in_water = waterup or waterdown
+            self.previously_in_web = "web" in self.modifiers
+            self.previously_in_water = ("water" in self.modifiers)
+            self.previously_in_lava = ("lava" in self.modifiers)
 
             if self.ceiling and self.y + self.vy + 1.8 >= self.ceiling:
                 self.vy = self.ceiling - self.y - 1.8
                 self.hit_ceiling = True
             
-            # self.y += self.vy # (Post order)
-
             self.possibilities_helper()
         
     
@@ -242,10 +260,6 @@ class Player:
     def jump(self, duration: int = 1, jump_boost: int = 0):
         self.move(1, state = self.JUMP, jump_boost = jump_boost)
         self.move(duration - 1, state = self.AIR)
-    
-    def webjump(self, duration: int = 1, jump_boost: int = 0):
-        self.move(1, web=True, state = self.JUMP, jump_boost=jump_boost)
-        self.move(duration - 1, web=True, state = self.AIR)
 
     def air(self, duration: int = 1):
         self.move(duration, state=self.AIR)
@@ -258,9 +272,6 @@ class Player:
     
     def sety(self, e: float):
         self.y = e
-    
-    def web(self, duration: int = 1):
-        self.move(duration, web = True, state=self.AIR)
     
     def inertia(self, value: float):
         self.inertia_threshold = value
@@ -283,6 +294,8 @@ class Player:
         self.add_output(string)
 
     def setceiling(self, height: float = 0.0):
+        if height == 0.0:
+            self.ceiling = None
         if height < 1.5:
             raise ValueError("Ceiling height is too low") # This will change with the scale attribute later on
         self.ceiling = height
@@ -290,11 +303,11 @@ class Player:
     def setvy(self, value: float, /):
         self.vy = value
     
-    def waterup(self, duration: int = 1):
-        self.move(duration, state = self.WATER, waterup=True)
+    def up(self, duration: int = 1):
+        self.move(duration, up=True)
     
-    def waterdown(self, duration: int = 1):
-        self.move(duration, state = self.WATER, waterdown=True)
+    def down(self, duration: int = 1):
+        self.move(duration, down=True)
     
     def possibilities(self, sequence: str):
         if not self.record: # JUST FOR NOW
@@ -332,25 +345,26 @@ class Player:
         # print(f.__doc__)
         self.add_output(f.__doc__)
 
-    add_alias(jump, "jump")
-    add_alias(outy, "outy")
-    add_alias(outvy, "outvy")
-    add_alias(sety, "sety", "y")
-    add_alias(web, "web")
-    add_alias(inertia, "inertia")
-    add_alias(air, "air", "a")
-    add_alias(repeat, "repeat", "r")
-    add_alias(printdisplay, "print")
-    add_alias(outty, "outty", "ty")
-    add_alias(outsty, "sty", "outsty")
-    add_alias(slime, "slime")
-    add_alias(setceiling, "setceiling", "ceil")
-    add_alias(setvy, "vy")
-    add_alias(webjump, "webjump", "wj")
-    add_alias(possibilities, "poss")
-    add_alias(ballhelp, "help")
-    add_alias(waterup, "waterup", "wtu")
-    add_alias(waterdown, "waterdown", "wtd")
+    FUNCTIONS = {
+        "jump": jump, "j": jump,
+        "outy": outy,
+        "outvy": outvy,
+        "sety": sety, "y": sety,
+        "inertia": inertia,
+        "air": air, "a": air,
+        "repeat": repeat, "r": repeat,
+        "print": printdisplay,
+        "outty": outty, "ty": outty,
+        "outsty": outsty, "sty": outsty,
+        "slime": slime,
+        "setceiling": setceiling, "setceil": setceiling, "ceil": setceiling,
+        "vy": setvy, "setvy": setvy,
+        "possibilities": possibilities, "poss": possibilities,
+        "ballhelp": ballhelp, "help": ballhelp,
+        "up": up,
+        "down": down,
+    }
+
 
     def get_suggestions(self, string: str):
         """
@@ -442,11 +456,12 @@ class Player:
         """
 
         result = []
-        depth = 0
         token = ""
+        stack = []
         
+        matches_next_element = lambda e: ((e == ")" and stack[-1] == "(") or (e == "]" and stack[-1] == "["))
+
         follows_slash = False
-        follows_comma = False
 
         # Delete comments
         string = self.remove_comments(string)
@@ -454,7 +469,6 @@ class Player:
         # Regex to change '|' into 'x(0) z(0)'
         replace_bar_regex = r"(\|)"
         string = re.sub(replace_bar_regex, "x(0) z(0)", string)
-
         
         for char in string + splitters[0]:
 
@@ -462,22 +476,18 @@ class Player:
                 follows_slash = True
                 token += char
                 continue
-            # elif char == ",":
-            #     if follows_comma:
-            #         raise SyntaxError("Expected expression")
-            #     follows_comma = True
-            #     continue
 
-            elif char == "(" and not follows_slash:
-                depth += 1
-            elif char == ")" and not follows_slash:
-                depth -= 1
+            elif (char == "(" or char == "[") and not follows_slash:
+                stack.append(char)
+            elif (char == ")" or char == "]") and not follows_slash:
+                if not stack:
+                    raise SyntaxError("Unmatched brackets")
+                if not matches_next_element(char):
+                    raise SyntaxError("Unmatched brackets")
+                stack.pop()
 
-                if depth < 0:
-                    raise SyntaxError("Unmatched closing parethesis")
             
-
-            if char in splitters and depth == 0 and not follows_slash:
+            if char in splitters and not stack and not follows_slash:
                 token = token.strip()
                 result.append(token) if token else None
                 token = ""
@@ -486,9 +496,8 @@ class Player:
                 token += char
 
             follows_slash = False
-            follows_comma = False
         
-        if depth:
+        if stack:
             raise SyntaxError("Unmatched open parethesis")
 
         # print(f"{string=} gave {result=}")
@@ -510,21 +519,30 @@ class Player:
         Raises any other error encountered while converting datatypes.
         """
 
-        tokenize_regex = r'(\W)?([^.\(\-)]+)(?:\.([^\(\.]+))?(?:\((.*)\))?(.+)?'
-        # tokenize_regex = r'([^.\(\-)]+)(?:\.([^\(\.]+))?(?:\((.*)\))?(.+)?'
+        # tokenize_regex = r'(\W)?([^.\(\-)]+)(?:\.([^\(\.]+))?(?:\[(.*)\])?(?:\((.*)\))?(.+)?'
+                         # r'(\W)?([^.\(\-)]+)(?:\.([^\(\.]+))?             (?:\((.*)\))?(.+)?'
+        e1 = r"(\W)?"
+        func = r"([^.\[\(\-\)\]]+)"
+        inputs = r"(?:\.([wasdWASD]+))?"
+        modifiers = r"(?:\[(.*)\])?"
+        args = r"(?:\((.*)\))?"
+        e2 = r"(.+)?"
 
+        tokenize_regex = e1 + func + inputs + modifiers + args + e2 
+        # print(tokenize_regex)
 
-        # func: ([^.\(\-)]+)
-        # inputs: (?:\.([^\(]+))?
-        # args: (?:\((.*)\))?
-        # error: (.+)?
+        error1, func_name, inputs, modifiers, args, error2 = re.findall(tokenize_regex, string, flags=re.DOTALL)[0]
+#         print(f"""Result for {string}: 
+# Error1: {error1}
+# Func: {func_name}
+# Inputs: {inputs}
+# Modifiers: {modifiers}
+# Args: {args}
+# Error2: {error2}""")
 
-        error, func_name, inputs, args, error2 = re.findall(tokenize_regex, string, flags=re.DOTALL)[0]
-        # print(f"result: {func_name} {inputs} {args} {error2}")
-
-        if error and error != "-":
+        if error1 and error1 != "-":
             
-            raise SyntaxError(f"Unknown item {error} in {string}")
+            raise SyntaxError(f"Unknown item {error1} in {string}")
         elif error2:
             raise SyntaxError(f"Unknown item {error2} in {string}")
         
@@ -576,8 +594,23 @@ class Player:
                 positional_args.append(arg)
         
         positional_args, keyword_args = self.check_types(func, positional_args, keyword_args, locals=locals)
+        if modifiers:
+            modifiers = self.validate_modifiers(modifiers.split(","))
+        else:
+            modifiers = []
 
-        return {"function": func, "inputs": inputs, "args": positional_args, "kwargs": keyword_args}
+        if func.__name__ not in Player._can_have_modifiers and modifiers:
+            raise TypeError(f"{func.__name__}() cannot be modified by a modifier")
+        
+        return {"function": func, "inputs": inputs, "modifiers": modifiers, "args": positional_args, "kwargs": keyword_args}
+    
+    def validate_modifiers(self, modifiers: list):
+        for i, modify in enumerate(modifiers):
+            a = self.ALIAS_TO_MODIFIER[modify.strip()]
+            modifiers[i] = a
+            if a not in self.MODIFIERS:
+                raise TypeError(f"No such modifier '{a}'")
+        return modifiers
     
     def check_types(self, func, args: list, kwargs: dict, locals = None):
         """
@@ -684,6 +717,7 @@ class Player:
 
         func = token["function"]
         self.inputs = token["inputs"]
+        self.modifiers = token["modifiers"]
         args = token["args"]
         kwargs = token["kwargs"]
 
@@ -712,7 +746,7 @@ if __name__ == "__main__":
     p = Player()
     # s = "jump(15) outy slime outy a(7) outy"
     # s = "jump(12) outy y(0.125) jump(12) outy"
-    s = " outvy r(waterup outvy, 5)"
+    s = " air(20) outvy down[ld] outvy up[ld] outvy r(down[ld] outvy, 5)"
     p.simulate(s)
     p.show_output()
 

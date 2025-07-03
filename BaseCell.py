@@ -390,7 +390,7 @@ class RenderViewer(QTextBrowser):
                     html_lines.append(f"<span style='color:{self.textOptions['Render']['Keyword Parameter']};'>{token}</span>")
                 case 35: # Var Positional Parameter
                     html_lines.append(f"<span style='color:{self.textOptions['Render']['Var Positional Parameter']};'>{token}</span>")
-                case 36:
+                case 36: # Datatype
                     html_lines.append(f"<span style='color:{self.textOptions['Render']['datatype']};'>{token}</span>")
         
         html_lines.append("</div>\n")

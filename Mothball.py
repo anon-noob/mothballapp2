@@ -16,7 +16,6 @@ import HelpPage
 import Settings
 import AboutMothball
 from PyQt5.QtCore import Qt, QTimer
-from pprint import pp
 from utils import * 
 import CodeCell
 import TextCell
@@ -24,9 +23,12 @@ import FileHandler
 import json
 import ParkourWordle
 
-# Scintilla resizing issue with newlines
+# Scintilla resizing issue with newlines (prob show scrollbar?)
 # Comments and docstring
 # Reorganize the help page
+# Re-enumerate the enums
+# Fix settings
+# Add other remaining colors
 
 class ActionStack:
     """

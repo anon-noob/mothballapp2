@@ -77,7 +77,7 @@ class CodeLinter:
         elif mode == "y":
             for i in my.Player.FUNCTIONS_BY_TYPE.values():
                 self.words += i
-            self.modifiers = []
+            self.modifiers = ["water","wt", "lava","lv", "ladder", "ld", "bl", "vine", "web"]
             self.inputs = []
 
             for e, func_list in enumerate(my.Player.FUNCTIONS_BY_TYPE.values(),1):

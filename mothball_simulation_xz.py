@@ -14,7 +14,6 @@ from pprint import pp
 # aq and tq in optimize doesnt work
 # Custom Defined Recursive Functions
 # # This also means adding conditionals
-# Add bool
 # Fix type annotations in custom defined functions
 
 
