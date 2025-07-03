@@ -48,6 +48,13 @@ class CodeLinter:
     STYLE_OUTPUT_NEGATIVE = 30
     STYLE_OUTPUT_TEXT = 31
 
+    STYLE_POSITIONAL_PARAMETER = 32
+    STYLE_POSITIONAL_OR_KEYWORD_PARAMETER = 33
+    STYLE_KEYWORD_PARAMETER = 34
+    STYLE_VAR_POSITIONAL_PARAMETER = 35
+
+    STYLE_DATATYPE = 36
+
     def __init__(self, generalOptions: dict, colorOptions: dict, textOptions: dict, mode: Literal["xz", "y"]):
         self.mode = mode # xz or y
         self.options = generalOptions
@@ -250,7 +257,7 @@ class CodeLinter:
                 tokens_and_style.append((token, self.STYLE_DEFAULT))
                 index += 1
 
-            elif token in self.words and not follows_dot:
+            elif token in self.words and not follows_dot: # Identify main functions (sprint, zmm, bwmm, etc.)
                 tokens_and_style.append((token, self.word_to_index[token]))
                 index += 1
                 last_function = token
@@ -454,6 +461,87 @@ class CodeLinter:
         # result.append(("\n", self.STYLE_DEFAULT, 0))
         # print(result)
         return result
+
+    def getFunctionSignature(self, nameOrAlias):
+        func = mxz.Player.FUNCTIONS.get(nameOrAlias)
+        if not func:
+            return []
+        func_name = func.__name__
+        aliases = mxz.Player.ALIASES.get(func_name)
+
+        params = inspect.signature(func).parameters.values()
+        positional: list[inspect.Parameter] = []
+        positional_or_keyword: list[inspect.Parameter] = []
+        keyword: list[inspect.Parameter] = []
+        var_position: list[inspect.Parameter] = []
+
+        for i in params:
+            if i.name == "self":
+                continue
+            if i.kind == inspect.Parameter.POSITIONAL_ONLY:
+                positional.append(i)
+            if i.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
+                positional_or_keyword.append(i)
+            if i.kind == inspect.Parameter.KEYWORD_ONLY:
+                keyword.append(i)
+            if i.kind == inspect.Parameter.VAR_POSITIONAL:
+                var_position.append(i)
+        
+        result = []
+        if aliases:
+            result.append(("Aliases: ", self.STYLE_DEFAULT))
+            for alias in aliases:
+                result.append((alias, self.word_to_index[func_name]))
+                result.append((", ", self.STYLE_DEFAULT))
+            if result and result[-1][0] == ", ": result.pop()
+            result.append(("\n", self.STYLE_DEFAULT))
+
+        if func_name in self.words: # Identify main functions (sprint, zmm, bwmm, etc.)
+            result.append((func_name, self.word_to_index[func_name]))
+        result.append(("(", self.bracket_colors[0]))
+
+        def appendResult(lst_of_params, style):
+            result = []
+            for i in lst_of_params:
+                if style == self.STYLE_VAR_POSITIONAL_PARAMETER:
+                    result.append(("*", self.STYLE_DEFAULT))
+                result.append((i.name, style))
+                c = i.annotation.__name__
+                if "float" in c:
+                    c = "float"
+                result.append((": ", self.STYLE_DEFAULT))
+                result.append((c, self.STYLE_DATATYPE))
+                if isinstance(i.default, (int,float)):
+                    result.append((" = ", self.STYLE_DEFAULT))
+                    result.append((str(i.default), self.STYLE_NUMBERS))
+                elif isinstance(i.default, str):
+                    result.append((" = ", self.STYLE_DEFAULT))
+                    result.append((i.default, self.STYLE_STRING))
+                elif i.default is None:
+                    result.append((" = ", self.STYLE_DEFAULT))
+                    result.append(("None", self.STYLE_DATATYPE))
+                result.append((", ", self.STYLE_DEFAULT))
+            return result
+
+        result.extend(appendResult(positional, self.STYLE_POSITIONAL_PARAMETER))
+        if positional:
+            result.append(("/, ", self.STYLE_DEFAULT))
+        result.extend(appendResult(positional_or_keyword, self.STYLE_POSITIONAL_OR_KEYWORD_PARAMETER))
+        result.extend(appendResult(var_position, self.STYLE_VAR_POSITIONAL_PARAMETER))
+        if keyword and not var_position:
+            result.append(("*, ", self.STYLE_DEFAULT))
+        result.extend(appendResult(keyword, self.STYLE_KEYWORD_PARAMETER))
+        
+
+        if result:
+            if result[-1][0] == ", ": 
+                result.pop()
+            elif result[-1][0] == "/, ": 
+                result.pop()
+                result.append(("/", self.STYLE_DEFAULT))
+        result.append((")", self.bracket_colors[0]))
+
+        return result
     
 
 class MDLinter:
@@ -553,20 +641,26 @@ class MDLinter:
                     tokens += self.lineParse(line + "\n")
             elif code_block:
                 if line.startswith("```"):
-                    a = CodeLinter(self.options, self.colorOptions, self.textOptions, "xz")
-                    bb = [(x[0], x[1], 1) for x in a.lintTexttoTokens(code[0:len(code)-1])]
-                    tokens += bb
-                    # print(tokens)
-                    
-                    if show_code_output:
-                        p=mxz.Player()
-                        try:
-                            p.simulate(code)
-                        except Exception as e:
-                            p.output = [(f"Error: {e}", "normal")]
-                        # print(code)
-                        # print("ADDING", p.output)
-                        tokens += a.parseOutput(p.output, True)
+                    if show_func_sig:
+                        a = CodeLinter(self.options, self.colorOptions, self.textOptions, "xz")
+                        bb = [(x[0], x[1], 1) for x in a.getFunctionSignature(code[0:len(code)-1])]
+                        tokens += bb
+
+                    else: # Normal code
+                        a = CodeLinter(self.options, self.colorOptions, self.textOptions, "xz")
+                        bb = [(x[0], x[1], 1) for x in a.lintTexttoTokens(code[0:len(code)-1])]
+                        tokens += bb
+                        # print(tokens)
+                        
+                        if show_code_output:
+                            p=mxz.Player()
+                            try:
+                                p.simulate(code)
+                            except Exception as e:
+                                p.output = [(f"Error: {e}", "normal")]
+                            # print(code)
+                            # print("ADDING", p.output)
+                            tokens += a.parseOutput(p.output, True)
 
                     code = ""
                     code_block = False

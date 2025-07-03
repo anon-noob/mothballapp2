@@ -113,6 +113,13 @@ class CellLexer(QsciLexerCustom):
     STYLE_OUTPUT_NEGATIVE = 30
     STYLE_OUTPUT_TEXT = 31
 
+    STYLE_POSITIONAL_PARAMETER = 32
+    STYLE_POSITIONAL_OR_KEYWORD_PARAMETER = 33
+    STYLE_KEYWORD_PARAMETER = 34
+    STYLE_VAR_POSITIONAL_PARAMETER = 35
+
+    STYLE_DATATYPE = 36
+
     def __init__(self, generalOptions: dict, colorOptions: dict, textOptions: dict, parent=None, cellType: Literal["code", "text"] = "code"):
         super().__init__(parent)
         self.codeColorOptions = colorOptions["Code"]
@@ -292,7 +299,7 @@ class RenderViewer(QTextBrowser):
                 curr_in_code = 2
 
             elif in_code == 0:
-                if curr_in_code == 1: # block-> default
+                if curr_in_code == 1: # block -> default
                     html_lines.append('</div>')
                     html_lines.append('<div>')
                     curr_in_code = 0
@@ -374,6 +381,16 @@ class RenderViewer(QTextBrowser):
                     html_lines.append(f"<span style='color:{outputColors['negativeNumber']};'>{token}</span>")
                 case 31: # Output Text
                     html_lines.append(f"<span style='color:{outputColors['text']};'>{token}</span>")
+                case 32: # Positional Parameter
+                    html_lines.append(f"<span style='color:{self.textOptions['Render']['Positional Parameter']};'>{token}</span>")
+                case 33: # Positional or Keyword Parameter
+                    html_lines.append(f"<span style='color:{self.textOptions['Render']['Positional or Keyword Parameter']};'>{token}</span>")
+                case 34: # Keyword Parameter
+                    html_lines.append(f"<span style='color:{self.textOptions['Render']['Keyword Parameter']};'>{token}</span>")
+                case 35: # Var Positional Parameter
+                    html_lines.append(f"<span style='color:{self.textOptions['Render']['Var Positional Parameter']};'>{token}</span>")
+                case 36:
+                    html_lines.append(f"<span style='color:{self.textOptions['Render']['datatype']};'>{token}</span>")
         
         html_lines.append("</div>\n")
         html_lines.append("</body>\n")
