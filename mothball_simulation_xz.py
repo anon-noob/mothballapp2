@@ -143,7 +143,13 @@ class Player:
 
     def safe_eval(self, expr: str, datatype: type, locals_dict: dict):
         "Evaluate and convert `expr` to `datatype`. If `datatype = str`, it returns the `expr` as normal."
-        if datatype in [float, int, f32]:
+        if datatype in [float, int, f32, bool]:
+            if datatype == bool:
+                if expr.strip().lower() == "true":
+                    return True
+                elif expr.strip().lower() == "false":
+                    return False
+
             if "__" in expr:
                     raise RuntimeError(f"Rejected unsafe expression {expr}")
             
@@ -932,16 +938,15 @@ class Player:
             raise ValueError(f"precision() only takes integers between 0 to 16 inclusive, got {decimal_places} instead.")
         self.precision = decimal_places
     
-    def inertia(self, value: f32, /, single_axis: str = "true"):
+    def inertia(self, value: f32, /, single_axis: bool = False):
         "Sets the player's inertia threshold"
         self.inertia_threshold = value
-        toggle = single_axis.lower().strip()
-        if toggle == "false":
+        if single_axis:
             self.inertia_axis = 2
         else:
             self.inertia_axis = 1
 
-    def sprintairdelay(self, toggle: str, /):
+    def sprintairdelay(self, toggle: bool, /):
         """
         `toggle` will toggle off if it is the string `"false"`, else it will assume true.
 
@@ -949,13 +954,12 @@ class Player:
         
         Versions 1.8 to 1.19 have a sprint air delay while later versions don't, so if you intend to calculate 1.20+ movement, set sprint air delay to `false`.
         """
-        toggle = toggle.lower().strip()
-        if toggle == "false":
-            self.air_sprint_delay = False
-        else:
+        if toggle:
             self.air_sprint_delay = True
+        else:
+            self.air_sprint_delay = False
     
-    def sneakdelay(self, toggle: str, /):
+    def sneakdelay(self, toggle: bool, /):
         """
         `toggle` will toggle true if it is the string `"true"`, else it will assume false.
 
@@ -963,18 +967,16 @@ class Player:
         
         Versions 1.8 to 1.19 dont have a sneak delay while later versions do, so if you intend to calculate 1.20+ movement, set sprint air delay to `true`.
         """
-        toggle = toggle.lower().strip()
-        if toggle == "true":
+        if toggle:
             self.sneak_delay = True
         else:
             self.sneak_delay = False
     
-    def singleaxisinertia(self, toggle: str, /):
+    def singleaxisinertia(self, toggle: bool, /):
         """
         Set's inertia to affect individual axis.
         """
-        toggle = toggle.lower().strip()
-        if toggle == "true":
+        if toggle:
             self.inertia_axis = 1
         else:
             self.inertia_axis = 2
@@ -1000,7 +1002,7 @@ class Player:
         if int(version_number) > 13:
             self.sneakdelay("true")
         if int(version_number) > 19 or (int(version_number) == 19 and patch_number > 3):
-            self.sprintairdelay("false")
+            self.sprintairdelay(False)
         if int(version_number) == 21 and int(patch_number) >= 5:
             self.inertia_axis = 2
     
@@ -1688,7 +1690,6 @@ self.local_funcs['{name}'] = {name}
 
         ### Check the positional arguments ###
         can_be_positional = positional_only | positional_or_keyword
-        # print(can_be_positional)
 
         if len(required_positionals) > len(args):
             number_of_missing = len(required_positionals) - len(args)
@@ -1709,7 +1710,6 @@ self.local_funcs['{name}'] = {name}
                 elif converted_value is None:
                     converted_value = 1
             elif list(can_be_positional)[i] == "label":
-
                 if converted_value is None:
                     converted_value = func.__name__
 
@@ -1907,7 +1907,7 @@ self.local_funcs['{name}'] = {name}
 if __name__ == "__main__":
     a = Player()
 
-    s = 'sj.wd(4) zmm outx'
+    s = 'sai( 1 ) f(10) sa(11) outx outvx'
     a.simulate(s)
     print("Parsed: ", s)
     b = a.show_output()

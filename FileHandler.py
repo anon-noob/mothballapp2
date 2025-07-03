@@ -26,7 +26,8 @@ default_code_colors = {
         "customFunctionParameter": "#e066ff",
         "customFunction": "#c6e2ff",
         "error": "#ff0000",
-        "default": "#ffffff"
+        "default": "#ffffff",
+        "bool": "#0fff83"
     },
     "Output": {
         "zLabel": "#00ffff",

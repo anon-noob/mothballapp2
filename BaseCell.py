@@ -193,6 +193,7 @@ class CellLexer(QsciLexerCustom):
         self.setColor(QColor(self.codeColorOptions["error"]), self.STYLE_ERROR)
         self.setColor(QColor(self.codeColorOptions["variable"]), self.STYLE_VARS)
         self.setColor(QColor(self.codeColorOptions["string"]), self.STYLE_STRING)
+        self.setColor(QColor(self.codeColorOptions["bool"]), self.STYLE_DATATYPE)
         self.setColor(QColor(self.defaultTextColor), self.STYLE_DEFAULT)
 
         self.setColor(QColor(self.textColorOptions["heading1"]), self.STYLE_HEADER1)

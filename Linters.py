@@ -256,6 +256,10 @@ class CodeLinter:
                 follows_dot = True
                 tokens_and_style.append((token, self.STYLE_DEFAULT))
                 index += 1
+            
+            elif token.lower() in ('true', 'false'):
+                tokens_and_style.append((token, self.STYLE_DATATYPE))
+                index += 1
 
             elif token in self.words and not follows_dot: # Identify main functions (sprint, zmm, bwmm, etc.)
                 tokens_and_style.append((token, self.word_to_index[token]))
@@ -500,7 +504,7 @@ class CodeLinter:
             result.append((func_name, self.word_to_index[func_name]))
         result.append(("(", self.bracket_colors[0]))
 
-        def appendResult(lst_of_params, style):
+        def appendTokens(lst_of_params, style):
             result = []
             for i in lst_of_params:
                 if style == self.STYLE_VAR_POSITIONAL_PARAMETER:
@@ -523,14 +527,14 @@ class CodeLinter:
                 result.append((", ", self.STYLE_DEFAULT))
             return result
 
-        result.extend(appendResult(positional, self.STYLE_POSITIONAL_PARAMETER))
+        result.extend(appendTokens(positional, self.STYLE_POSITIONAL_PARAMETER))
         if positional:
             result.append(("/, ", self.STYLE_DEFAULT))
-        result.extend(appendResult(positional_or_keyword, self.STYLE_POSITIONAL_OR_KEYWORD_PARAMETER))
-        result.extend(appendResult(var_position, self.STYLE_VAR_POSITIONAL_PARAMETER))
+        result.extend(appendTokens(positional_or_keyword, self.STYLE_POSITIONAL_OR_KEYWORD_PARAMETER))
+        result.extend(appendTokens(var_position, self.STYLE_VAR_POSITIONAL_PARAMETER))
         if keyword and not var_position:
             result.append(("*, ", self.STYLE_DEFAULT))
-        result.extend(appendResult(keyword, self.STYLE_KEYWORD_PARAMETER))
+        result.extend(appendTokens(keyword, self.STYLE_KEYWORD_PARAMETER))
         
 
         if result:
