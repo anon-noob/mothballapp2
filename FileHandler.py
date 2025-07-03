@@ -199,7 +199,7 @@ def reindexFiles():
             with open(os.path.join(notebooks_path,file), "r") as f:
                 data = json.load(f)
             
-            if data["version"] == VERSION:
+            if not versionIsOutdated(data["version"]):
                 continue
             if str(0) in data: # already reindexed
                 continue
@@ -216,6 +216,23 @@ def reindexFiles():
         
         except Exception as e:
             pass
+
+def versionIsOutdated(version_str: str):
+    """
+    Compares the `version_str` with the current version given by `VERSION`, returning True if `VERSION` is later than `version_str`
+    
+    Version is in the format `major.minor.patch`, where `major`, `minor`, `patch` are integers.
+    """
+    
+    original_version = [int(x) for x in VERSION.split(".")]
+    compared_to = [int(x) for x in version_str.split(".")]
+
+    for i in range(min(original_version, compared_to)):
+        if original_version[i] > compared_to[i]:
+            return True
+        elif original_version[i] < compared_to[i]:
+            return False
+    return False
         
 if __name__ == "__main__":
     # For deleting unnecessary files

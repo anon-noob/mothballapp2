@@ -24,6 +24,7 @@ import FileHandler
 import json
 import ParkourWordle
 
+# Scintilla resizing issue with newlines
 # Comments and docstring
 # Reorganize the help page
 
@@ -242,7 +243,6 @@ class MainWindow(QMainWindow):
             self.CELLS.insert(after_cell_or_at_index, section)
         else:
             index = self.section_container.indexOf(after_cell_or_at_index)
-            # print("add at index", index, "from cell")
             self.CELLS.insert(index, section)
             self.section_container.insertWidget(index + 1, section)
 
