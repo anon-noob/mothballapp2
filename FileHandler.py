@@ -57,7 +57,12 @@ default_text_colors = {
         "links": "#1fb9e8",
         "default": "#ffffff",
         "Output Background": "#3e3e3e",
-        "Block Background": "#242424"
+        "Block Background": "#242424",
+        "Positional Parameter": "#FF009D",
+        "Var Positional Parameter": "#FF4BBA",
+        "Keyword Parameter": "#ff6200",
+        "Positional or Keyword Parameter": "#ffcf33",
+        "datatype": "#0ffff0"
     },
     "Code Background": "#2e2e2e",
     "Render Background": "#2e2e2e"
@@ -211,22 +216,24 @@ def reindexFiles():
         except Exception as e:
             pass
         
-# if __name__ == "__main__":
+if __name__ == "__main__":
     # For deleting unnecessary files
-    # def deleteAll():
-    #     if operating_system == "Windows":
-    #         path = os.path.join(user_path, "AppData", "Roaming", "Mothball", "Mothball Settings")
-    #     elif operating_system == "Darwin":
-    #         path = os.path.join(user_path, "Library", "Application Support", "Mothball", "Mothball Settings")
-    #     elif operating_system == "Linux":
-    #         path = os.path.join(user_path, ".config", "Mothball", "Mothball Settings")
+    def deleteAll():
+        if operating_system == "Windows":
+            path = os.path.join(user_path, "AppData", "Roaming", "Mothball", "Mothball Settings")
+        elif operating_system == "Darwin":
+            path = os.path.join(user_path, "Library", "Application Support", "Mothball", "Mothball Settings")
+        elif operating_system == "Linux":
+            path = os.path.join(user_path, ".config", "Mothball", "Mothball Settings")
         
-    #     print("Delete All:", os.listdir(path))
-    #     r = input("Confirm? (y/n) ").strip().lower()
-    #     if r == "y":
-    #         for filename in os.listdir(path):
-    #             file_path = os.path.join(path, filename)
-    #             if os.path.isfile(file_path):
-    #                 os.remove(file_path)
-    #     else:
-    #         print("Cancelled")
+        print("Delete All:", os.listdir(path))
+        r = input("Confirm? (y/n) ").strip().lower()
+        if r == "y":
+            for filename in os.listdir(path):
+                file_path = os.path.join(path, filename)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+        else:
+            print("Cancelled")
+    
+    deleteAll()
