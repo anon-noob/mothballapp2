@@ -49,7 +49,6 @@ class Player:
         self.modifiers = 0
 
         self.record = {}
-        self.record_inertia = {}
         
         self.local_vars = {"px": 0.0625}
         self.local_funcs = {}
@@ -220,7 +219,6 @@ class Player:
                         self.vy = max(-0.15, self.vy)
             
             # idk
-            self.inertialistener_helper()
 
             if abs(self.vy) < self.inertia_threshold and not self.modifiers & self.WATER:
                 self.vy = 0
@@ -237,6 +235,7 @@ class Player:
                 self.hit_ceiling = True
             
             self.possibilities_helper()
+            self.inertialistener_helper()
             
         
     
@@ -250,31 +249,12 @@ class Player:
             top = self.y - top_diff
             botdiff = (self.y + self.vy) % 0.0625
             bot = self.y + self.vy - botdiff + 0.0625
-            # bot = self.y + self.vy - botdiff
 
             self.add_output_with_label(f"Tick {self.record['tick']}", f"{self.format_number(self.y)} ({top} to {bot})")
         self.record['tick'] += 1
     
     def get_inertia_speed(self):
         return self.inertia_threshold / f32(0.91)
-    
-    def inertialistener_helper(self):
-        "Auxilary function for dealing with `inertialistener()` functions"
-        if not self.record_inertia:
-            return
-        
-        record_axis = self.record_inertia["type"]
-        inertia_speed = self.get_inertia_speed()
-        tolerance = abs(self.record_inertia["tolerance"]) + inertia_speed
-
-        if abs(self.vy) <= tolerance:
-            if abs(self.vy) <= inertia_speed:
-                self.add_output_with_label(f"Tick {self.record_inertia['tick']} Vy (Hit)", self.format_number(self.vy), "expr")
-            else:
-                self.add_output_with_label(f"Tick {self.record_inertia['tick']} Vy (Miss)", self.format_number(self.vy), "expr")
-
-        self.record_inertia['tick'] += 1
-        
     
     def jump(self, duration: int = 1, jump_boost: int = 0):
         self.move(1, state = self.JUMP, jump_boost = jump_boost)
@@ -335,23 +315,6 @@ class Player:
             raise TypeError(f"Nested posibilities functions are not allowed.")
         self.simulate(sequence, return_defaults=False)
         self.record = {}
-    
-
-    def inertialistener(self, sequence: MothballSequence, /, tolerance: float = 0.002):
-        """
-        Displays ticks where while `sequence` is run, the player's velocity on EACH axis is within `tolerance` of hitting inertia, or has hit inertia.
-
-        Inertia is determined.
-        """
-
-        if not self.record_inertia:
-            self.record_inertia = {"type":"y", "tick":1, "tolerance":tolerance}
-        else:
-            raise TypeError(f"Nested inertia listener functions are not allowed.")
-        self.simulate(sequence, return_defaults=False)
-        self.record_inertia = {}
-
-
 
     def ballhelp(self, func: str):
         "Gets help about function `func`"
@@ -398,8 +361,7 @@ class Player:
         "possibilities": possibilities, "poss": possibilities,
         "ballhelp": ballhelp, "help": ballhelp,
         "up": up,
-        "down": down,
-        "inertialistener": inertialistener, "il": inertialistener
+        "down": down
     }
 
 

@@ -1954,7 +1954,12 @@ if __name__ == "__main__":
     a = Player()
 
     # s = 'f(-13.875) wa.a(6) x(0) xil(wj.a wa.d(8) wa.sd(2) wa.s) outx x(0) w.s outz z(0) zil(wj.sd wa.d(2) sa.wd(9)) outz s.wd outz xmm vec | aq(-16.255, -38.185, -62.88, -76.93, -84.985, -90) xil(sj sa45(5) zmm outx sa45(7)) outx'
-    s = 'sta vx(0.005494505336154793) pre(16) outvx sa outvx'
+    # s = 'sta vx(0.005494505336154793) pre(16) outvx sa outvx'
+    s = """
+f(59.65) sa.wa(11) sj.wa sa(7) sj(8) sj(8) s vec | 
+aq(-11.037,-62.686,-58.221,-46.929,-83.174,-85.899,-90.)
+il(sj outvx z(0) sa45 outvx outx(-0.5) r(sa45 outvx, 5) outx(-0.5) zmm(1) r(sa45 outvx,5) outx)
+"""
     a.simulate(s)
     print("Parsed: ", s)
     b = a.show_output()
