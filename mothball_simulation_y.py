@@ -234,10 +234,7 @@ class Player:
                 self.vy = self.ceiling - self.y - 1.8
                 self.hit_ceiling = True
             
-            self.possibilities_helper()
-            self.inertialistener_helper()
-            
-        
+            self.possibilities_helper()        
     
     def possibilities_helper(self):
         if not self.record:
@@ -746,9 +743,7 @@ class Player:
 if __name__ == "__main__":
     p = Player()
     # s = "jump(15) outy slime outy a(7) outy"
-    # s = "jump(12) outy y(0.125) jump(12) outy"
-    s = "inertia(0.003) il(j outvy r(a outvy outy, 14))"
-    # s = "il(j outvy r(a outvy, 14))"
+    s = "jump(12) outy y(0.125) jump(12) outy"
     p.simulate(s)
     p.show_output()
 
