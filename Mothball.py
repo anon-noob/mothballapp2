@@ -170,10 +170,11 @@ class MainWindow(QMainWindow):
         self.path = ""
         self.unsaved_changes = False
         self.user = FileHandler.user_path
+        FileHandler.deleteAll() # TEMP FIX!?
         FileHandler.createDirectories()
         self.version = FileHandler.VERSION
 
-        FileHandler.reindexFiles() # For update purposes only!
+        # FileHandler.reindexFiles() # For update purposes only! (outdated?)
 
         self.codecell_colors = FileHandler.getCodeColorSettings()
         self.textcell_colors = FileHandler.getTextColorSettings()
