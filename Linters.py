@@ -204,21 +204,19 @@ class CodeLinter:
 
             elif token in "({[":
                 tokens_and_style.append((token, Style.ERROR))
-                # tokens_and_style.append((token, self.bracket_colors[depth % 3]))
                 depth += 1
                 index += 1
                 local_parenthesis_stack.append(token)
                 local_parenthesis_stack_index.append(index)
-                # print(local_parenthesis_stack)
                 if token == "[":
                     in_square_brackets = True
                 elif token == "(":
                     if last_function:
                         func_stack.push(self.getFunction(last_function))
                         curr_func = func_stack.peek()
-                        if curr_func.current_parameter() and curr_func.current_parameter_datatype() == str:
-                            if curr_func.func not in ['repeat', 'bwmm', 'xbwmm', 'wall', "xwall", 'blocks',"xblocks", "taps", "possibilities", "xpossibilities", "xzpossibilities"]:
-                                in_string = True
+                        if curr_func.current_parameter() and curr_func.current_parameter_datatype() == str: 
+                            # if curr_func.func not in ['repeat', 'bwmm', 'xbwmm', 'wall', "xwall", 'blocks',"xblocks", "taps", "possibilities", "xpossibilities", "xzpossibilities"]: # This should be replaced with the new MothballSequence addition
+                            in_string = True
                 elif token == "{":
                     in_curly_brackets = not in_curly_brackets
 
@@ -235,8 +233,8 @@ class CodeLinter:
                         curr_func.discard_parameter()
 
                         if curr_func.current_parameter() and curr_func.current_parameter_datatype() == str:
-                            if curr_func.func not in ['repeat', 'bwmm', 'xbwmm', 'wall', "xwall", 'blocks',"xblocks", "taps", "possibilities", "xpossibilities", "xzpossibilities"]:
-                                in_string = True
+                            # if curr_func.func not in ['repeat', 'bwmm', 'xbwmm', 'wall', "xwall", 'blocks',"xblocks", "taps", "possibilities", "xpossibilities", "xzpossibilities"]:
+                            in_string = True
             
                 elif curr_func and curr_func.after_keyword:
                     curr_func.discard_parameter(curr_func.curr_param_name)
@@ -254,8 +252,8 @@ class CodeLinter:
 
                     curr_func.curr_param_name = last_nonspace_token
                     if curr_func.keyword_parameters_remaining[last_nonspace_token].annotation == str:
-                        if curr_func.func not in ['repeat', 'bwmm', 'xbwmm', 'wall', "xwall", 'blocks',"xblocks", "taps", "possibilities", "xpossibilities", "xzpossibilities"]:
-                            in_string = True
+                        # if curr_func.func not in ['repeat', 'bwmm', 'xbwmm', 'wall', "xwall", 'blocks',"xblocks", "taps", "possibilities", "xpossibilities", "xzpossibilities"]:
+                        in_string = True
             
             elif token in ")}]":
                 if self.matchParenthesis(local_parenthesis_stack, token):

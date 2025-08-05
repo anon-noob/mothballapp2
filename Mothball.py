@@ -23,15 +23,16 @@ import FileHandler
 import json
 import ParkourWordle
 from Enums import CellType, TextCellState
+from PyQt5.QtWidgets import QScrollBar
 
-# Scintilla resizing issue with newlines (prob show scrollbar?)
+# Scintilla resizing issue with newlines (prob show scrollbar?) <-- yep i set vertical scrollbar always on (Aug 5, 2025)
 # Comments and docstring
 # Reorganize the help page
 # Re-enumerate the enums
 # Fix settings
 # Add other remaining colors
 # Var should not lint as strings
-
+# Set the scrollbars to always be visible
 class ActionStack:
     """
     Keeps track of GUI changes, mainly adding, removing, and moving cells. `undo` executes the action, `redo` executes the opposite action. 
@@ -162,6 +163,8 @@ class MainWindow(QMainWindow):
         self.actionStack: ActionStack = ActionStack(self)
         self.CELLS: list[Union[TextCell.TextSection, CodeCell.SimulationSection]] = []
 
+        # QScrollArea.setVerticalScrollBarPolicy = lambda self, policy: QScrollArea.verticalScrollBar(self).setVisible(True)
+        # QScrollArea.setHorizontalScrollBarPolicy = lambda self, policy: QScrollArea.horizontalScrollBar(self).setVisible(True)
         self.setWindowTitle("Mothball Notebook - Unnamed")
         self.name = ""
         self.path = ""
@@ -212,8 +215,9 @@ class MainWindow(QMainWindow):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setWidget(self.section_widget)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.main_layout.addWidget(self.scroll_area)
-
+        
         self.setCentralWidget(central_widget)  # Set central widget
 
         self.addCell()  # Add the first section by default
@@ -398,7 +402,7 @@ class MainWindow(QMainWindow):
         ```
         code_cell_data: dict = {
             "name": name_of_cell,
-            "mode": Literal[0,1,2], # 0 = xz, 1 = y
+            "cell_type": Literal[0,1], # 0 = xz, 1 = y
             "code": code_input, # The actual Mothball code
             "exec_time": "None",
             "has_changed": False,
@@ -410,6 +414,7 @@ class MainWindow(QMainWindow):
         ```
         text_cell_data: dict = {
             "raw_text": cell_input_text, # The given markdown text
+            "cell_type": Literal[2]
             "mode": Literal["edit","render"], # Determines if the cell is in edit or render mode
             "has_changed": False
         }
@@ -431,7 +436,7 @@ class MainWindow(QMainWindow):
             data = self.collectAllCellData()
             self.unsaved_changes = False
             with open(self.path, "w") as f:
-                json.dump(data, f)
+                json.dump(data, f, indent=4)
             
             self.setWindowTitle(self.windowTitle().rstrip("*"))
 
@@ -453,7 +458,7 @@ class MainWindow(QMainWindow):
             data = self.collectAllCellData()
 
             with open(self.path, "w") as f:
-                json.dump(data, f)
+                json.dump(data, f, indent=4)
 
             self.setWindowTitle(f"Mothball Notebook - {self.name}")
 

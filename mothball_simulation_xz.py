@@ -21,6 +21,9 @@ from pprint import pp
 class OverwriteError(Exception):
     pass
 
+class MothballSequence(str):
+    pass
+
 class Player:
     pi = 3.14159265358979323846
 
@@ -30,7 +33,7 @@ class Player:
     # These movement CAN have inputs
     _can_have_input = ["walk", "walkair", "walkjump", "sprint", "sprintair", "sprintjump", "sneak", "sneakair", "sneakjump", "sneaksprint", "sneaksprintair", "sneaksprintjump"]
 
-    # These allow modifiers
+    # These allow modifiers (see the attribute MODIFIERS)
     _can_have_modifiers = _fortyfive_methods + _can_have_input + ["stop", "stopjump", "stopair", "sneakstop", "sneakstopair", "sneakstopjump"]
     
     MODIFIERS = ["water", "web", "lava", "block", "ladder", "vine"]
@@ -156,7 +159,7 @@ class Player:
             result = eval(expr, {"__builtins__": {}}, locals_dict)
             converted_value = datatype(result) if result is not None else None
             return converted_value
-        else:
+        else: # strings
             return expr
 
     def add_output(self, string: str):
@@ -655,10 +658,6 @@ class Player:
             self.move(1, rotation, self.get_optimal_strafe_jump_angle(speed=speed, slow=slow, slip=slip, is_sneaking=True), slip=slip, is_sprinting=True, is_sneaking=True, state=self.JUMP, speed=speed, slow=slow)
             self.sneaksprintair45(duration - 1, rotation)
 
-    def lava(self, duration: int = 1, rotation:f32 = None, /):
-        # self.move(duration, rotation, slip=f32(0.9/0.91), state=self.LAVA, is_sneaking=True)
-        self.move(duration, rotation, slip=f32(0.5/0.91), state=self.LAVA)
-
     # PRIVATE FUNCTION
     def get_optimal_strafe_jump_angle(self, speed: int = None, slow: int = None, slip: f32 = None, is_sneaking: bool = False):
         player = Player.copy_player(self)
@@ -1090,7 +1089,7 @@ class Player:
             self.rotation_queue.append(("turn", angle))
 
     # Nested functions
-    def repeat(self, sequence: str, count: int, /):
+    def repeat(self, sequence: MothballSequence, count: int, /):
         "Run `sequence` for `count` times. Raises `ValueError` if `count < 0`"
         
         if count < 0:
@@ -1099,7 +1098,7 @@ class Player:
         for _ in range(count):
             self.simulate(sequence, return_defaults=False)
     
-    def possibilities(self, sequence: str, min_distance: float, offset: float = 0.6, /, *, increment: float = 0.0625, miss: float = None):
+    def possibilities(self, sequence: MothballSequence, min_distance: float, offset: float = 0.6, /, *, increment: float = 0.0625, miss: float = None):
         """
         Displays ticks where while `sequence` is run, the player reaches certain block milestones ONLY ON Z (as determined by `increment`, default 0.0625) less than or equal to `min_distance`, useful to check which tiers results in precise landings.
         
@@ -1117,7 +1116,7 @@ class Player:
         self.simulate(sequence, return_defaults=False)
         self.record = {}
     
-    def xpossibilities(self, sequence: str, min_distance: float, offset: float = 0.6, /, *, increment: float = 0.0625, miss: float = None):
+    def xpossibilities(self, sequence: MothballSequence, min_distance: float, offset: float = 0.6, /, *, increment: float = 0.0625, miss: float = None):
         """
         Displays ticks where while `sequence` is run, the player reaches certain block milestones ONLY ON X (as determined by `increment`, default 0.0625) less than or equal to `min_distance`, useful to check which tiers results in precise landings.
         
@@ -1134,7 +1133,7 @@ class Player:
         self.simulate(sequence, return_defaults=False)
         self.record = {}
     
-    def xzpossibilities(self, sequence: str, min_distance: float, x_offset: float = 0.6, z_offset: float = 0.6, /, *, x_increment: float = 0.0625, z_increment: float = 0.0625, miss: float = None):
+    def xzpossibilities(self, sequence: MothballSequence, min_distance: float, x_offset: float = 0.6, z_offset: float = 0.6, /, *, x_increment: float = 0.0625, z_increment: float = 0.0625, miss: float = None):
         """
         Displays ticks where while `sequence` is run, the player reaches certain block milestones (as determined by `increment`, default 0.0625) less than or equal to `min_distance`, useful to check which tiers results in precise landings.
         
@@ -1283,7 +1282,7 @@ class Player:
         elif z:
             return vz
     
-    def bwmm(self, zmm: float, sequence: str, /):
+    def bwmm(self, zmm: float, sequence: MothballSequence, /):
         "Attempts to find the speed such that executing `sequence` results in using `zmm` blocks of momentum on the Z axis. A warning is raised if the simulation using the calculated speed doesn't match `zmm`, meaning that inertia was encountered while simulating."
         vz = self.optimize(None, zmm, sequence, Player.mm_to_dist)
 
@@ -1292,7 +1291,7 @@ class Player:
         if abs(Player.dist_to_mm(self.z) - zmm) > 1e-5:
             self.add_output_with_label("Warning", "encountered inertia on Z while optimizing!", "warning")
 
-    def wall(self, z: float, sequence: str, /):
+    def wall(self, z: float, sequence: MothballSequence, /):
         "Attempts to find the speed such that executing `sequence` results in a displacement of `z` on the Z axis. A warning is raised if the simulation using the calculated speed doesn't match `z`, meaning that inertia was encountered while simulating."
         vz = self.optimize(None, z, sequence)
 
@@ -1301,7 +1300,7 @@ class Player:
         if abs(self.z - z) > 1e-5:
             self.add_output_with_label("Warning", "encountered inertia on Z while optimizing!", "warning")
     
-    def blocks(self, zb: float, sequence: str, /):
+    def blocks(self, zb: float, sequence: MothballSequence, /):
         "Attempts to find the speed such that executing `sequence` results in traversing `zb` blocks on the Z axis. A warning is raised if the simulation using the calculated speed doesn't match `zb`, meaning that inertia was encountered while simulating."
         vz = self.optimize(None, zb, sequence, Player.block_to_dist)
 
@@ -1310,7 +1309,7 @@ class Player:
         if abs(Player.dist_to_block(self.z) - zb) > 1e-5:
             self.add_output_with_label("Warning", "encountered inertia on Z while optimizing!", "warning")
     
-    def xbwmm(self, xmm: float, sequence: str, /):
+    def xbwmm(self, xmm: float, sequence: MothballSequence, /):
         "Attempts to find the speed such that executing `sequence` results in using `xmm` blocks of momentum on the X axis. A warning is raised if the simulation using the calculated speed doesn't match `xmm`, meaning that inertia was encountered while simulating."
         vx = self.optimize(xmm, None, sequence, Player.mm_to_dist)
 
@@ -1319,7 +1318,7 @@ class Player:
         if abs(Player.dist_to_mm(self.x) - xmm) > 1e-5:
             self.add_output_with_label("Warning", "encountered inertia on X while optimizing!", "warning")
 
-    def xwall(self, x: float, sequence: str, /):
+    def xwall(self, x: float, sequence: MothballSequence, /):
         "Attempts to find the speed such that executing `sequence` results in a displacement of `x` on the X axis. A warning is raised if the simulation using the calculated speed doesn't match `x`, meaning that inertia was encountered while simulating."
         vx = self.optimize(x, None, sequence)
 
@@ -1328,7 +1327,7 @@ class Player:
         if abs(self.x - x) > 1e-5:
             self.add_output_with_label("Warning", "encountered inertia on X while optimizing!", "warning")
     
-    def xblocks(self, xb: float, sequence: str, /):
+    def xblocks(self, xb: float, sequence: MothballSequence, /):
         "Attempts to find the speed such that executing `sequence` results in traversing `xb` blocks on the X axis. A warning is raised if the simulation using the calculated speed doesn't match `xb`, meaning that inertia was encountered while simulating."
         vx = self.optimize(xb, None, sequence, Player.block_to_dist)
 
@@ -1339,7 +1338,7 @@ class Player:
 
     # We need to fix nested functions
 
-    def function(self, name: str, *args: str, code: str, docstring: str):
+    def function(self, name: str, *args: str, code: MothballSequence, docstring: str):
         # `name` has to be checked which will be done later
 
         name = self.formatted(name)
@@ -1697,7 +1696,6 @@ self.local_funcs['{name}'] = {name}
 
         for i in range(min(len(args), len(can_be_positional))):
 
-            # RISKY RISKY RISKY RISKY RISKY
             datatype = list(can_be_positional.values())[i]
             if datatype == inspect.Parameter.empty:
                 datatype = str
@@ -1716,7 +1714,6 @@ self.local_funcs['{name}'] = {name}
 
             converted_args.append(converted_value)
         
-        # print(args, can_be_positional)
         if len(args) < len(can_be_positional):
             a = len(args) - len(can_be_positional)
             can_be_positional = {x:can_be_positional[x] for x in list(can_be_positional)[a:]}
@@ -1725,7 +1722,6 @@ self.local_funcs['{name}'] = {name}
             for j in args[len(can_be_positional):]:
                 c = self.safe_eval(j, list(var_positional.values())[0], locals)
                 converted_args.append(c)
-                # print(converted_args)
         
         elif not var_positional and len(args) > len(can_be_positional):
             raise TypeError(f"{func.__name__} accepts at most {len(can_be_positional)} positional arguments, got {len(args)} instead")
@@ -1736,17 +1732,12 @@ self.local_funcs['{name}'] = {name}
         for kw, value in kwargs.items():
             datatype = can_be_keyword.get(kw)
 
-            # print(kw, datatype)
-
             if datatype is None:
                 raise TypeError(f"{func.__name__} has no keyword argument '{kw}'")
             
             elif datatype in [int, float, f32]:
                 converted_kwargs[kw] = self.safe_eval(value, datatype, locals)
             else:
-                # if kw == "label": # is this even needed
-                #     if value is None:
-                #         value = func.__name__
 
                 converted_kwargs[kw] = datatype(value)
                 
@@ -1907,8 +1898,8 @@ self.local_funcs['{name}'] = {name}
 if __name__ == "__main__":
     a = Player()
 
-    s = 'sai( 1 ) f(10) sa(11) outx outvx'
+    s = 'repeat(sj, 1)'
     a.simulate(s)
     print("Parsed: ", s)
     b = a.show_output()
-    print(a.output)
+    # print(a.output)
