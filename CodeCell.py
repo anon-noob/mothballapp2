@@ -23,7 +23,7 @@ from Enums import *
 class SimulationSection(Cell):
     "Mothball Code Cell, `CodeEdit` as the input field, `RenderViewer` as the output viewer. The actual highlighting is done here, and the highlighting logic is computed in its linter `self.linter`."
     def __init__(self, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, mode: CellType):
-        super().__init__(generalOptions, colorOptions, textOptions, "code")
+        super().__init__(generalOptions, colorOptions, textOptions, mode)
         self.mode = mode
         self.words = []
         self.raw_output = []

@@ -494,14 +494,14 @@ class MainWindow(QMainWindow):
                 if cell is None:
                     break
 
-                if cell.mode == CellType.TEXT:
-                    b = self.addCell(cellType="text")
+                if cell.cell_type == CellType.TEXT:
+                    b = self.addCell(cellType=cell.cell_type)
                     b.input_field.setText(cell.raw_text)
                     if cell.mode == "render":
                         b.renderText()
 
                 else:
-                    b = self.addCell(cellType=cell.mode)
+                    b = self.addCell(cellType=cell.cell_type)
                     b.input_field.setText(cell.code.rstrip())
                     b.output_field.renderTextfromOutput(b.linter, cell.raw_output)
                     b.raw_output = cell.raw_output

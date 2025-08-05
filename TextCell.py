@@ -16,7 +16,7 @@ class TextSection(Cell):
     """
 
     def __init__(self, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, initialMode: TextCellState):
-        super().__init__(generalOptions, colorOptions, textOptions, "text")
+        super().__init__(generalOptions, colorOptions, textOptions, CellType.TEXT)
         self.mode = initialMode
         self.linter = MDLinter(generalOptions, colorOptions, textOptions)
         self.raw_text = ""

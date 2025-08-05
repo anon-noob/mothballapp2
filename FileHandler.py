@@ -196,7 +196,7 @@ def loadFile(filepath):
         a = f.get(str(i))
         if a is None:
             break
-        if a['mode'] == CellType.TEXT:
+        if a['cell_type'] == CellType.TEXT:
             entries[i] = TextCell(**a)
         else:
             entries[i] = CodeCell(**a)
@@ -301,5 +301,5 @@ if __name__ == "__main__":
     deleteAll()
 
     # print(getTextColorSettings())
-    # updateFiles()
+    updateFiles()
     pass
