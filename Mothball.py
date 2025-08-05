@@ -170,7 +170,10 @@ class MainWindow(QMainWindow):
         self.path = ""
         self.unsaved_changes = False
         self.user = FileHandler.user_path
-        FileHandler.deleteAll() # TEMP FIX!?
+        try:
+            FileHandler.deleteAll() # TEMP FIX!?
+        except Exception as e:
+            print(e)
         FileHandler.createDirectories()
         self.version = FileHandler.VERSION
 
