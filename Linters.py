@@ -226,7 +226,7 @@ class CodeLinter:
                 index += 1
 
                 if curr_func and not curr_func.after_keyword:
-                    if curr_func.current_parameter().kind == inspect.Parameter.VAR_POSITIONAL:
+                    if curr_func.current_parameter() and curr_func.current_parameter().kind == inspect.Parameter.VAR_POSITIONAL:
                         if curr_func.current_parameter().annotation == str and curr_func.func not in ["taps"]:
                             in_string = True
                     else:
