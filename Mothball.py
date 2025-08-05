@@ -22,6 +22,7 @@ import TextCell
 import FileHandler
 import json
 import ParkourWordle
+from Enums import CellType, TextCellState
 
 # Scintilla resizing issue with newlines (prob show scrollbar?)
 # Comments and docstring
@@ -29,6 +30,7 @@ import ParkourWordle
 # Re-enumerate the enums
 # Fix settings
 # Add other remaining colors
+# Var should not lint as strings
 
 class ActionStack:
     """
@@ -216,24 +218,24 @@ class MainWindow(QMainWindow):
 
         self.addCell()  # Add the first section by default
 
-        self.empty_add_xz_button.clicked.connect(lambda: self.addCell(cellType="xz"))
-        self.empty_add_y_button.clicked.connect(lambda: self.addCell(cellType="y"))
-        self.empty_add_text_button.clicked.connect(lambda: self.addCell(cellType="text"))
+        self.empty_add_xz_button.clicked.connect(lambda: self.addCell(cellType=CellType.XZ))
+        self.empty_add_y_button.clicked.connect(lambda: self.addCell(cellType=CellType.Y))
+        self.empty_add_text_button.clicked.connect(lambda: self.addCell(cellType=CellType.TEXT))
 
         self.createMenus()
         self.unsaved_changes = False
         
     
-    def addCell(self, after_cell_or_at_index: Optional[Union[CodeCell.SimulationSection, TextCell.TextSection, int]] = None, cellType: Literal["xz","y","text"] = "xz", addActionStack:bool = True, *, initialMode: Literal["edit", "render"] = "edit"):
+    def addCell(self, after_cell_or_at_index: Optional[Union[CodeCell.SimulationSection, TextCell.TextSection, int]] = None, cellType: CellType = CellType.XZ, addActionStack:bool = True, *, initialMode: TextCellState = TextCellState.EDIT):
         """
         Add a new xz (horizontal), y (vertical), or text (markdown) cell below. Returns the new cell.
         """
         self.empty_add_widget.hide()
         QApplication.processEvents()
 
-        if cellType == "xz" or cellType == "y":
+        if cellType == CellType.XZ or cellType == CellType.Y:
             section = CodeCell.SimulationSection(self.settings, self.codecell_colors, self.textcell_colors, self.removeCell, self.addCell, self.moveCell, self.onChangeDetected, mode=cellType)
-        elif cellType == "text":
+        elif cellType == CellType.TEXT:
             section = TextCell.TextSection(self.settings, self.codecell_colors, self.textcell_colors, self.removeCell, self.addCell, self.moveCell, self.onChangeDetected, initialMode=initialMode)
         
         if after_cell_or_at_index is None: # Add to the bottom end
@@ -363,9 +365,8 @@ class MainWindow(QMainWindow):
         data = {}
         if isinstance(self.CELLS[index], CodeCell.SimulationSection):
             data = {
-                "type": "code",
                 "name": self.name,
-                "mode": self.CELLS[index].mode,
+                "cell_type": self.CELLS[index].cellType,
                 "code": self.CELLS[index].input_field.text(),
                 "exec_time": "None",
                 "has_changed": False,
@@ -373,8 +374,8 @@ class MainWindow(QMainWindow):
             }
         elif isinstance(self.CELLS[index], TextCell.TextSection):
             data = {
-                "type": "text",
                 "raw_text": self.CELLS[index].input_field.text(),
+                "cell_type": self.CELLS[index].cellType,
                 "mode": self.CELLS[index].mode,
                 "has_changed": False
             }
@@ -396,9 +397,8 @@ class MainWindow(QMainWindow):
         Cell data differs depending on its `type`, which is either `code` or `text`. Type `code` cells have data
         ```
         code_cell_data: dict = {
-            "type": "code",
             "name": name_of_cell,
-            "mode": Literal["xz" "y"], # xz is a horizontal calculation cell, y is vertical
+            "mode": Literal[0,1,2], # 0 = xz, 1 = y
             "code": code_input, # The actual Mothball code
             "exec_time": "None",
             "has_changed": False,
@@ -409,7 +409,6 @@ class MainWindow(QMainWindow):
         Type `text` cells have data
         ```
         text_cell_data: dict = {
-            "type": "text",
             "raw_text": cell_input_text, # The given markdown text
             "mode": Literal["edit","render"], # Determines if the cell is in edit or render mode
             "has_changed": False
@@ -495,13 +494,13 @@ class MainWindow(QMainWindow):
                 if cell is None:
                     break
 
-                if cell.type == "text":
+                if cell.mode == CellType.TEXT:
                     b = self.addCell(cellType="text")
                     b.input_field.setText(cell.raw_text)
                     if cell.mode == "render":
                         b.renderText()
 
-                elif cell.type == "code":
+                else:
                     b = self.addCell(cellType=cell.mode)
                     b.input_field.setText(cell.code.rstrip())
                     b.output_field.renderTextfromOutput(b.linter, cell.raw_output)

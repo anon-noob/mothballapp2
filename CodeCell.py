@@ -14,6 +14,7 @@ from PyQt5.QtGui import QColor
 from BaseCell import Cell, CodeEdit, RenderViewer
 from Linters import CodeLinter
 from typing import Literal
+from Enums import *
 
 
 ## Delete newline when ctrl v
@@ -21,24 +22,7 @@ from typing import Literal
 
 class SimulationSection(Cell):
     "Mothball Code Cell, `CodeEdit` as the input field, `RenderViewer` as the output viewer. The actual highlighting is done here, and the highlighting logic is computed in its linter `self.linter`."
-    STYLE_DEFAULT = 0
-    STYLE_FAST = 1
-    STYLE_SLOW = 2
-    STYLE_STOP = 3
-    STYLE_RETURN = 4
-    STYLE_CALCS = 5
-    STYLE_SETTER = 6
-    STYLE_INPUTS = 7
-    STYLE_MODIFIER = 8
-    STYLE_NUMBERS = 9
-    STYLE_COMMENT = 10
-    STYLE_KW_ARG = 11
-    STYLE_NEST0 = 12
-    STYLE_NEST1 = 13
-    STYLE_NEST2 = 14
-    STYLE_ERROR = 15
-
-    def __init__(self, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, mode: Literal["xz","y"]):
+    def __init__(self, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, mode: CellType):
         super().__init__(generalOptions, colorOptions, textOptions, "code")
         self.mode = mode
         self.words = []
@@ -58,7 +42,7 @@ class SimulationSection(Cell):
         self.input_field.setUnmatchedBraceBackgroundColor(QColor("#4F4F4F"))
         self.input_field.setMatchedBraceBackgroundColor(QColor("#4F4F4F"))
 
-        self.bracket_colors = {0:self.STYLE_NEST0, 1:self.STYLE_NEST1, 2:self.STYLE_NEST2}
+        self.bracket_colors = {0:Style.NEST0, 1:Style.NEST1, 2:Style.NEST2}
 
         content_layout.addWidget(self.input_field)
 
@@ -83,9 +67,9 @@ class SimulationSection(Cell):
         self.down_button.clicked.connect(lambda: move_callback(self, 1))
         self.run_button.clicked.connect(self.run_simulation)
         self.delete_button.clicked.connect(lambda: remove_callback(self))
-        self.add_xz_button.clicked.connect(lambda: add_callback(self, "xz"))
-        self.add_y_button.clicked.connect(lambda: add_callback(self, "y"))
-        self.add_text_button.clicked.connect(lambda: add_callback(self, "text"))
+        self.add_xz_button.clicked.connect(lambda: add_callback(self, CellType.XZ))
+        self.add_y_button.clicked.connect(lambda: add_callback(self, CellType.Y))
+        self.add_text_button.clicked.connect(lambda: add_callback(self, CellType.TEXT))
 
         self.adjust_output_height()
 
@@ -108,9 +92,9 @@ class SimulationSection(Cell):
         "Execute the Mothball code and show its output."
         text = self.input_field.text()
         try:
-            if self.mode == "xz":
+            if self.mode == CellType.XZ:
                 p = mxz.Player()
-            elif self.mode == "y":
+            elif self.mode == CellType.Y:
                 p = my.Player()
             p.simulate(text)
             self.output_field.renderTextfromOutput(self.linter, p.output)

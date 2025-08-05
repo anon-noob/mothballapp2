@@ -1,72 +1,73 @@
 import os, platform, json
 from DataStorage import CodeCell, TextCell, File
+from Enums import *
 
-VERSION = "v1.1.0"
+VERSION = "v1.1.1"
 
 default_code_colors = {
-    "Code": {
-        "fast": "#00ffff",
-        "slow": "#1e90ff",
-        "stop": "#7fffd4",
-        "setters": "#ff8c00",
-        "returners": "#ff6347",
-        "inputs": "#00ff00",
-        "modifiers": "#00ff88",
-        "calculators": "#ffc0cb",
-        "numbers": "#ffff00",
-        "comment": "#808080",
-        "bracket1": "#ee82ee",
-        "bracket2": "#4169e1",
-        "bracket0": "#ffd700",
-        "keyword": "#ff00ff",
-        "variable": "#7cfc00",
-        "string": "#ff3030",
-        "backslash": "#fa8072",
-        "commentBackslash": "#424242",
-        "customFunctionParameter": "#e066ff",
-        "customFunction": "#c6e2ff",
-        "error": "#ff0000",
-        "default": "#ffffff",
-        "bool": "#0fff83"
+    StringLiterals.CODE: {
+        Style.FAST: "#00ffff",
+        Style.SLOW: "#1e90ff",
+        Style.STOP: "#7fffd4",
+        Style.SETTER: "#ff8c00",
+        Style.RETURN: "#ff6347",
+        Style.INPUTS: "#00ff00",
+        Style.MODIFIER: "#00ff88",
+        Style.CALCS: "#ffc0cb",
+        Style.NUMBERS: "#ffff00",
+        Style.COMMENT: "#808080",
+        Style.NEST1: "#ee82ee",
+        Style.NEST2: "#4169e1",
+        Style.NEST0: "#ffd700",
+        Style.KW_ARG: "#ff00ff",
+        Style.VARS: "#7cfc00",
+        Style.STRING: "#ff3030",
+        Style.BACKSLASH: "#fa8072",
+        Style.COMMENT_BACKSLASH: "#424242",
+        Style.CUSTOM_FUNC_PARAMETER: "#e066ff",
+        Style.CUSTOM_FUNC: "#c6e2ff",
+        Style.ERROR: "#ff0000",
+        Style.DEFAULT: "#ffffff",
+        Style.BOOL: "#0fff83"
     },
-    "Output": {
-        "zLabel": "#00ffff",
-        "xLabel": "#ee82ee",
-        "label": "#ff8c00",
-        "warning": "#ff6347",
-        "text": "#ffd700",
-        "positiveNumber": "#00ff00",
-        "negativeNumber": "#ff6347",
-        "placeholder": "#808080",
-        "default": "#ffffff"
+    StringLiterals.OUTPUT: {
+        Style.OUTPUT_ZLABEL: "#00ffff",
+        Style.OUTPUT_XLABEL: "#ee82ee",
+        Style.OUTPUT_LABEL: "#ff8c00",
+        Style.OUTPUT_WARNING: "#ff6347",
+        Style.OUTPUT_TEXT: "#ffd700",
+        Style.OUTPUT_POSITIVE: "#00ff00",
+        Style.OUTPUT_NEGATIVE: "#ff6347",
+        Style.OUTPUT_PLACEHOLDER: "#808080",
+        Style.DEFAULT: "#ffffff"
     },
-    "Code Background": "#2e2e2e",
-    "Output Background": "#2e2e2e"
+    StringLiterals.CODE_BACKGROUND: "#2e2e2e",
+    StringLiterals.OUTPUT_BACKGROUND: "#2e2e2e"
 }
 
 default_text_colors = {
-    "Code": {
-        "heading1": "#00ff88",
-        "heading2": "#00ff88",
-        "heading3": "#00ff88",
-        "default": "#ffffff"
+    StringLiterals.CODE: {
+        Style.HEADER1: "#00ff88",
+        Style.HEADER2: "#00ff88",
+        Style.HEADER3: "#00ff88",
+        Style.DEFAULT: "#ffffff"
     },
-    "Render": {
-        "heading1": "#00ff88",
-        "heading2": "#00ff88",
-        "heading3": "#00ff88",
-        "links": "#1fb9e8",
-        "default": "#ffffff",
-        "Output Background": "#3e3e3e",
-        "Block Background": "#242424",
-        "Positional Parameter": "#FF009D",
-        "Var Positional Parameter": "#FF4BBA",
-        "Keyword Parameter": "#ff6200",
-        "Positional or Keyword Parameter": "#ffcf33",
-        "datatype": "#0ffff0"
+    StringLiterals.RENDER: {
+        Style.RENDER_HEADER1: "#00ff88",
+        Style.RENDER_HEADER2: "#00ff88",
+        Style.RENDER_HEADER3: "#00ff88",
+        Style.LINKS: "#1fb9e8",
+        Style.DEFAULT: "#ffffff",
+        Style.POSITIONAL_PARAMETER: "#FF009D",
+        Style.VAR_POSITIONAL_PARAMETER: "#FF4BBA",
+        Style.KEYWORD_PARAMETER: "#ff6200",
+        Style.POSITIONAL_OR_KEYWORD_PARAMETER: "#ffcf33",
+        Style.DATATYPE: "#0ffff0"
     },
-    "Code Background": "#2e2e2e",
-    "Render Background": "#2e2e2e"
+    StringLiterals.OUTPUT_BACKGROUND: "#3e3e3e",
+    StringLiterals.RENDER_BLOCK_BACKGROUND: "#242424",
+    StringLiterals.RENDER_CODE_BACKGROUND: "#2e2e2e",
+    StringLiterals.RENDER_BACKGROUND: "#2e2e2e"
 }
 
 default_settings = {
@@ -147,11 +148,26 @@ def getPathToSettings():
         raise FileNotFoundError(f"No directory exists to settings")
     return path
 
+def convertKeysToInt(dictionary: dict):
+    new_dict = {}
+    for key,value in dictionary.items():
+        if isinstance(key, str) and key.isnumeric():
+            key = int(key)
+            new_dict[key] = None
+        else:
+            new_dict[key] = None
+        if isinstance(value, dict):
+            new_dict[key] = convertKeysToInt(value)
+        else:
+            new_dict[key] = value
+    
+    return new_dict
+
 def getSettings(fileName):
     "Get settings from `fileName`. For general settings, use `getGeneralSettings`"
     path = os.path.join(getPathToSettings(), fileName)
     with open(path) as file:
-        return json.load(file)
+        return convertKeysToInt(json.load(file))
     
 def getCodeColorSettings():
     "Get the color mapping for Mothball code highlighting"
@@ -180,9 +196,9 @@ def loadFile(filepath):
         a = f.get(str(i))
         if a is None:
             break
-        if a['type'] == "text":
+        if a['mode'] == CellType.TEXT:
             entries[i] = TextCell(**a)
-        elif a['type'] == "code":
+        else:
             entries[i] = CodeCell(**a)
 
         i += 1
@@ -215,6 +231,34 @@ def reindexFiles():
                 json.dump(new_data, f, indent=4)
         
         except Exception as e:
+            pass
+
+def updateFiles():
+    notebooks_path = getNotebooks()
+    files = [f for f in os.listdir(notebooks_path) if os.path.isfile(os.path.join(notebooks_path, f))]
+
+    for file in files:
+        try:
+            with open(os.path.join(notebooks_path,file), "r") as f:
+                data = json.load(f)
+
+            i = 0
+            while str(i) in data:
+                if 'type' in data[str(i)]:
+                    del data[str(i)]['type']
+                if isinstance(data[str(i)]['mode'], str) or isinstance(data[str(i)]['mode'], int):
+                    a = data[str(i)]['mode']
+                    data[str(i)]['cell_type'] = {"xz": 0, "y": 1, "text": 2}.get(a, a)
+                    if a != 2:
+                        del data[str(i)]['mode']
+                    else:
+                        data[str(i)]['mode'] = StringLiterals.RENDER
+
+                i += 1
+            
+            with open(os.path.join(notebooks_path,file), "w") as f:
+                json.dump(data, f, indent=4)
+        except:
             pass
 
 def versionIsOutdated(version_str: str):
@@ -255,3 +299,7 @@ if __name__ == "__main__":
             print("Cancelled")
     
     deleteAll()
+
+    # print(getTextColorSettings())
+    # updateFiles()
+    pass

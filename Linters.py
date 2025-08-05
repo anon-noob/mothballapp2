@@ -9,53 +9,14 @@ import mothball_simulation_y as my
 from utils import *
 import string
 from typing import Literal
+from Enums import *
 
 class CodeLinter:
     """
     Manages linting mothball syntax and mothball simulation outputs.
     """
-    STYLE_DEFAULT = 0
-    STYLE_FAST = 1
-    STYLE_SLOW = 2
-    STYLE_STOP = 3
-    STYLE_RETURN = 4
-    STYLE_CALCS = 5
-    STYLE_SETTER = 6
-    STYLE_INPUTS = 7
-    STYLE_MODIFIER = 8
-    STYLE_NUMBERS = 9
-    STYLE_COMMENT = 10
-    STYLE_KW_ARG = 11
-    STYLE_NEST0 = 12
-    STYLE_NEST1 = 13
-    STYLE_NEST2 = 14
-    STYLE_ERROR = 15
-    STYLE_VARS = 16
-    STYLE_STRING = 17
-    STYLE_LINKS = 18
-    STYLE_HEADER1 = 19
-    STYLE_HEADER2 = 20
-    STYLE_HEADER3 = 21
-    STYLE_RENDER_HEADER1 = 22
-    STYLE_RENDER_HEADER2 = 23
-    STYLE_RENDER_HEADER3 = 24
 
-    STYLE_OUTPUT_LABEL = 25
-    STYLE_OUTPUT_ZLABEL = 26
-    STYLE_OUTPUT_XLABEL = 27
-    STYLE_OUTPUT_WARNING = 28
-    STYLE_OUTPUT_POSITIVE = 29
-    STYLE_OUTPUT_NEGATIVE = 30
-    STYLE_OUTPUT_TEXT = 31
-
-    STYLE_POSITIONAL_PARAMETER = 32
-    STYLE_POSITIONAL_OR_KEYWORD_PARAMETER = 33
-    STYLE_KEYWORD_PARAMETER = 34
-    STYLE_VAR_POSITIONAL_PARAMETER = 35
-
-    STYLE_DATATYPE = 36
-
-    def __init__(self, generalOptions: dict, colorOptions: dict, textOptions: dict, mode: Literal["xz", "y"]):
+    def __init__(self, generalOptions: dict, colorOptions: dict, textOptions: dict, mode: CellType):
         self.mode = mode # xz or y
         self.options = generalOptions
         self.colorOptions = colorOptions
@@ -63,8 +24,8 @@ class CodeLinter:
         self.words = []
         self.word_to_index = {}
         self.text = ""
-        self.bracket_colors = {0:self.STYLE_NEST0, 1:self.STYLE_NEST1, 2:self.STYLE_NEST2}
-        if mode == "xz":
+        self.bracket_colors = {0:Style.NEST1, 1:Style.NEST2, 2:Style.NEST0}
+        if mode == CellType.XZ:
             for i in mxz.Player.FUNCTIONS_BY_TYPE.values():
                 self.words += i
 
@@ -74,7 +35,7 @@ class CodeLinter:
             for e, func_list in enumerate(mxz.Player.FUNCTIONS_BY_TYPE.values(),1):
                 for word in func_list:
                     self.word_to_index[word] = e
-        elif mode == "y":
+        elif mode == CellType.Y:
             for i in my.Player.FUNCTIONS_BY_TYPE.values():
                 self.words += i
             self.modifiers = ["water","wt", "lava","lv", "ladder", "ld", "bl", "vine", "web"]
@@ -114,22 +75,7 @@ class CodeLinter:
         Main function for linting. Returns a list of 2-tuples, each tuple contains the token and the style to lint.
         """
         tokens_and_style: list[tuple[str, int]] = []
-        # new_block_states = []
-        # startingBlockStates = deepcopy(startingBlockStates)
 
-        # curr_line = startingBlockStates.line_number
-        # follows_dot = False
-        # in_square_brackets = startingBlockStates.in_brackets
-        # local_parenthesis_stack = startingBlockStates.parenthesis_stack
-        # in_comment = startingBlockStates.in_comment
-        # last_function = startingBlockStates.current_function
-        # depth = startingBlockStates.depth
-        # func_stack = startingBlockStates.function_stack
-        # curr_func = func_stack.peek()
-        # in_string = startingBlockStates.in_string
-        # last_nonspace_token = startingBlockStates.last_nonspace_token
-        # last_nonspace_token_index = -1
-        # index = -1
         curr_line = 0
         follows_dot = False
         in_square_brackets = False
@@ -149,24 +95,10 @@ class CodeLinter:
         
         for token in listOfTokens:
             if token == "\n":
-
-            #     new_state = BlockData()
-            #     new_state.line_number = curr_line + 1
-            #     new_state.in_brackets = in_square_brackets
-            #     new_state.in_comment = in_comment
-            #     new_state.in_brackets = in_square_brackets
-            #     new_state.in_string = in_string
-            #     new_state.depth = depth
-            #     new_state.current_function = last_function
-            #     new_state.last_nonspace_token = last_nonspace_token
-            #     new_state.function_stack = func_stack.copy()
-            #     new_state.parenthesis_stack = local_parenthesis_stack + []
                 curr_line += 1
-            #     new_block_states.append(new_state)
-            
             
             elif token.startswith("\\"):
-                tokens_and_style.append((token, self.STYLE_DEFAULT))
+                tokens_and_style.append((token, Style.BACKSLASH))
                 index += 1
                 if not token.isspace():
                     last_nonspace_token = token
@@ -174,7 +106,7 @@ class CodeLinter:
                 continue
 
             elif in_comment:
-                tokens_and_style.append((token, self.STYLE_COMMENT))
+                tokens_and_style.append((token, Style.COMMENT))
                 index += 1
                 if token == "#":
                     in_comment = False
@@ -186,7 +118,7 @@ class CodeLinter:
             elif follows_dot:
                 follows_dot = False
                 if token in self.inputs:
-                    tokens_and_style.append((token, self.STYLE_INPUTS))
+                    tokens_and_style.append((token, Style.INPUTS))
                     index += 1
                     if not token.isspace():
                         last_nonspace_token = token
@@ -195,7 +127,7 @@ class CodeLinter:
             
             elif in_string and token not in ",#=}" and not in_curly_brackets:
                 if last_function == "var" and token not in string.punctuation.replace("_","") and curr_func.current_parameter().name == "variable_name":
-                    tokens_and_style.append((token, self.STYLE_VARS))
+                    tokens_and_style.append((token, Style.VARS))
                     local_vars.append(token)
                     index += 1
                 elif token == ")":
@@ -215,16 +147,16 @@ class CodeLinter:
                                 curr_func = func_stack.peek()
                                 last_function = curr_func.func
                     else:
-                        tokens_and_style.append((token, self.STYLE_ERROR))
+                        tokens_and_style.append((token, Style.ERROR))
                 elif token == "{":
-                    tokens_and_style.append((token, self.STYLE_ERROR))
+                    tokens_and_style.append((token, Style.ERROR))
                     index += 1
                     depth += 1
                     local_parenthesis_stack.append(token)
                     local_parenthesis_stack_index.append(index)
                     in_curly_brackets = not in_curly_brackets
                 else:
-                    tokens_and_style.append((token, self.STYLE_STRING))
+                    tokens_and_style.append((token, Style.STRING))
                     index += 1
                 if not token.isspace():
                     last_nonspace_token = token
@@ -233,12 +165,12 @@ class CodeLinter:
 
             if token == "#":
                 in_comment = True
-                tokens_and_style.append((token, self.STYLE_COMMENT))
+                tokens_and_style.append((token, Style.COMMENT))
                 index += 1
 
             elif in_square_brackets:
                 if token in self.modifiers:
-                    tokens_and_style.append((token, self.STYLE_MODIFIER))
+                    tokens_and_style.append((token, Style.MODIFIER))
                     index += 1
                 elif token == "]":
                     in_square_brackets = False
@@ -249,16 +181,16 @@ class CodeLinter:
                     tokens_and_style[ind] = (tokens_and_style[ind][0], self.bracket_colors[depth % 3])
                     local_parenthesis_stack.pop()
                 else:
-                    tokens_and_style.append((token, self.STYLE_DEFAULT))
+                    tokens_and_style.append((token, Style.DEFAULT))
                     index += 1
 
             elif token == ".":
                 follows_dot = True
-                tokens_and_style.append((token, self.STYLE_DEFAULT))
+                tokens_and_style.append((token, Style.DEFAULT))
                 index += 1
             
             elif token.lower() in ('true', 'false'):
-                tokens_and_style.append((token, self.STYLE_DATATYPE))
+                tokens_and_style.append((token, Style.BOOL))
                 index += 1
 
             elif token in self.words and not follows_dot: # Identify main functions (sprint, zmm, bwmm, etc.)
@@ -267,11 +199,11 @@ class CodeLinter:
                 last_function = token
             
             elif token in local_vars:
-                tokens_and_style.append((token, self.STYLE_VARS))
+                tokens_and_style.append((token, Style.VARS))
                 index += 1
 
             elif token in "({[":
-                tokens_and_style.append((token, self.STYLE_ERROR))
+                tokens_and_style.append((token, Style.ERROR))
                 # tokens_and_style.append((token, self.bracket_colors[depth % 3]))
                 depth += 1
                 index += 1
@@ -292,7 +224,7 @@ class CodeLinter:
 
             elif token == ",": # NEXT PARAMETER
                 in_string = False
-                tokens_and_style.append((token, self.STYLE_DEFAULT))
+                tokens_and_style.append((token, Style.DEFAULT))
                 index += 1
 
                 if curr_func and not curr_func.after_keyword:
@@ -311,13 +243,13 @@ class CodeLinter:
 
             elif token == "=": # KEYWORD ARGUMENT
                 in_string = False
-                tokens_and_style.append((token, self.STYLE_DEFAULT))
+                tokens_and_style.append((token, Style.DEFAULT))
                 index += 1
                 if curr_func:
                     curr_func.set_after_keyword()
                 if curr_func and last_nonspace_token in curr_func.keyword_parameters_remaining:
                     text, style = tokens_and_style[last_nonspace_token_index]
-                    tokens_and_style[last_nonspace_token_index] = (text, self.STYLE_KW_ARG)
+                    tokens_and_style[last_nonspace_token_index] = (text, Style.KW_ARG)
 
 
                     curr_func.curr_param_name = last_nonspace_token
@@ -344,30 +276,29 @@ class CodeLinter:
                     elif token == "}":
                         in_curly_brackets = not in_curly_brackets
                 else:
-                    tokens_and_style.append((token, self.STYLE_ERROR))
+                    tokens_and_style.append((token, Style.ERROR))
                     index += 1
             
             elif token.isnumeric():
-                tokens_and_style.append((token, self.STYLE_NUMBERS))
+                tokens_and_style.append((token, Style.NUMBERS))
                 index += 1
             
             else:
-                tokens_and_style.append((token, self.STYLE_DEFAULT))
+                tokens_and_style.append((token, Style.DEFAULT))
                 index += 1
             if not token.isspace():
                 last_nonspace_token = token
                 last_nonspace_token_index = index
 
-        # return (tokens_and_style, new_block_states)
         return tokens_and_style
 
     def getFunction(self, name: str):
         """
         Returns the Mothball function object given the function's `name` or alias.
         """
-        if self.mode == "xz":
+        if self.mode == CellType.XZ:
             return mxz.Player.FUNCTIONS[name]
-        elif self.mode == "y":
+        elif self.mode == CellType.Y:
             return my.Player.FUNCTIONS[name]
 
     def parseText(self):
@@ -410,7 +341,7 @@ class CodeLinter:
             if i + 1 < len(outputLines):
                 string += "\n"
             if expr_type == "normal":
-                result.append((string, self.STYLE_OUTPUT_TEXT, 0))
+                result.append((string, Style.OUTPUT_TEXT, 0))
             else:
                 result += self.separate(string, expr_type)
         
@@ -429,21 +360,21 @@ class CodeLinter:
         result: list[tuple[str, str]] = []
 
         expr_type_to_tag_name = {
-            "expr": self.STYLE_OUTPUT_LABEL,
-            "x-expr": self.STYLE_OUTPUT_XLABEL,
-            "z-expr": self.STYLE_OUTPUT_ZLABEL,
-            "warning": self.STYLE_OUTPUT_WARNING
+            "expr": Style.OUTPUT_LABEL,
+            "x-expr": Style.OUTPUT_XLABEL,
+            "z-expr": Style.OUTPUT_ZLABEL,
+            "warning": Style.OUTPUT_WARNING
         }
 
         a, b = string.split(": ")
         tag_name = expr_type_to_tag_name.get(expr_type)
         if tag_name is None:
-            return [(string, self.STYLE_OUTPUT_TEXT, 0)]
+            return [(string, Style.OUTPUT_TEXT, 0)]
         result.append((a, tag_name, 0))
-        result.append((": ", self.STYLE_DEFAULT, 0))
+        result.append((": ", Style.DEFAULT, 0))
 
         if expr_type == "warning":
-            result.append((b, self.STYLE_OUTPUT_TEXT, 0))
+            result.append((b, Style.OUTPUT_TEXT, 0))
             return result
         
         b = b.split(" ")
@@ -451,16 +382,16 @@ class CodeLinter:
         # Either 1 or 3 items
         b_float = float(b[0])
         if b_float >= 0: # positive number
-            result.append((b[0], self.STYLE_OUTPUT_POSITIVE, 0))
+            result.append((b[0], Style.OUTPUT_POSITIVE, 0))
         else: # Negative number
-            result.append(('-', self.STYLE_DEFAULT, 0))
-            result.append((b[0][1:], self.STYLE_OUTPUT_NEGATIVE, 0))
+            result.append(('-', Style.DEFAULT, 0))
+            result.append((b[0][1:], Style.OUTPUT_NEGATIVE, 0))
 
         if len(b) == 3:
             sign = b[1]
             number = b[2]
-            result.append((f" {sign} ", self.STYLE_DEFAULT, 0))
-            result.append((number, self.STYLE_OUTPUT_POSITIVE if sign == '+' else self.STYLE_OUTPUT_NEGATIVE, 0))
+            result.append((f" {sign} ", Style.DEFAULT, 0))
+            result.append((number, Style.OUTPUT_POSITIVE if sign == '+' else Style.OUTPUT_NEGATIVE, 0))
         
         # result.append(("\n", self.STYLE_DEFAULT, 0))
         # print(result)
@@ -493,12 +424,12 @@ class CodeLinter:
         
         result = []
         if aliases:
-            result.append(("Aliases: ", self.STYLE_DEFAULT))
+            result.append(("Aliases: ", Style.DEFAULT))
             for alias in aliases:
                 result.append((alias, self.word_to_index[func_name]))
-                result.append((", ", self.STYLE_DEFAULT))
+                result.append((", ", Style.DEFAULT))
             if result and result[-1][0] == ", ": result.pop()
-            result.append(("\n", self.STYLE_DEFAULT))
+            result.append(("\n", Style.DEFAULT))
 
         if func_name in self.words: # Identify main functions (sprint, zmm, bwmm, etc.)
             result.append((func_name, self.word_to_index[func_name]))
@@ -507,34 +438,34 @@ class CodeLinter:
         def appendTokens(lst_of_params, style):
             result = []
             for i in lst_of_params:
-                if style == self.STYLE_VAR_POSITIONAL_PARAMETER:
-                    result.append(("*", self.STYLE_DEFAULT))
+                if style == Style.VAR_POSITIONAL_PARAMETER:
+                    result.append(("*", Style.DEFAULT))
                 result.append((i.name, style))
                 c = i.annotation.__name__
                 if "float" in c:
                     c = "float"
-                result.append((": ", self.STYLE_DEFAULT))
-                result.append((c, self.STYLE_DATATYPE))
+                result.append((": ", Style.DEFAULT))
+                result.append((c, Style.DATATYPE))
                 if isinstance(i.default, (int,float)):
-                    result.append((" = ", self.STYLE_DEFAULT))
-                    result.append((str(i.default), self.STYLE_NUMBERS))
+                    result.append((" = ", Style.DEFAULT))
+                    result.append((str(i.default), Style.NUMBERS))
                 elif isinstance(i.default, str):
-                    result.append((" = ", self.STYLE_DEFAULT))
-                    result.append((i.default, self.STYLE_STRING))
+                    result.append((" = ", Style.DEFAULT))
+                    result.append((i.default, Style.STRING))
                 elif i.default is None:
-                    result.append((" = ", self.STYLE_DEFAULT))
-                    result.append(("None", self.STYLE_DATATYPE))
-                result.append((", ", self.STYLE_DEFAULT))
+                    result.append((" = ", Style.DEFAULT))
+                    result.append(("None", Style.DATATYPE))
+                result.append((", ", Style.DEFAULT))
             return result
 
-        result.extend(appendTokens(positional, self.STYLE_POSITIONAL_PARAMETER))
+        result.extend(appendTokens(positional, Style.POSITIONAL_PARAMETER))
         if positional:
-            result.append(("/, ", self.STYLE_DEFAULT))
-        result.extend(appendTokens(positional_or_keyword, self.STYLE_POSITIONAL_OR_KEYWORD_PARAMETER))
-        result.extend(appendTokens(var_position, self.STYLE_VAR_POSITIONAL_PARAMETER))
+            result.append(("/, ", Style.DEFAULT))
+        result.extend(appendTokens(positional_or_keyword, Style.POSITIONAL_OR_KEYWORD_PARAMETER))
+        result.extend(appendTokens(var_position, Style.VAR_POSITIONAL_PARAMETER))
         if keyword and not var_position:
-            result.append(("*, ", self.STYLE_DEFAULT))
-        result.extend(appendTokens(keyword, self.STYLE_KEYWORD_PARAMETER))
+            result.append(("*, ", Style.DEFAULT))
+        result.extend(appendTokens(keyword, Style.KEYWORD_PARAMETER))
         
 
         if result:
@@ -542,7 +473,7 @@ class CodeLinter:
                 result.pop()
             elif result[-1][0] == "/, ": 
                 result.pop()
-                result.append(("/", self.STYLE_DEFAULT))
+                result.append(("/", Style.DEFAULT))
         result.append((")", self.bracket_colors[0]))
 
         return result
@@ -552,14 +483,6 @@ class MDLinter:
     """
     Manages linting markdown (not including inline code and block quotes)
     """
-    STYLE_DEFAULT = 0
-    STYLE_LINKS = 18
-    STYLE_HEADER1 = 19
-    STYLE_HEADER2 = 20
-    STYLE_HEADER3 = 21
-    STYLE_RENDER_HEADER1 = 22
-    STYLE_RENDER_HEADER2 = 23
-    STYLE_RENDER_HEADER3 = 24
 
     def __init__(self, generalOptions: dict, colorOptions: dict, textOptions: dict):
         self.raw_text = ""
@@ -580,9 +503,9 @@ class MDLinter:
         for part in parts:
             if part:
                 if part.startswith("[") and part.endswith(")"):
-                    result.append((part, self.STYLE_LINKS, 0))
+                    result.append((part, Style.LINKS, 0))
                 else:
-                    result.append((part, self.STYLE_DEFAULT, 0))
+                    result.append((part, Style.DEFAULT, 0))
 
         # Remove empty strings and return the result
         return result
@@ -600,9 +523,9 @@ class MDLinter:
         for i, word in enumerate(a):
             if i % 2:
                 if i + 1 < maximum:
-                    tokens += [(x[0], x[1], 2) for x in CodeLinter(self.options, self.colorOptions, self.textOptions, "xz").lintTexttoTokens(word)]
+                    tokens += [(x[0], x[1], 2) for x in CodeLinter(self.options, self.colorOptions, self.textOptions, CellType.XZ).lintTexttoTokens(word)]
                 else:
-                    tokens.append(("`", self.STYLE_DEFAULT, 0))
+                    tokens.append(("`", Style.DEFAULT, 0))
                     tokens += self.detectAttachments(word)
                     # tokens.append((word, self.STYLE_DEFAULT, 0))
             else:
@@ -627,11 +550,11 @@ class MDLinter:
         for line in self.raw_text.split("\n"):
             if not code_block:
                 if line.startswith("# "): # Heading 1
-                    tokens.append((line[2:] + "\n", self.STYLE_RENDER_HEADER1, 0))
+                    tokens.append((line[2:] + "\n", Style.RENDER_HEADER1, 0))
                 elif line.startswith("## "):
-                    tokens.append((line[3:] + "\n", self.STYLE_RENDER_HEADER2, 0))
+                    tokens.append((line[3:] + "\n", Style.RENDER_HEADER2, 0))
                 elif line.startswith("### "):
-                    tokens.append((line[4:] + "\n", self.STYLE_RENDER_HEADER3, 0))
+                    tokens.append((line[4:] + "\n", Style.RENDER_HEADER3, 0))
                 elif line.startswith("```"):
                     code_block = True
                     args = line[3:].strip().split("/")
@@ -646,12 +569,12 @@ class MDLinter:
             elif code_block:
                 if line.startswith("```"):
                     if show_func_sig:
-                        a = CodeLinter(self.options, self.colorOptions, self.textOptions, "xz")
+                        a = CodeLinter(self.options, self.colorOptions, self.textOptions, CellType.XZ)
                         bb = [(x[0], x[1], 1) for x in a.getFunctionSignature(code[0:len(code)-1])]
                         tokens += bb
 
                     else: # Normal code
-                        a = CodeLinter(self.options, self.colorOptions, self.textOptions, "xz")
+                        a = CodeLinter(self.options, self.colorOptions, self.textOptions, CellType.XZ)
                         bb = [(x[0], x[1], 1) for x in a.lintTexttoTokens(code[0:len(code)-1])]
                         tokens += bb
                         # print(tokens)
@@ -683,11 +606,11 @@ class MDLinter:
         tokens = []
         for line in self.raw_text.split("\n"):
             if line.startswith("# "): # Heading 1
-                tokens.append((line + "\n", self.STYLE_HEADER1))
+                tokens.append((line + "\n", Style.HEADER1))
             elif line.startswith("## "):
-                tokens.append((line + "\n", self.STYLE_HEADER2))
+                tokens.append((line + "\n", Style.HEADER2))
             elif line.startswith("### "):
-                tokens.append((line + "\n", self.STYLE_HEADER3))
+                tokens.append((line + "\n", Style.HEADER3))
             else:
-                tokens.append((line + "\n", self.STYLE_DEFAULT))
+                tokens.append((line + "\n", Style.DEFAULT))
         return tokens

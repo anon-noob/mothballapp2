@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from Enums import *
 
 @dataclass
 class CodeCell:
@@ -7,15 +8,13 @@ class CodeCell:
     mode: `xz` or `y` \\
     code: the code string \\
     raw_output: the raw output of the code, as a `list[tuple]`
-    type: `code`
     """
     name: str
-    mode: str
+    cell_type: CellType
     code: str
     exec_time: str | None
     has_changed: bool
     raw_output: list[list]
-    type: str
 
 @dataclass
 class TextCell:
@@ -23,10 +22,9 @@ class TextCell:
     name: name of file \\
     mode: `edit` or `render` \\
     raw_text: the raw output of the code, as a `list[tuple]`
-    type: `text`
     """
-    type: str
-    mode: str
+    cell_type: CellType
+    mode: StringLiterals
     rows: int
     has_changed: bool
     raw_text: str
