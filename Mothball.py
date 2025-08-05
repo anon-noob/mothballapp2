@@ -362,8 +362,9 @@ class MainWindow(QMainWindow):
         """
         Opens the settings window.
         """
-        self.settings_page = Settings.SettingsWindow(self.settings, self.codecell_colors, self.textcell_colors)
-        self.settings_page.show()
+        # self.settings_page = Settings.SettingsWindow(self.settings, self.codecell_colors, self.textcell_colors)
+        # self.settings_page.show()
+        QMessageBox.information(self, "Not Implemented", "Settings Page does not work at the moment, apologies for the inconvenience!")
 
     def collectCellData(self, index: int) -> dict:
         data = {}

@@ -4,37 +4,33 @@ import re
 import inspect
 from collections import Counter
 
-# lava
-# vine/ladder
+class MothballSequence(str):
+    "Subclass of str, flag for a mothball sequence instead of a generic string."
+    pass
 
 class Player:
 
-    JUMP = "jump"
-    GROUND = "ground"
-    AIR = "air"
-    SLIME = "slime"
+    JUMP = 0
+    GROUND = 1
+    AIR = 2
+    SLIME = 3
 
-    ALIAS_TO_MODIFIER = {"water": "water",
-                         "wt": "water",
-                         "lv": "lava",
-                         "lava": "lava",
-                         "web": "web",
-                         "block": "block",
-                         "bl": "block",
-                         "ladder": "ladder",
-                         "ld": "ladder",
-                         "vine": "ladder"
-                         }
+    WATER =  0b1
+    LAVA =   0b10
+    WEB =    0b100
+    LADDER = 0b1000
+
+    ALIAS_TO_MODIFIER = {"water": WATER,"wt": WATER,"lv": LAVA,"lava": LAVA,"web": WEB,"ladder": LADDER,"ld": LADDER,"vine": LADDER}
     
     _can_have_modifiers = ["up", "down", "jump", "air"]
 
-    MODIFIERS = ["water", "web", "lava", "ladder", "vine", "webjump"]
+    MODIFIERS = [WATER, LAVA, WEB, LADDER]
 
     FUNCTIONS_BY_TYPE = {
         "fast-movers": ["jump", "j", "air", "a", "slime"],
         "slow-movers": ["up", "down"],
         "setters": ["sety", "y", "setvy", "vy", "inertia","setceiling", "ceil"],
-        "calculators": ["repeat", "r", "poss", "print"],
+        "calculators": ["repeat", "r", "poss", "print", "inertialistener", "il"],
         "returners": ["ty", "sty", "outy", "outvy", "help"]
     }
 
@@ -50,9 +46,10 @@ class Player:
 
         self.state = self.GROUND
 
-        self.modifiers = []
+        self.modifiers = 0
 
         self.record = {}
+        self.record_inertia = {}
         
         self.local_vars = {"px": 0.0625}
         self.local_funcs = {}
@@ -194,7 +191,7 @@ class Player:
                 self.vy = 0.42 + 0.1 * jump_boost
                 # self.y = 0.0
 
-            elif "water" in self.modifiers:
+            elif self.modifiers & self.WATER:
                 a = self.vy * 0.8 - 0.02
                 if abs(a) < self.inertia_threshold:
                     a = 0
@@ -203,7 +200,7 @@ class Player:
                 if down:
                     self.vy = a # Going down
             
-            elif "lava" in self.modifiers:
+            elif self.modifiers & self.LAVA:
                 a = self.vy * 0.5 - 0.02
                 if abs(a) < self.inertia_threshold:
                     a = 0
@@ -216,29 +213,31 @@ class Player:
                 if state == self.SLIME:
                     self.vy = -self.vy
                 self.vy = (self.vy - 0.08) * 0.98
-                if "ladder" in self.modifiers:
+                if self.modifiers & self.LADDER:
                     if up:
                         self.vy = 0.12 * 0.98
                     elif down:
                         self.vy = max(-0.15, self.vy)
             
             # idk
+            self.inertialistener_helper()
 
-            if abs(self.vy) < self.inertia_threshold and "water" not in self.modifiers:
+            if abs(self.vy) < self.inertia_threshold and not self.modifiers & self.WATER:
                 self.vy = 0
 
-            if "web" in self.modifiers:
+            if self.modifiers & self.WEB:
                 self.vy = self.vy / 20
 
-            self.previously_in_web = "web" in self.modifiers
-            self.previously_in_water = ("water" in self.modifiers)
-            self.previously_in_lava = ("lava" in self.modifiers)
+            self.previously_in_web = self.modifiers & self.WEB
+            self.previously_in_water = self.modifiers & self.WATER
+            self.previously_in_lava = self.modifiers & self.LAVA
 
             if self.ceiling and self.y + self.vy + 1.8 >= self.ceiling:
                 self.vy = self.ceiling - self.y - 1.8
                 self.hit_ceiling = True
             
             self.possibilities_helper()
+            
         
     
     def possibilities_helper(self):
@@ -255,6 +254,26 @@ class Player:
 
             self.add_output_with_label(f"Tick {self.record['tick']}", f"{self.format_number(self.y)} ({top} to {bot})")
         self.record['tick'] += 1
+    
+    def get_inertia_speed(self):
+        return self.inertia_threshold / f32(0.91)
+    
+    def inertialistener_helper(self):
+        "Auxilary function for dealing with `inertialistener()` functions"
+        if not self.record_inertia:
+            return
+        
+        record_axis = self.record_inertia["type"]
+        inertia_speed = self.get_inertia_speed()
+        tolerance = abs(self.record_inertia["tolerance"]) + inertia_speed
+
+        if abs(self.vy) <= tolerance:
+            if abs(self.vy) <= inertia_speed:
+                self.add_output_with_label(f"Tick {self.record_inertia['tick']} Vy (Hit)", self.format_number(self.vy), "expr")
+            else:
+                self.add_output_with_label(f"Tick {self.record_inertia['tick']} Vy (Miss)", self.format_number(self.vy), "expr")
+
+        self.record_inertia['tick'] += 1
         
     
     def jump(self, duration: int = 1, jump_boost: int = 0):
@@ -286,7 +305,7 @@ class Player:
         self.move(1, state=self.SLIME)
         self.y = height
     
-    def repeat(self, sequence: str, count: int = 1):
+    def repeat(self, sequence: MothballSequence, count: int = 1):
         for _ in range(count):
             self.simulate(sequence, return_defaults=False, locals=self.local_vars)
     
@@ -309,7 +328,7 @@ class Player:
     def down(self, duration: int = 1):
         self.move(duration, down=True)
     
-    def possibilities(self, sequence: str):
+    def possibilities(self, sequence: MothballSequence):
         if not self.record: # JUST FOR NOW
             self.record = {"tick":1}
         else:
@@ -317,6 +336,23 @@ class Player:
         self.simulate(sequence, return_defaults=False)
         self.record = {}
     
+
+    def inertialistener(self, sequence: MothballSequence, /, tolerance: float = 0.002):
+        """
+        Displays ticks where while `sequence` is run, the player's velocity on EACH axis is within `tolerance` of hitting inertia, or has hit inertia.
+
+        Inertia is determined.
+        """
+
+        if not self.record_inertia:
+            self.record_inertia = {"type":"y", "tick":1, "tolerance":tolerance}
+        else:
+            raise TypeError(f"Nested inertia listener functions are not allowed.")
+        self.simulate(sequence, return_defaults=False)
+        self.record_inertia = {}
+
+
+
     def ballhelp(self, func: str):
         "Gets help about function `func`"
         f = Player.FUNCTIONS.get(func)
@@ -354,8 +390,8 @@ class Player:
         "air": air, "a": air,
         "repeat": repeat, "r": repeat,
         "print": printdisplay,
-        "outty": outty, "ty": outty,
-        "outsty": outsty, "sty": outsty,
+        "outty": outty, "outtopy": outty,
+        "outsty": outsty, "outsneaktopy": outsty,
         "slime": slime,
         "setceiling": setceiling, "setceil": setceiling, "ceil": setceiling,
         "vy": setvy, "setvy": setvy,
@@ -363,6 +399,7 @@ class Player:
         "ballhelp": ballhelp, "help": ballhelp,
         "up": up,
         "down": down,
+        "inertialistener": inertialistener, "il": inertialistener
     }
 
 
@@ -597,7 +634,7 @@ class Player:
         if modifiers:
             modifiers = self.validate_modifiers(modifiers.split(","))
         else:
-            modifiers = []
+            modifiers = 0
 
         if func.__name__ not in Player._can_have_modifiers and modifiers:
             raise TypeError(f"{func.__name__}() cannot be modified by a modifier")
@@ -605,12 +642,13 @@ class Player:
         return {"function": func, "inputs": inputs, "modifiers": modifiers, "args": positional_args, "kwargs": keyword_args}
     
     def validate_modifiers(self, modifiers: list):
+        m = 0
         for i, modify in enumerate(modifiers):
             a = self.ALIAS_TO_MODIFIER[modify.strip()]
-            modifiers[i] = a
+            m = m | a
             if a not in self.MODIFIERS:
                 raise TypeError(f"No such modifier '{a}'")
-        return modifiers
+        return m
     
     def check_types(self, func, args: list, kwargs: dict, locals = None):
         """
@@ -718,6 +756,7 @@ class Player:
         func = token["function"]
         self.inputs = token["inputs"]
         self.modifiers = token["modifiers"]
+        # print(self.modifiers)
         args = token["args"]
         kwargs = token["kwargs"]
 
@@ -746,7 +785,8 @@ if __name__ == "__main__":
     p = Player()
     # s = "jump(15) outy slime outy a(7) outy"
     # s = "jump(12) outy y(0.125) jump(12) outy"
-    s = " air(20) outvy down[ld] outvy up[ld] outvy r(down[ld] outvy, 5)"
+    s = "inertia(0.003) il(j outvy r(a outvy outy, 14))"
+    # s = "il(j outvy r(a outvy, 14))"
     p.simulate(s)
     p.show_output()
 

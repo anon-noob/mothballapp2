@@ -277,29 +277,31 @@ def versionIsOutdated(version_str: str):
         elif original_version[i] < compared_to[i]:
             return False
     return False
-        
+
+def deleteAll():
+    if operating_system == "Windows":
+        path = os.path.join(user_path, "AppData", "Roaming", "Mothball", "Mothball Settings")
+    elif operating_system == "Darwin":
+        path = os.path.join(user_path, "Library", "Application Support", "Mothball", "Mothball Settings")
+    elif operating_system == "Linux":
+        path = os.path.join(user_path, ".config", "Mothball", "Mothball Settings")
+    
+    # print("Delete All:", os.listdir(path))
+    # r = input("Confirm? (y/n) ").strip().lower()
+    # if r == "y":
+    for filename in os.listdir(path):
+        file_path = os.path.join(path, filename)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+    # else:
+    #     print("Cancelled")
+
 if __name__ == "__main__":
     # For deleting unnecessary files
-    def deleteAll():
-        if operating_system == "Windows":
-            path = os.path.join(user_path, "AppData", "Roaming", "Mothball", "Mothball Settings")
-        elif operating_system == "Darwin":
-            path = os.path.join(user_path, "Library", "Application Support", "Mothball", "Mothball Settings")
-        elif operating_system == "Linux":
-            path = os.path.join(user_path, ".config", "Mothball", "Mothball Settings")
-        
-        print("Delete All:", os.listdir(path))
-        r = input("Confirm? (y/n) ").strip().lower()
-        if r == "y":
-            for filename in os.listdir(path):
-                file_path = os.path.join(path, filename)
-                if os.path.isfile(file_path):
-                    os.remove(file_path)
-        else:
-            print("Cancelled")
     
-    deleteAll()
+    
+    # deleteAll()
 
     # print(getTextColorSettings())
-    updateFiles()
+    # updateFiles()
     pass

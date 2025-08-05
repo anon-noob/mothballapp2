@@ -14,7 +14,7 @@ from pprint import pp
 # aq and tq in optimize doesnt work
 # Custom Defined Recursive Functions
 # # This also means adding conditionals
-# Fix type annotations in custom defined functions
+# Fix custom defined functions
 
 # Mothball Strings
 
@@ -22,42 +22,41 @@ class OverwriteError(Exception):
     pass
 
 class MothballSequence(str):
+    "Subclass of str, flag for a mothball sequence instead of a generic string."
     pass
 
 class Player:
     pi = 3.14159265358979323846
 
     # These are 45-strafe movement, and cannot have an input appended (WASD)
-    _fortyfive_methods = ["walk45", "walkair45", "walkjump45", "sprint45", "sprintair45", "sprintjump45", "sneak45", "sneakair45", "sneakjump45", "sneaksprint45", "sneaksprintair45", "sneaksprintjump45"]
+    _fortyfive_methods = ("walk45", "walkair45", "walkjump45", "sprint45", "sprintair45", "sprintjump45", "sneak45", "sneakair45", "sneakjump45", "sneaksprint45", "sneaksprintair45", "sneaksprintjump45")
 
-    # These movement CAN have inputs
-    _can_have_input = ["walk", "walkair", "walkjump", "sprint", "sprintair", "sprintjump", "sneak", "sneakair", "sneakjump", "sneaksprint", "sneaksprintair", "sneaksprintjump"]
+    # These movement CAN have inputs (WASD)
+    _can_have_input = ("walk", "walkair", "walkjump", "sprint", "sprintair", "sprintjump", "sneak", "sneakair", "sneakjump", "sneaksprint", "sneaksprintair", "sneaksprintjump")
 
-    # These allow modifiers (see the attribute MODIFIERS)
-    _can_have_modifiers = _fortyfive_methods + _can_have_input + ["stop", "stopjump", "stopair", "sneakstop", "sneakstopair", "sneakstopjump"]
+    # These allow modifiers, which modify movement (see the attribute MODIFIERS)
+    _can_have_modifiers = _fortyfive_methods + _can_have_input + ("stop", "stopjump", "stopair", "sneakstop", "sneakstopair", "sneakstopjump")
     
-    MODIFIERS = ["water", "web", "lava", "block", "ladder", "vine"]
 
     mm_to_dist = dist_to_block = lambda mm: (mm + copysign(f32(0.6), mm))
     dist_to_mm = block_to_dist = lambda dist: (dist - copysign(f32(0.6), dist))
 
     sprintjump_boost = f32(0.2)
 
-    JUMP = "jump"
-    GROUND = "ground"
-    AIR = "air"
+    # Player States Enums
+    JUMP = 0
+    GROUND = 1
+    AIR = 2
 
-    ALIAS_TO_MODIFIER = {"water": "water",
-                         "wt": "water",
-                         "lv": "lava",
-                         "lava": "lava",
-                         "web": "web",
-                         "block": "block",
-                         "bl": "block",
-                         "ladder": "ladder",
-                         "ld": "ladder",
-                         "vine": "ladder"
-                         }
+    # Modifiers Enums (yes they're in binary)
+    WATER =  0b1
+    LAVA =   0b10
+    WEB =    0b100
+    BLOCK =  0b1000
+    LADDER = 0b10000
+
+    MODIFIERS = (WATER, WEB, LAVA, BLOCK, LADDER)
+    ALIAS_TO_MODIFIER = {"water": WATER,"wt": WATER,"lv": LAVA,"lava": LAVA,"web": WEB,"block": BLOCK,"bl": BLOCK,"ladder": LADDER,"ld": LADDER,"vine": LADDER}
 
     FUNCTIONS_BY_TYPE = {"fast-movers": [
         "sprint", "s", "sprint45", "s45", "sprintjump", "sprintjump45", "sj", "sj45", "sprintair", "sa", "sprintair45", "sa45", "sprintstrafejump", "sprintstrafejump45", "strafejump", "strafejump45", "stfj", "stfj45", "sneaksprint", "sneaksprintair", "sneaksprintjump", "sns", "snsa", "snsj", "sneaksprint45", "sneaksprintair45", "sneaksprintjump45", "sns45", "snsa45", "snsj45"
@@ -70,7 +69,7 @@ class Player:
     ], "calculators": [
         "bwmm", "xbwmm", "wall", "xwall", "inv", "xinv", "blocks", "xblocks", "repeat", "r", "possibilities", "poss", "xpossibilities", "xposs", "xzpossibilities", "xzposs", 'taps'
     ], "setters": [
-        "face", "facing", "f", "turn", "setposz", "z", "setvz", "vz", "setposx", "x", "setvx", "vx", "setslip", "slip", "setprecision", "precision", "pre", "inertia", "sprintairdelay", "sdel", "version", "v", "anglequeue", "aq", "tq", "turnqueue", "speed", "slow", "slowness", "sndel", "sneakdelay", "var", "function", "func", "alias", "toggle", "singleaxisinertia",
+        "face", "facing", "f", "turn", "setposz", "z", "setvz", "vz", "setposx", "x", "setvx", "vx", "setslip", "slip", "setprecision", "precision", "pre", "inertia", "sprintairdelay", "sdel", "version", "v", "anglequeue", "aq", "tq", "turnqueue", "speed", "slow", "slowness", "sndel", "sneakdelay", "var", "function", "func", "alias", "toggle", "singleaxisinertia","inertialistener", "il", "xinertialistener", "xil", "zinertialistener", "zil", "xzinertialistener", "xzil"
     ]}
 
     
@@ -105,7 +104,7 @@ class Player:
 
         self.inputs = ""
 
-        self.modifiers = []
+        self.modifiers = 0
 
         self.reverse = False
 
@@ -113,16 +112,14 @@ class Player:
 
         self.previously_sneaking = False
 
-        self.previously_blocking = False # maybe
-
         self.previously_in_web = False
 
         self.state = self.GROUND
 
         self.record = {}
 
-        self.swift = 0 # This is because the function will be called speed
-        self.slow = 0
+        self.speed_effect = 0
+        self.slow_effect = 0
         
         self.local_vars = {"px": 0.0625}
         self.local_funcs = {}
@@ -130,6 +127,8 @@ class Player:
         self.output: list[tuple[str | Literal['normal', 'z-expr', 'x-expr', 'expr']]] = []
 
         self.closed_vars = {} # For declaring functions only
+
+        self.record_inertia = {}
     
     @staticmethod
     def isfloat(string: str):
@@ -152,6 +151,8 @@ class Player:
                     return True
                 elif expr.strip().lower() == "false":
                     return False
+                else:
+                    return bool(expr)
 
             if "__" in expr:
                     raise RuntimeError(f"Rejected unsafe expression {expr}")
@@ -235,7 +236,6 @@ class Player:
                     item_to_eval += char
 
                     item_to_eval = item_to_eval[1:len(item_to_eval) - 1]
-                    # print(f"{item_to_eval = }")
                     if item_to_eval:
                         x = eval(item_to_eval, {"__builtins__": {}}, self.local_vars)
                         x = str(x)
@@ -281,12 +281,10 @@ class Player:
         """
 
         # Setting slipperiness here and treating it like air is analytically and numerically equivalent
-        if "water" in self.modifiers:
+        if self.modifiers  & self.WATER:
             slip=f32(0.8/0.91)
-        elif "lava" in self.modifiers:
+        elif self.modifiers & self.LAVA:
             slip=f32(0.5/0.91)
-        
-
         
         sj_boost = self.sprintjump_boost
         if self.previous_slip is None:
@@ -296,13 +294,13 @@ class Player:
             self.inputs = "wa"
         
         if speed is None:
-            speed = self.swift
+            speed = self.speed_effect
         if slow is None:
-            slow = self.slow
+            slow = self.slow_effect
 
         self.state = state
         # If sneaking is modified by ladders, always set the state to AIR
-        if ((self.sneak_delay and self.previously_sneaking) or (not self.sneak_delay and is_sneaking)) and "ladder" in self.modifiers:
+        if ((self.sneak_delay and self.previously_sneaking) or (not self.sneak_delay and is_sneaking)) and self.modifiers & self.LAVA:
             self.state = self.AIR
 
         override_rotation = False
@@ -313,20 +311,15 @@ class Player:
         if not slip: # If slip is not given, assume its ground slip since air slip (0.1) is always passed into the argument
             slip = self.default_ground_slip
         
-        # print(f"AT MOVE, {duration = }")
-
         for _ in range(duration):
-            # print(f"I got here with dur {duration}")
             if not override_rotation:
                 rotation = f32(self.get_angle() + rotation_offset)
-            # print(f"{rotation  = }")
                 
             # MOVING THE PLAYER
             self.x += self.vx
             self.z += self.vz
 
             forward, strafe = self.movement_values()
-            # print(forward, strafe)
 
             if self.reverse:
                 forward *= f32(-1)
@@ -358,7 +351,7 @@ class Player:
                 self.vz += self.mccos(facing) * sj_boost
 
             # BLOCKING
-            if "block" in self.modifiers:
+            if self.modifiers & self.BLOCK:
                 forward = f32(float(forward) * 0.2)
                 strafe  = f32(float(strafe) * 0.2)
 
@@ -392,10 +385,10 @@ class Player:
                 self.vx += float(strafe * cos_yaw - forward * sin_yaw)
                 self.vz += float(forward * cos_yaw + strafe * sin_yaw)
 
-            if "web" in self.modifiers:
+            if self.modifiers & self.WEB:
                 self.vx = self.vx / 4
                 self.vz = self.vz / 4
-            if "ladder" in self.modifiers:
+            if self.modifiers & self.LADDER:
                 self.vx = min(max(self.vx, -0.15),0.15)
                 self.vz = min(max(self.vz, -0.15),0.15)
             
@@ -404,13 +397,46 @@ class Player:
             self.previous_slip = slip
             self.previously_sprinting = is_sprinting
             self.previously_sneaking = is_sneaking
-            # self.previously_blocking = is_blocking
-            self.previously_in_web = "web" in self.modifiers
+            self.previously_in_web = bool(self.modifiers & self.WEB)
             self.last_turn = rotation - self.last_rotation
             self.last_rotation = rotation
 
             # Record possibilities
             self.possibilities_helper()
+
+            self.inertialistener_helper()
+
+    def get_inertia_speed(self):
+        "Get the speed of hitting inertia, depending on whether the player is midair, on ground, and with what slipperiness."
+        if self.state == self.AIR:
+            return self.inertia_threshold / f32(0.91)
+        else:
+            return self.inertia_threshold / f32(f32(0.91) * self.current_slip)
+
+    def inertialistener_helper(self):
+        "Auxilary function for dealing with `inertialistener()` functions"
+        if not self.record_inertia:
+            return
+        
+        record_axis = self.record_inertia["type"]
+        inertia_speed = self.get_inertia_speed()
+        tolerance = abs(self.record_inertia["tolerance"]) + inertia_speed
+
+        if record_axis == "x" or record_axis == "xz":
+            if abs(self.vx) <= tolerance:
+                if abs(self.vx) <= inertia_speed:
+                    self.add_output_with_label(f"Tick {self.record_inertia['tick']} Vx (Hit)", self.format_number(self.vx), "x-expr")
+                else:
+                    self.add_output_with_label(f"Tick {self.record_inertia['tick']} Vx (Miss)", self.format_number(self.vx), "x-expr")
+
+        if record_axis == "z" or record_axis == "xz":
+            if abs(self.vz) <= tolerance:
+                if abs(self.vz) <= inertia_speed:
+                    self.add_output_with_label(f"Tick {self.record_inertia['tick']} Vz (Hit)", self.format_number(self.vz), "z-expr")
+                else:
+                    self.add_output_with_label(f"Tick {self.record_inertia['tick']} Vz (Miss)", self.format_number(self.vz), "z-expr")
+
+        self.record_inertia['tick'] += 1
             
     def possibilities_helper(self):
         "Auxilary function for dealing with `possibilities()` functions"
@@ -480,7 +506,7 @@ class Player:
 
         Notets on fluids: The equation for water is the same as air with S = 0.8/0.91 and M being either 1 or 0 multiplied by 0.98 or 1, similarly for lava, set S = 0.5/0.91
         """
-        if "water" in self.modifiers or "lava" in self.modifiers: # It doesnt matter if you are in web
+        if self.modifiers & self.WATER or self.modifiers & self.LAVA: # It doesnt matter if you are in web
             M = f32(0.02)
         
         elif state == self.AIR:
@@ -668,9 +694,9 @@ class Player:
         player.rotation_queue = []
         player.rotation = 0.0
         if speed is not None:
-            player.swift = speed
+            player.speed_effect = speed
         if slow is not None:
-            player.slow = slow
+            player.slow_effect = slow
         if slip is not None:
             player.default_ground_slip = slip
         
@@ -882,9 +908,9 @@ class Player:
         """
 
         if speed is None:
-            speed = self.swift
+            speed = self.speed_effect
         if slow is None:
-            slow = self.slow
+            slow = self.slow_effect
 
         if speed < 0 or 256 < speed:
             raise ValueError(f"argument 'speed' should be an integer between 0 and 256 inclusive, not {speed}")
@@ -1013,7 +1039,7 @@ class Player:
         """
         if multiplier < 0 or 256 < multiplier:
             raise ValueError(f"speed() takes an integer between 0 and 256 inclusive, not {multiplier}")
-        self.swift = multiplier
+        self.speed_effect = multiplier
     
     def slowness(self, multiplier: int, /):
         """
@@ -1028,7 +1054,7 @@ class Player:
         """
         if multiplier < 0 or 256 < multiplier:
             raise ValueError(f"slow() takes an integer between 0 and 256 inclusive, not {multiplier}")
-        self.slow = multiplier
+        self.slow_effect = multiplier
     
     def var(self, variable_name: str, value: str):
         """
@@ -1151,8 +1177,51 @@ class Player:
         self.simulate(sequence, return_defaults=False)
         self.record = {}
 
+    def inertialistener(self, sequence: MothballSequence, /, tolerance: float = 0.002):
+        """
+        Displays ticks where while `sequence` is run, the player's velocity on EACH axis is within `tolerance` of hitting inertia, or has hit inertia.
 
-    def ballhelp(self, func: str):
+        Inertia is determined.
+        """
+
+        if not self.record_inertia:
+            self.record_inertia = {"type":"xz", "tick":1, "tolerance":tolerance}
+        else:
+            raise TypeError(f"Nested inertia listener functions are not allowed.")
+        self.simulate(sequence, return_defaults=False)
+        self.record_inertia = {}
+
+    def xinertialistener(self, sequence: MothballSequence, tolerance: float = 0.002):
+        """
+        Displays ticks where while `sequence` is run, the player's x-velocity is below the maximum velocity (as determined by `max_vel`, default 0.01), useful to check when players are close to hitting inertia in a sequence of ticks.
+
+        `max_vel` is set to 0.01 by default, but you can set it higher for different types of inertia (eg. ground inertia).
+
+        """
+
+        if not self.record_inertia: # JUST FOR NOW
+            self.record_inertia = {"type":"x", "tick":1, "tolerance":tolerance}
+        else:
+            raise TypeError(f"Nested inertia listener functions are not allowed.")
+        self.simulate(sequence, return_defaults=False)
+        self.record_inertia = {}
+
+    def zinertialistener(self, sequence: MothballSequence, tolerance: float = 0.002):
+        """
+        Displays ticks where while `sequence` is run, the player's z-velocity is below the maximum velocity (as determined by `max_vel`, default 0.01), useful to check when players are close to hitting inertia in a sequence of ticks.
+
+        `max_vel` is set to 0.01 by default, but you can set it higher for different types of inertia (eg. ground inertia).
+
+        """
+
+        if not self.record: # JUST FOR NOW
+            self.record_inertia = {"type":"z", "tick":1, "tolerance":tolerance}
+        else:
+            raise TypeError(f"Nested inertia listener functions are not allowed.")
+        self.simulate(sequence, return_defaults=False)
+        self.record_inertia = {}
+
+    def ballhelp(self, func: MothballSequence):
         "Gets help about function `func`"
         # NOTE: probably format the string better to include color, etc
         f = Player.FUNCTIONS.get(func)
@@ -1204,8 +1273,8 @@ class Player:
         p.air_sprint_delay = player.air_sprint_delay
         p.sneak_delay = player.sneak_delay
         p.previously_sprinting = player.previously_sprinting
-        p.swift = player.swift
-        p.slow = player.slow
+        p.speed_effect = player.speed_effect
+        p.slow_effect = player.slow_effect
         p.local_vars = player.local_vars
 
         return p
@@ -1354,8 +1423,6 @@ class Player:
 
         for arg in args:
             arg = arg.strip()
-            # print(arg)
-
             
             if arg == "/" and current_arg_kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
                 for i in range(len(arguments)):
@@ -1532,7 +1599,6 @@ self.local_funcs['{name}'] = {name}
         if stack:
             raise SyntaxError("Unmatched open parethesis")
 
-        # print(f"{string=} gave {result=}")
         return result
     
     def tokenize(self, string: str, locals: dict = None) -> dict:
@@ -1561,16 +1627,7 @@ self.local_funcs['{name}'] = {name}
         e2 = r"(.+)?"
 
         tokenize_regex = e1 + func + inputs + modifiers + args + e2 
-        # print(tokenize_regex)
-
         error1, func_name, inputs, modifiers, args, error2 = re.findall(tokenize_regex, string, flags=re.DOTALL)[0]
-#         print(f"""Result for {string}: 
-# Error1: {error1}
-# Func: {func_name}
-# Inputs: {inputs}
-# Modifiers: {modifiers}
-# Args: {args}
-# Error2: {error2}""")
 
         if error1 and error1 != "-":
             
@@ -1629,10 +1686,8 @@ self.local_funcs['{name}'] = {name}
         if modifiers:
             modifiers = self.validate_modifiers(modifiers.split(","))
         else:
-            modifiers = []
+            modifiers = 0
 
-        # print(func.__name__)
-        # print(func.__name__ in Player._can_have_modifiers)
         if func.__name__ not in Player._can_have_input:
             if inputs:
                 raise TypeError(f"{func.__name__}() cannot be modified by an input")
@@ -1650,13 +1705,13 @@ self.local_funcs['{name}'] = {name}
         return {"function": func, "inputs": inputs, "modifiers": modifiers, "args": positional_args, "kwargs": keyword_args}
     
     def validate_modifiers(self, modifiers: list):
+        m = 0
         for i, modify in enumerate(modifiers):
             a = self.ALIAS_TO_MODIFIER[modify.strip()]
-            modifiers[i] = a
-            # print(modify.strip())
+            m = m | a
             if a not in self.MODIFIERS:
                 raise TypeError(f"No such modifier '{a}'")
-        return modifiers
+        return m
 
 
     def check_types(self, func, args: list, kwargs: dict, locals = None):
@@ -1674,7 +1729,6 @@ self.local_funcs['{name}'] = {name}
         signature = inspect.signature(func).parameters.values()
 
         positional_only = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.POSITIONAL_ONLY and x.name != "self"}
-        # print(positional_only)
         positional_or_keyword = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD and x.name != "self"}
         keyword_only = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.KEYWORD_ONLY}
         var_positional = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.VAR_POSITIONAL}
@@ -1768,11 +1822,9 @@ self.local_funcs['{name}'] = {name}
 
         parsed_tokens = self.parse(sequence)
 
-        # print(parsed_tokens)
 
         for token in parsed_tokens:
             runnable = self.tokenize(token, locals=locals)
-            # pp(runnable)
             self.run(runnable)
 
         
@@ -1883,7 +1935,10 @@ self.local_funcs['{name}'] = {name}
             "wall": wall, "inv": wall,
             "xwall": xwall, "xinv": xwall,
             "blocks": blocks,
-            "xblocks": xblocks
+            "xblocks": xblocks,
+            "inertialistener": inertialistener, "il": inertialistener, "xzinertialistener": inertialistener, "xzil": inertialistener,
+            "xinertialistener": xinertialistener, "xil": xinertialistener,
+            "zinertialistener": zinertialistener, "zil": zinertialistener,
             }
     ALIASES = {}
     for alias, func in FUNCTIONS.items():
@@ -1898,8 +1953,11 @@ self.local_funcs['{name}'] = {name}
 if __name__ == "__main__":
     a = Player()
 
-    s = 'repeat(sj, 1)'
+    # s = 'f(-13.875) wa.a(6) x(0) xil(wj.a wa.d(8) wa.sd(2) wa.s) outx x(0) w.s outz z(0) zil(wj.sd wa.d(2) sa.wd(9)) outz s.wd outz xmm vec | aq(-16.255, -38.185, -62.88, -76.93, -84.985, -90) xil(sj sa45(5) zmm outx sa45(7)) outx'
+    s = 'sta vx(0.005494505336154793) pre(16) outvx sa outvx'
     a.simulate(s)
     print("Parsed: ", s)
     b = a.show_output()
     # print(a.output)
+    a.state = a.AIR
+    print(a.get_inertia_speed())
