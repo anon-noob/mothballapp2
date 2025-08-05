@@ -1279,7 +1279,7 @@ class Player:
 
         return p
 
-    def taps(self, *seq_or_num: str):
+    def taps(self, *seq_or_num: MothballSequence):
         """
         Runs each sequence until the player fully stops **on the ground**, or based on the most recent modifiers used. If a number is passed, execute the previous sequence that many times.
         
@@ -1958,7 +1958,7 @@ if __name__ == "__main__":
     s = """
 f(59.65) sa.wa(11) sj.wa sa(7) sj(8) sj(8) s vec | 
 aq(-11.037,-62.686,-58.221,-46.929,-83.174,-85.899,-90.)
-il(sj outvx z(0) sa45 outvx outx(-0.5) r(sa45 outvx, 5) outx(-0.5) zmm(1) r(sa45 outvx,5) outx)
+il(sj outvx z(0) sa45 outvx outx(-0.5) sa45(5) outx(-0.5) zmm(1) sa45(5) outx)
 """
     a.simulate(s)
     print("Parsed: ", s)
