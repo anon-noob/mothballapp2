@@ -489,7 +489,6 @@ class MainWindow(QMainWindow):
 
         filepath = QFileDialog(self).getOpenFileName(self, "Open File", FileHandler.getNotebooks())[0]
         if filepath:
-            self.unsaved_changes = False
             self.path = filepath
             self.clearAllCells()
             f = FileHandler.loadFile(filepath)
@@ -513,6 +512,7 @@ class MainWindow(QMainWindow):
                     b.raw_output = cell.raw_output
                     
                 i += 1
+            self.unsaved_changes = False
             self.setWindowTitle("Mothball Notebook - " + f.fileName)
             self.actionStack.reset()
             QApplication.processEvents()
