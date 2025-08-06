@@ -31,7 +31,7 @@ class Player:
         "slow-movers": ["up", "down"],
         "setters": ["sety", "y", "setvy", "vy", "inertia","setceiling", "ceil"],
         "calculators": ["repeat", "r", "poss", "print", "inertialistener", "il"],
-        "returners": ["ty", "sty", "outy", "outvy", "help"]
+        "returners": ["outty", "outsty", "outy", "outvy", "help"]
     }
 
     def __init__(self) -> None:

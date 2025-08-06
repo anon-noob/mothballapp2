@@ -25,7 +25,6 @@ class TextCell:
     """
     cell_type: CellType
     mode: StringLiterals
-    rows: int
     has_changed: bool
     raw_text: str
 

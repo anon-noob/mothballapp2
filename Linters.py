@@ -600,15 +600,53 @@ class MDLinter:
         """
         Parses `text`. Returns a list of 2-tuples, each tuple contains the text and the linting style.
         """
+        # THIS MIGHT BE THE ISSUE TO THE LINUX PROBLEM
         self.raw_text = text
         tokens = []
-        for line in self.raw_text.split("\n"):
-            if line.startswith("# "): # Heading 1
-                tokens.append((line + "\n", Style.HEADER1))
-            elif line.startswith("## "):
-                tokens.append((line + "\n", Style.HEADER2))
-            elif line.startswith("### "):
-                tokens.append((line + "\n", Style.HEADER3))
+        
+        # (NEW CODE ATTEMPT) First parse
+        results = []
+
+        item = ""
+        for char in text:
+            if char == "\n":
+                if item:
+                    results.append(item)
+                    results.append(char)
+                item = ""
+                continue
+            item += char
+        if item:
+            results.append(item)
+        
+        tokens = []
+        for i in results:
+            if i.startswith("# "):
+                tokens.append((i, Style.HEADER1))
             else:
-                tokens.append((line + "\n", Style.DEFAULT))
+                tokens.append((i, Style.DEFAULT))
         return tokens
+        
+        
+        
+        
+        
+        
+        
+        # m = self.raw_text.split("\n")
+        # print(m, "\n".join(m) == self.raw_text)
+        # for line in m:
+            # if line.startswith("# "): # Heading 1
+            #     tokens.append((line + "\n", Style.HEADER1))
+            # elif line.startswith("## "):
+            #     tokens.append((line + "\n", Style.HEADER2))
+            # elif line.startswith("### "):
+            #     tokens.append((line + "\n", Style.HEADER3))
+            # else:
+            # tokens.append((line + "\n", Style.DEFAULT))
+        # return tokens
+
+# a = MDLinter({},{},{})
+# print(a.parseTextToHighlight("""Hello and welcome!
+# to my greatest
+# achievement"""))

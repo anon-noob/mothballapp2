@@ -33,6 +33,19 @@ from PyQt5.QtWidgets import QScrollBar
 # Add other remaining colors
 # Var should not lint as strings
 # Set the scrollbars to always be visible
+
+# Disable automatic execution in text cells (why tf is that a thing)
+
+
+
+"""ERRORS:
+(Linux) Type in Text Cells does this error
+Assertion [lengthStyle == 0 || (lengthStyle > 0 && lengthStyle + position <= style.Length())] failed at ../../tmpym18yovx/QScintilla2/QScintilla_src-2.14.1/scintilla/src/CellBuffer.cpp 635
+
+Aborted
+"""
+
+
 class ActionStack:
     """
     Keeps track of GUI changes, mainly adding, removing, and moving cells. `undo` executes the action, `redo` executes the opposite action. 

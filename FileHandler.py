@@ -2,7 +2,7 @@ import os, platform, json
 from DataStorage import CodeCell, TextCell, File
 from Enums import *
 
-VERSION = "v1.1.1"
+VERSION = "v1.1.1" # Last release: 1.1.0
 
 default_code_colors = {
     StringLiterals.CODE: {
