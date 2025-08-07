@@ -25,17 +25,20 @@ import ParkourWordle
 from Enums import CellType, TextCellState
 from PyQt5.QtWidgets import QScrollBar
 
-# Scintilla resizing issue with newlines (prob show scrollbar?) <-- yep i set vertical scrollbar always on (Aug 5, 2025)
+# Scintilla resizing issue with newlines (prob show scrollbar?) <-- yep i set vertical scrollbar always on (Aug 5, 2025) but it doesn't fix the issue. 
+# Yes it does, just set the CodeEdit(QSciScintilla) to have a verical scroll policy (Aug 5, 2025)
+
 # Comments and docstring
 # Reorganize the help page
-# Re-enumerate the enums
+# MORE ENUMS
 # Fix settings
 # Add other remaining colors
 # Var should not lint as strings
-# Set the scrollbars to always be visible
+# Better error msgs
 
 # Disable automatic execution in text cells (why tf is that a thing)
 
+# Debian Linux fix: run in console `sudo apt-get install libxcb-xinerama0`
 
 
 """ERRORS:

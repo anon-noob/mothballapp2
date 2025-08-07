@@ -5,6 +5,7 @@ import re
 import inspect
 from collections import Counter
 from pprint import pp
+import functools
 
 # XZPoss w/ z neo z.
 # add miscs
@@ -16,7 +17,8 @@ from pprint import pp
 # # This also means adding conditionals
 # Fix custom defined functions
 
-# Mothball Strings
+# Multi-error msgs
+# Rewrite label formattings!
 
 class OverwriteError(Exception):
     pass
@@ -91,31 +93,20 @@ class Player:
         self.last_turn = f32(0.0)
 
         self.rotation_queue: list[tuple[str, f32]] = []
-
         self.air_sprint_delay = True
-
         self.sneak_delay = False
-
         self.precision = 7
-
         self.inertia_threshold = 0.005
-
         self.inertia_axis = 1
-
         self.inputs = ""
-
         self.modifiers = 0
-
         self.reverse = False
 
         self.previously_sprinting = False
-
         self.previously_sneaking = False
-
         self.previously_in_web = False
 
         self.state = self.GROUND
-
         self.record = {}
 
         self.speed_effect = 0
@@ -129,7 +120,20 @@ class Player:
         self.closed_vars = {} # For declaring functions only
 
         self.record_inertia = {}
-    
+
+        self.call_stack = [] # For debugging and error messaging
+
+    @staticmethod
+    def record_to_call_stack(func):
+        "Decorator which appends and pops from call stack for functions which accept a `MothballSequence`"
+        @functools.wraps(func)
+        def inner(*args, **kwargs):
+            # args[0] == self
+            args[0].call_stack.append(func.__name__)
+            func(*args, **kwargs)
+            args[0].call_stack.pop()
+        return inner
+
     @staticmethod
     def isfloat(string: str):
         try: 
@@ -1115,15 +1119,18 @@ class Player:
             self.rotation_queue.append(("turn", angle))
 
     # Nested functions
+    @record_to_call_stack
     def repeat(self, sequence: MothballSequence, count: int, /):
         "Run `sequence` for `count` times. Raises `ValueError` if `count < 0`"
-        
         if count < 0:
             raise ValueError(f"repeat() must have a nonnegative argument 'count'")
         
+        # self.stack_trace.append("repeat")
         for _ in range(count):
             self.simulate(sequence, return_defaults=False)
+        # self.stack_trace.pop()
     
+    @record_to_call_stack
     def possibilities(self, sequence: MothballSequence, min_distance: float, offset: float = 0.6, /, *, increment: float = 0.0625, miss: float = None):
         """
         Displays ticks where while `sequence` is run, the player reaches certain block milestones ONLY ON Z (as determined by `increment`, default 0.0625) less than or equal to `min_distance`, useful to check which tiers results in precise landings.
@@ -1139,9 +1146,12 @@ class Player:
             self.record = {"type":"z", "tick":1, "min_distance": min_distance, "z offset": offset, "z increment": increment, "miss": miss}
         else:
             raise TypeError(f"Nested posibilities functions are not allowed.")
+        self.call_stack.append("possibilities")
         self.simulate(sequence, return_defaults=False)
+        self.call_stack.pop()
         self.record = {}
     
+    @record_to_call_stack
     def xpossibilities(self, sequence: MothballSequence, min_distance: float, offset: float = 0.6, /, *, increment: float = 0.0625, miss: float = None):
         """
         Displays ticks where while `sequence` is run, the player reaches certain block milestones ONLY ON X (as determined by `increment`, default 0.0625) less than or equal to `min_distance`, useful to check which tiers results in precise landings.
@@ -1156,9 +1166,12 @@ class Player:
             self.record = {"type": "x", "tick":1, "min_distance": min_distance, "x offset": offset, "x increment": increment, "miss": miss}
         else:
             raise TypeError(f"Nested posibilities functions are not allowed.")
+        self.call_stack.append("xpossibilities")
         self.simulate(sequence, return_defaults=False)
+        self.call_stack.pop()
         self.record = {}
     
+    @record_to_call_stack
     def xzpossibilities(self, sequence: MothballSequence, min_distance: float, x_offset: float = 0.6, z_offset: float = 0.6, /, *, x_increment: float = 0.0625, z_increment: float = 0.0625, miss: float = None):
         """
         Displays ticks where while `sequence` is run, the player reaches certain block milestones (as determined by `increment`, default 0.0625) less than or equal to `min_distance`, useful to check which tiers results in precise landings.
@@ -1174,9 +1187,12 @@ class Player:
             self.record = {"type": "xz", "tick":1, "min_distance": min_distance, "x offset": x_offset, "z offset": z_offset, "x increment":x_increment, "z increment":z_increment, "miss": miss}
         else:
             raise TypeError(f"Nested posibilities functions are not allowed.")
+        self.call_stack.append("xzpossibilities")
         self.simulate(sequence, return_defaults=False)
+        self.call_stack.pop()
         self.record = {}
 
+    @record_to_call_stack
     def inertialistener(self, sequence: MothballSequence, /, tolerance: float = 0.002):
         """
         Displays ticks where while `sequence` is run, the player's velocity on EACH axis is within `tolerance` of hitting inertia, or has hit inertia.
@@ -1188,9 +1204,12 @@ class Player:
             self.record_inertia = {"type":"xz", "tick":1, "tolerance":tolerance}
         else:
             raise TypeError(f"Nested inertia listener functions are not allowed.")
+        self.call_stack.append("inertialistener")
         self.simulate(sequence, return_defaults=False)
+        self.call_stack.pop()
         self.record_inertia = {}
 
+    @record_to_call_stack
     def xinertialistener(self, sequence: MothballSequence, tolerance: float = 0.002):
         """
         Displays ticks where while `sequence` is run, the player's x-velocity is below the maximum velocity (as determined by `max_vel`, default 0.01), useful to check when players are close to hitting inertia in a sequence of ticks.
@@ -1203,9 +1222,12 @@ class Player:
             self.record_inertia = {"type":"x", "tick":1, "tolerance":tolerance}
         else:
             raise TypeError(f"Nested inertia listener functions are not allowed.")
+        self.call_stack.append("xinertialistener")
         self.simulate(sequence, return_defaults=False)
+        self.call_stack.pop()
         self.record_inertia = {}
 
+    @record_to_call_stack
     def zinertialistener(self, sequence: MothballSequence, tolerance: float = 0.002):
         """
         Displays ticks where while `sequence` is run, the player's z-velocity is below the maximum velocity (as determined by `max_vel`, default 0.01), useful to check when players are close to hitting inertia in a sequence of ticks.
@@ -1218,9 +1240,12 @@ class Player:
             self.record_inertia = {"type":"z", "tick":1, "tolerance":tolerance}
         else:
             raise TypeError(f"Nested inertia listener functions are not allowed.")
+        self.call_stack.append("zinertialistener")
         self.simulate(sequence, return_defaults=False)
+        self.call_stack.pop()
         self.record_inertia = {}
 
+    @record_to_call_stack
     def ballhelp(self, func: MothballSequence):
         "Gets help about function `func`"
         # NOTE: probably format the string better to include color, etc
@@ -1276,9 +1301,11 @@ class Player:
         p.speed_effect = player.speed_effect
         p.slow_effect = player.slow_effect
         p.local_vars = player.local_vars
+        p.call_stack = player.call_stack
 
         return p
 
+    @record_to_call_stack
     def taps(self, *seq_or_num: MothballSequence):
         """
         Runs each sequence until the player fully stops **on the ground**, or based on the most recent modifiers used. If a number is passed, execute the previous sequence that many times.
@@ -1295,6 +1322,8 @@ class Player:
         
         Example: `taps(walk[water](5))` walk while in water for 5t, then stops in water since the player was in water.
         """
+        self.call_stack.append("taps")
+
         d = {}
         last_seq = ""
         after_num = False
@@ -1326,6 +1355,8 @@ class Player:
                     self.simulate(f"stop[{modifiers}]", return_defaults=False)
         if had_sneak_delay:
             self.sneak_delay = True
+        
+        self.call_stack.pop()
 
     
     def optimize(self, x: float, z: float, sequence: str, conversion: "function" = lambda x: x, /) -> tuple[float, float] | float:
@@ -1355,65 +1386,82 @@ class Player:
         elif z:
             return vz
     
+    @record_to_call_stack
     def bwmm(self, zmm: float, sequence: MothballSequence, /):
         "Attempts to find the speed such that executing `sequence` results in using `zmm` blocks of momentum on the Z axis. A warning is raised if the simulation using the calculated speed doesn't match `zmm`, meaning that inertia was encountered while simulating."
         vz = self.optimize(None, zmm, sequence, Player.mm_to_dist)
+
 
         self.simulate(f" z(0) vz({vz}) outvz(label=Vz Needed) {sequence} zmm(label=Zmm Used) ", return_defaults=False)
 
         if abs(Player.dist_to_mm(self.z) - zmm) > 1e-5:
             self.add_output_with_label("Warning", "encountered inertia on Z while optimizing!", "warning")
 
+    @record_to_call_stack
     def wall(self, z: float, sequence: MothballSequence, /):
         "Attempts to find the speed such that executing `sequence` results in a displacement of `z` on the Z axis. A warning is raised if the simulation using the calculated speed doesn't match `z`, meaning that inertia was encountered while simulating."
         vz = self.optimize(None, z, sequence)
 
+
         self.simulate(f" z(0) vz({vz}) outvz(label=Vz Needed) {sequence} outz(label=Z dist)")
         
+
         if abs(self.z - z) > 1e-5:
             self.add_output_with_label("Warning", "encountered inertia on Z while optimizing!", "warning")
     
+    @record_to_call_stack
     def blocks(self, zb: float, sequence: MothballSequence, /):
         "Attempts to find the speed such that executing `sequence` results in traversing `zb` blocks on the Z axis. A warning is raised if the simulation using the calculated speed doesn't match `zb`, meaning that inertia was encountered while simulating."
         vz = self.optimize(None, zb, sequence, Player.block_to_dist)
 
+
         self.simulate(f" z(0) vz({vz}) outvz(label=Vz Needed) {sequence} zb(label=Z blocks)")
         
+
         if abs(Player.dist_to_block(self.z) - zb) > 1e-5:
             self.add_output_with_label("Warning", "encountered inertia on Z while optimizing!", "warning")
     
+    @record_to_call_stack
     def xbwmm(self, xmm: float, sequence: MothballSequence, /):
         "Attempts to find the speed such that executing `sequence` results in using `xmm` blocks of momentum on the X axis. A warning is raised if the simulation using the calculated speed doesn't match `xmm`, meaning that inertia was encountered while simulating."
         vx = self.optimize(xmm, None, sequence, Player.mm_to_dist)
 
+
         self.simulate(f" x(0) vx({vx}) outvx(label=Vx Needed) {sequence} xmm(label=Xmm Used) ", return_defaults=False)
+
 
         if abs(Player.dist_to_mm(self.x) - xmm) > 1e-5:
             self.add_output_with_label("Warning", "encountered inertia on X while optimizing!", "warning")
 
+    @record_to_call_stack
     def xwall(self, x: float, sequence: MothballSequence, /):
         "Attempts to find the speed such that executing `sequence` results in a displacement of `x` on the X axis. A warning is raised if the simulation using the calculated speed doesn't match `x`, meaning that inertia was encountered while simulating."
         vx = self.optimize(x, None, sequence)
 
+
         self.simulate(f" x(0) vx({vx}) outvx(label=Vx Needed) {sequence} outx(label=X dist)")
         
+
         if abs(self.x - x) > 1e-5:
             self.add_output_with_label("Warning", "encountered inertia on X while optimizing!", "warning")
     
+    @record_to_call_stack
     def xblocks(self, xb: float, sequence: MothballSequence, /):
         "Attempts to find the speed such that executing `sequence` results in traversing `xb` blocks on the X axis. A warning is raised if the simulation using the calculated speed doesn't match `xb`, meaning that inertia was encountered while simulating."
         vx = self.optimize(xb, None, sequence, Player.block_to_dist)
 
+
         self.simulate(f" x(0) vx({vx}) outvx(label=Vx Needed) {sequence} xb(label=X blocks)")
         
+
         if abs(Player.dist_to_block(self.x) - xb) > 1e-5:
             self.add_output_with_label("Warning", "encountered inertia on X while optimizing!", "warning")
 
     # We need to fix nested functions
-
+    @record_to_call_stack
     def function(self, name: str, *args: str, code: MothballSequence, docstring: str):
         # `name` has to be checked which will be done later
-
+        # self.stack_trace.append("function")
         name = self.formatted(name)
         # parse args in python-like syntax (arg_name: type_anno = default_val)
         param_regex = r"^([a-zA-Z][a-zA-Z0-9]*)(?:(?:\s*:\s*)([a-z0-9]+))?(?:(?:\s*=\s*)([a-zA-Z0-9]+))?$"
@@ -1468,6 +1516,7 @@ self.local_funcs['{name}'] = {name}
     """
         
         exec(code_string, globals() | {'self': self})
+        # self.stack_trace.pop()
 
     def get_suggestions(self, string: str):
         """
@@ -1532,7 +1581,7 @@ self.local_funcs['{name}'] = {name}
         
         return result
 
-    def parse(self, string: str, splitters: tuple = ("\n", " ", "\r", "\t")) -> list: 
+    def parse(self, string: str, splitters: tuple = ("\n", " ", "\r", "\t"), strict_whitespace: bool = True) -> list: 
         """
         Splits the string at any of the splitters that are outside of parenthesis. By default, it splits at any whitespace. 
         
@@ -1561,6 +1610,9 @@ self.local_funcs['{name}'] = {name}
         result = []
         token = ""
         stack = []
+        current = 0
+        high = len(string)
+        expecting_whitespace = False
         
         matches_next_element = lambda e: ((e == ")" and stack[-1] == "(") or (e == "]" and stack[-1] == "["))
 
@@ -1574,6 +1626,18 @@ self.local_funcs['{name}'] = {name}
         string = re.sub(replace_bar_regex, "x(0) z(0)", string)
         
         for char in string + splitters[0]:
+            if strict_whitespace:
+                if expecting_whitespace and not char.isspace():
+                    if char in ")]":
+                        raise SyntaxError(f"Unmatched brackets at character {current}: {string[max(0, current-5):min(high, current + 5)]}")
+                    else:
+                        msg = f"Space needed at character {current}"
+                        if self.call_stack:
+                            msg += f" (inside {', '.join(self.call_stack)})"
+                        msg += f": {string[max(0, current-7):min(high, current + 7)]}"
+                        raise SyntaxError(msg)
+                else:
+                    expecting_whitespace = False
 
             if char == "\\":
                 follows_slash = True
@@ -1584,10 +1648,16 @@ self.local_funcs['{name}'] = {name}
                 stack.append(char)
             elif (char == ")" or char == "]") and not follows_slash:
                 if not stack:
-                    raise SyntaxError("Unmatched brackets")
+                    raise SyntaxError(f"Unmatched brackets at character {current}: {string[max(0, current-5):min(high, current + 5)]}")
                 if not matches_next_element(char):
-                    raise SyntaxError("Unmatched brackets")
+                    raise SyntaxError(f"Unmatched brackets at character {current}: {string[max(0, current-5):min(high, current + 5)]}")
                 stack.pop()
+                if not stack:
+                    token += char
+                    follows_slash = False
+                    expecting_whitespace = True
+                    current += 1
+                    continue
 
             
             if char in splitters and not stack and not follows_slash:
@@ -1597,12 +1667,15 @@ self.local_funcs['{name}'] = {name}
 
             else:
                 token += char
+                current += 1
 
             follows_slash = False
+            expecting_whitespace = False
         
         if stack:
             raise SyntaxError("Unmatched open parethesis")
 
+        # print(result)
         return result
     
     def tokenize(self, string: str, locals: dict = None) -> dict:
@@ -1663,7 +1736,7 @@ self.local_funcs['{name}'] = {name}
         keyword_args = {}
 
         # TEST TEST TEST!!!!!! -> removes "None" from the args
-        args = self.parse(args, splitters=",")
+        args = self.parse(args, splitters=",", strict_whitespace=False)
         # args = [x for x in self.parse(args, splitters=",") if x not in [None, "None"]]
         
         
@@ -1957,12 +2030,11 @@ self.local_funcs['{name}'] = {name}
 if __name__ == "__main__":
     a = Player()
 
-    # s = 'f(-13.875) wa.a(6) x(0) xil(wj.a wa.d(8) wa.sd(2) wa.s) outx x(0) w.s outz z(0) zil(wj.sd wa.d(2) sa.wd(9)) outz s.wd outz xmm vec | aq(-16.255, -38.185, -62.88, -76.93, -84.985, -90) xil(sj sa45(5) zmm outx sa45(7)) outx'
+    # s = 'f(-13.875) wa.a(6) x(0) xil(wj.a wa.d(8) wa.sd(2) wa.s) outx x(0) w.s outz z(0) zil( wj.sd wa.d(2) sa.wd(9)) outz s.wd outz xmm vec | aq(-16.255, -38.185, -62.88, -76.93, -84.985, -90) xil(sj sa45(5) zmm outx sa45(7)) outx'
+    # s = 'r(sj(3),2)'
     # s = 'sta vx(0.005494505336154793) pre(16) outvx sa outvx'
-    s = "taps(sn)"
+    s = """bwmm(1, sj sa)"""
     a.simulate(s)
     print("Parsed: ", s)
     b = a.show_output()
     # print(a.output)
-    a.state = a.AIR
-    print(a.get_inertia_speed())
