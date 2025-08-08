@@ -258,7 +258,7 @@ def updateFiles():
             
             with open(os.path.join(notebooks_path,file), "w") as f:
                 json.dump(data, f, indent=4)
-        except:
+        except Exception as e:
             pass
 
 def versionIsOutdated(version_str: str):

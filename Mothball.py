@@ -190,6 +190,10 @@ class MainWindow(QMainWindow):
             FileHandler.deleteAll() # TEMP FIX!?
         except Exception as e:
             print(e)
+        try:
+            FileHandler.updateFiles() # TEMP FIX!?
+        except Exception as e:
+            print(e)
         FileHandler.createDirectories()
         self.version = FileHandler.VERSION
 

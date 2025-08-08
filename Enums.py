@@ -93,3 +93,18 @@ class StringLiterals(str):
     RENDER_BLOCK_BACKGROUND = "render block background"
     RENDER_CODE_BACKGROUND = "render code background"
     RENDER_BACKGROUND = "render background"
+
+class ExpressionType(int):
+    Z_LABEL = 0                     # zmm: 1.25
+    Z_LABEL_WITH_EXPRESSION = 1     # zmm: 1.25
+    X_LABEL = 2                     # outx: 0.5
+    X_LABEL_WITH_EXPRESSION = 3     # outx: 0.5
+    GENERAL_LABEL = 4               # Other Label
+    GENERAL_LABEL_WITH_NUMBER = 5   # Other Label: Any text
+    GENERAL_LABEL_WITH_EXPRESSION = 6 # Other Label: 1 + 2
+    WARNING = 7                     # Warning: message
+    TEXT = 8                        # Basic text
+    Z_INERTIA_HIT = 9               # Z Inertia (hit): speed (diff)
+    Z_INERTIA_MISS = 10              # Z Inertia (miss): speed (diff)
+    X_INERTIA_HIT = 11              # X Inertia (hit): speed (diff)
+    X_INERTIA_MISS = 12             # X Inertia (miss): speed (diff)

@@ -1,65 +1,69 @@
+from math import sin, cos, atan2 as arctan, sqrt, copysign, degrees as deg
 from numpy import float32 as f32
 from typing import Literal
 import re
 import inspect
 from collections import Counter
+from pprint import pp
+import functools
+from Enums import ExpressionType
+
+class OverwriteError(Exception):
+    pass
 
 class MothballSequence(str):
     "Subclass of str, flag for a mothball sequence instead of a generic string."
     pass
 
-class Player:
-
-    JUMP = 0
-    GROUND = 1
-    AIR = 2
-    SLIME = 3
-
-    WATER =  0b1
-    LAVA =   0b10
-    WEB =    0b100
-    LADDER = 0b1000
-
-    ALIAS_TO_MODIFIER = {"water": WATER,"wt": WATER,"lv": LAVA,"lava": LAVA,"web": WEB,"ladder": LADDER,"ld": LADDER,"vine": LADDER}
-    
-    _can_have_modifiers = ["up", "down", "jump", "air"]
-
-    MODIFIERS = [WATER, LAVA, WEB, LADDER]
-
-    FUNCTIONS_BY_TYPE = {
-        "fast-movers": ["jump", "j", "air", "a", "slime"],
-        "slow-movers": ["up", "down"],
-        "setters": ["sety", "y", "setvy", "vy", "inertia","setceiling", "ceil"],
-        "calculators": ["repeat", "r", "poss", "print", "inertialistener", "il"],
-        "returners": ["outty", "outsty", "outy", "outvy", "help"]
-    }
+class BasePlayer:
+    pi = 3.14159265358979323846
+    MODIFIERS = tuple()
+    ALIAS_TO_MODIFIER = {}
+    FUNCTIONS = {}
+    ALIASES = {}
+    FUNCTIONS_BY_TYPE = {}
+    _can_have_modifiers=()
+    _can_have_input=()
+    _fortyfive_methods=()
 
     def __init__(self) -> None:
-        self.y = 0.0
-        self.vy = 0.0
-
         self.precision = 7
-
         self.inertia_threshold = 0.005
+        self.modifiers = 0
+        self.reverse = False
 
+        self.previously_sprinting = False
+        self.previously_sneaking = False
         self.previously_in_web = False
 
-        self.state = self.GROUND
-
-        self.modifiers = 0
-
-        self.record = {}
-        
         self.local_vars = {"px": 0.0625}
         self.local_funcs = {}
 
-        self.output: list[tuple[str | Literal['normal', 'z-expr', 'x-expr', 'expr']]] = []
+        self.output: list[tuple[ExpressionType, tuple]] = []
 
         self.closed_vars = {} # For declaring functions only
 
-        self.ceiling = None
-        self.hit_ceiling = False
+        self.call_stack = [] # For debugging and error messaging
 
+    @staticmethod
+    def record_to_call_stack(func):
+        "Decorator which appends and pops from call stack for functions which accept a `MothballSequence`"
+        @functools.wraps(func)
+        def inner(*args, **kwargs):
+            # args[0] == self
+            args[0].call_stack.append(func.__name__)
+            func(*args, **kwargs)
+            args[0].call_stack.pop()
+        return inner
+
+    @staticmethod
+    def isfloat(string: str):
+        try: 
+            float(string)
+            return True
+        except ValueError: 
+            return False
+    
     @staticmethod
     def clean_backslashes(string: str):
         "Replaces backslashes if possible. Anything with `\` followed by a char will be replaced."
@@ -67,61 +71,53 @@ class Player:
 
     def safe_eval(self, expr: str, datatype: type, locals_dict: dict):
         "Evaluate and convert `expr` to `datatype`. If `datatype = str`, it returns the `expr` as normal."
-        if datatype in [float, int, f32]:
+        if datatype in [float, int, f32, bool]:
+            if datatype == bool:
+                if expr.strip().lower() == "true":
+                    return True
+                elif expr.strip().lower() == "false":
+                    return False
+                else:
+                    return bool(expr)
+
             if "__" in expr:
                     raise RuntimeError(f"Rejected unsafe expression {expr}")
             
             result = eval(expr, {"__builtins__": {}}, locals_dict)
             converted_value = datatype(result) if result is not None else None
             return converted_value
-        else:
+        else: # strings
             return expr
 
-    def add_output(self, string: str):
-        """
-        Appends to the `Player` object's `output` attribute, used for displaying results as normal
-        """
-        string = Player.clean_backslashes(self.formatted(str(string)))
-        self.output.append((string, "normal"))
+    def add_to_output(self, expression_type: ExpressionType, label: str = '', string_or_num: str | float = '', num2: float = 0, strip_label: bool = True):
+        if strip_label:
+            label = label.strip()
+        match expression_type:
+            case ExpressionType.Z_LABEL | ExpressionType.X_LABEL | ExpressionType.GENERAL_LABEL_WITH_NUMBER:
+                if num2:
+                    expression_type += 1 # changes ExpressionType Flag
+                    nn = string_or_num - num2
+                    self.output.append((expression_type, 
+                                    (BasePlayer.clean_backslashes(self.formatted(label)), ": ", self.truncate_number(num2), " - " if nn <= 0 else " + ", self.truncate_number(abs(nn)))))
+                else:
+                    self.output.append((expression_type, 
+                                    (BasePlayer.clean_backslashes(self.formatted(label)), ": ", self.truncate_number(string_or_num))))
 
-
-    def add_output_with_label(self, label: str, string: str = '', expr_type: str = 'z-expr'):
-        """
-        Appends to the `Player` object's `output` attribute, used for displaying results in the form `label: string`
-
-        All strings can be formatted by putting variable names inside curly brackets `{}`
-
-        `expr_type` is either `z-expr`, `x-expr`, or just `expr`
-        """
-        label = Player.clean_backslashes(self.formatted(label))
-        string = Player.clean_backslashes(self.formatted(str(string)))
-        self.output.append((f"{label}: {string}", expr_type))
+            case ExpressionType.TEXT:
+                self.output.append((expression_type, 
+                                    (self.formatted(string_or_num.strip()),)))
+            case ExpressionType.WARNING:
+                self.output.append((expression_type, 
+                                    ("Warning", ": ", BasePlayer.clean_backslashes(self.formatted(string_or_num.strip())))))
+            case ExpressionType.Z_INERTIA_HIT | ExpressionType.X_INERTIA_HIT | ExpressionType.Z_INERTIA_MISS | ExpressionType.X_INERTIA_MISS:
+                a = abs(abs(string_or_num) - abs(num2))
+                self.output.append((expression_type, 
+                                    (BasePlayer.clean_backslashes(self.formatted(label)), ": ", self.truncate_number(string_or_num), " (", self.truncate_number(a), ")")))
+            case ExpressionType.GENERAL_LABEL:
+                self.output.append((expression_type, (BasePlayer.clean_backslashes(self.formatted(label)),)))
     
-    def format_number(self, value: float, centered_about: float = 0, return_as_string = False):
-        """
-        Returns `value` as a number or an expression as a string. Automatically rounds the decimals according to the `Player` object's `precision` attribute.
-        
-        If `centered_about = 0`, return `value` as a string. \\
-        Otherwise, return a mathematical expression as a string such that the expression evaluates to `value` by adding or subtracting from `centered_about`. Note that `centered_about` will not be rounded.
-
-        ```py
-        >> p = Player()
-        >> p.format_number(3.1415926)
-        "3.1415926"
-        >> p.precision = 3 # now all numbers will round to 3 decimal places
-        >> p.format_number(3.1415926)
-        "3.142"
-        >> p.format_number(3.1415926, 2.71828)
-        "2.71828 + 0.423"
-        >> p.format_number(1.616, 2.71828)
-        "2.71828 - 1.102"
-        ```
-        """
-        if centered_about:
-            return f"{centered_about} {'-' if centered_about - value > 0 else '+'} {f'{abs(value - centered_about):.{self.precision}f}'}"
-
-        else:
-            return f"{value:.{self.precision}f}"
+    def truncate_number(self, value: float):
+        return f"{value:.{self.precision}f}"
     
     def formatted(self, string: str):
         "Formats string just like an f-string"
@@ -150,12 +146,11 @@ class Player:
                     item_to_eval += char
 
                     item_to_eval = item_to_eval[1:len(item_to_eval) - 1]
-                    # print(f"{item_to_eval = }")
                     if item_to_eval:
                         x = eval(item_to_eval, {"__builtins__": {}}, self.local_vars)
                         x = str(x)
 
-                    formatted_string += x
+                        formatted_string += x
                     item_to_eval = ''
                 else: 
                     formatted_string += item_to_eval + char
@@ -171,196 +166,10 @@ class Player:
             raise SyntaxError("Unmatched Brackets")
 
         return formatted_string
-    
-    def move(self, duration, jump_boost = 0, up = False, down = False, state = "GROUND"):
-        
-        for _ in range(duration):
-            
-            self.y += self.vy # (Pre order)
-            if self.hit_ceiling:
-                self.vy = 0
-                self.y = self.ceiling - 1.8
-                self.hit_ceiling = False
 
-            # idk
-            if self.previously_in_web:
-                self.vy = 0
-
-            if state == self.JUMP:
-                self.vy = 0.42 + 0.1 * jump_boost
-                # self.y = 0.0
-
-            elif self.modifiers & self.WATER:
-                a = self.vy * 0.8 - 0.02
-                if abs(a) < self.inertia_threshold:
-                    a = 0
-                if up:
-                    self.vy = a + 0.04 # Going up
-                if down:
-                    self.vy = a # Going down
-            
-            elif self.modifiers & self.LAVA:
-                a = self.vy * 0.5 - 0.02
-                if abs(a) < self.inertia_threshold:
-                    a = 0
-                if up:
-                    self.vy = a + 0.04 # Going up
-                if down:
-                    self.vy = a # Going down
-            
-            else:
-                if state == self.SLIME:
-                    self.vy = -self.vy
-                self.vy = (self.vy - 0.08) * 0.98
-                if self.modifiers & self.LADDER:
-                    if up:
-                        self.vy = 0.12 * 0.98
-                    elif down:
-                        self.vy = max(-0.15, self.vy)
-            
-            # idk
-
-            if abs(self.vy) < self.inertia_threshold and not self.modifiers & self.WATER:
-                self.vy = 0
-
-            if self.modifiers & self.WEB:
-                self.vy = self.vy / 20
-
-            self.previously_in_web = self.modifiers & self.WEB
-            self.previously_in_water = self.modifiers & self.WATER
-            self.previously_in_lava = self.modifiers & self.LAVA
-
-            if self.ceiling and self.y + self.vy + 1.8 >= self.ceiling:
-                self.vy = self.ceiling - self.y - 1.8
-                self.hit_ceiling = True
-            
-            self.possibilities_helper()        
-    
-    def possibilities_helper(self):
-        if not self.record:
-            return
-        
-        if self.vy < 0:
-            
-            top_diff = self.y % 0.0625
-            top = self.y - top_diff
-            botdiff = (self.y + self.vy) % 0.0625
-            bot = self.y + self.vy - botdiff + 0.0625
-
-            self.add_output_with_label(f"Tick {self.record['tick']}", f"{self.format_number(self.y)} ({top} to {bot})")
-        self.record['tick'] += 1
-    
-    def get_inertia_speed(self):
-        return self.inertia_threshold / f32(0.91)
-    
-    def jump(self, duration: int = 1, jump_boost: int = 0):
-        self.move(1, state = self.JUMP, jump_boost = jump_boost)
-        self.move(duration - 1, state = self.AIR)
-
-    def air(self, duration: int = 1):
-        self.move(duration, state=self.AIR)
-
-    def outy(self, centered_at: float = 0.0, label: str = "outy"):
-        self.add_output_with_label(label, self.format_number(self.y, centered_about=centered_at), "expr")
-
-    def outvy(self, centered_at: float = 0.0, label: str = "vy"):
-        self.add_output_with_label(label, self.format_number(self.vy, centered_about=centered_at), "expr")
-    
-    def sety(self, e: float):
-        self.y = e
-    
-    def inertia(self, value: float):
-        self.inertia_threshold = value
-
-    def outty(self, centered_at: float = 0, label: str = "top y"):
-        self.add_output_with_label(label, self.format_number(self.y + 1.8, centered_about=centered_at), "expr")
-    
-    def outsty(self, centered_at: float = 0, label: str = "top y (sneak)"):
-        self.add_output_with_label(label, self.format_number(self.y + 1.5, centered_about=centered_at), "expr")
-    
-    def slime(self, height: float = 0.0):
-        self.move(1, state=self.SLIME)
-        self.y = height
-    
-    def repeat(self, sequence: MothballSequence, count: int = 1):
-        for _ in range(count):
-            self.simulate(sequence, return_defaults=False, locals=self.local_vars)
-    
-    def printdisplay(self, string:str = ""):
-        self.add_output(string)
-
-    def setceiling(self, height: float = 0.0):
-        if height == 0.0:
-            self.ceiling = None
-        if height < 1.5:
-            raise ValueError("Ceiling height is too low") # This will change with the scale attribute later on
-        self.ceiling = height
-
-    def setvy(self, value: float, /):
-        self.vy = value
-    
-    def up(self, duration: int = 1):
-        self.move(duration, up=True)
-    
-    def down(self, duration: int = 1):
-        self.move(duration, down=True)
-    
-    def possibilities(self, sequence: MothballSequence):
-        if not self.record: # JUST FOR NOW
-            self.record = {"tick":1}
-        else:
-            raise TypeError(f"Nested posibilities functions are not allowed.")
-        self.simulate(sequence, return_defaults=False)
-        self.record = {}
-
-    def ballhelp(self, func: str):
-        "Gets help about function `func`"
-        f = Player.FUNCTIONS.get(func)
-        if f is None:
-            f = self.local_funcs.get(func)
-            # print(self.local_funcs)
-            # print(f)
-            if f is None:
-                raise NameError(f"Function {func} not found")
-            
-
-        f_sig = inspect.signature(f).parameters
-        # print(f"Help with {func}\n-------------------")
-        # print('Arguments:')
-        self.add_output(f"Help with {func}:")
-        self.add_output(f"  Arguments:")
-        
-
-        # print(f_sig.values())
-        for y in f_sig.values(): # PLEASE ADD * and /
-            # print(f"\t{y}")
-            if y.name != "self":
-                self.add_output(f"    {y}")
-        
-        self.add_output('')
-        # print(f.__doc__)
-        self.add_output(f.__doc__)
-
-    FUNCTIONS = {
-        "jump": jump, "j": jump,
-        "outy": outy,
-        "outvy": outvy,
-        "sety": sety, "y": sety,
-        "inertia": inertia,
-        "air": air, "a": air,
-        "repeat": repeat, "r": repeat,
-        "print": printdisplay,
-        "outty": outty, "outtopy": outty,
-        "outsty": outsty, "outsneaktopy": outsty,
-        "slime": slime,
-        "setceiling": setceiling, "setceil": setceiling, "ceil": setceiling,
-        "vy": setvy, "setvy": setvy,
-        "possibilities": possibilities, "poss": possibilities,
-        "ballhelp": ballhelp, "help": ballhelp,
-        "up": up,
-        "down": down
-    }
-
+    def move(self):
+        "Implement in the subclasses"
+        ...
 
     def get_suggestions(self, string: str):
         """
@@ -373,7 +182,7 @@ class Player:
         matches_part = [] # If string in word
         matches_char_count = {}
 
-        for command in Player.FUNCTIONS.keys():
+        for command in BasePlayer.FUNCTIONS.keys():
             # 1. Matches start
             if command.startswith(string):
                 matches_start.append(command)
@@ -425,7 +234,7 @@ class Player:
         
         return result
 
-    def parse(self, string: str, splitters: tuple = ("\n", " ", "\r", "\t")) -> list: 
+    def parse(self, string: str, splitters: tuple = ("\n", " ", "\r", "\t"), strict_whitespace: bool = True) -> list: 
         """
         Splits the string at any of the splitters that are outside of parenthesis. By default, it splits at any whitespace. 
         
@@ -454,6 +263,9 @@ class Player:
         result = []
         token = ""
         stack = []
+        current = 0
+        high = len(string)
+        expecting_whitespace = False
         
         matches_next_element = lambda e: ((e == ")" and stack[-1] == "(") or (e == "]" and stack[-1] == "["))
 
@@ -467,6 +279,18 @@ class Player:
         string = re.sub(replace_bar_regex, "x(0) z(0)", string)
         
         for char in string + splitters[0]:
+            if strict_whitespace:
+                if expecting_whitespace and not char.isspace():
+                    if char in ")]":
+                        raise SyntaxError(f"Unmatched brackets at character {current}: {string[max(0, current-5):min(high, current + 5)]}")
+                    else:
+                        msg = f"Space needed at character {current}"
+                        if self.call_stack:
+                            msg += f" (inside {', '.join(self.call_stack)})"
+                        msg += f": {string[max(0, current-7):min(high, current + 7)]}"
+                        raise SyntaxError(msg)
+                else:
+                    expecting_whitespace = False
 
             if char == "\\":
                 follows_slash = True
@@ -477,10 +301,16 @@ class Player:
                 stack.append(char)
             elif (char == ")" or char == "]") and not follows_slash:
                 if not stack:
-                    raise SyntaxError("Unmatched brackets")
+                    raise SyntaxError(f"Unmatched brackets at character {current}: {string[max(0, current-5):min(high, current + 5)]}")
                 if not matches_next_element(char):
-                    raise SyntaxError("Unmatched brackets")
+                    raise SyntaxError(f"Unmatched brackets at character {current}: {string[max(0, current-5):min(high, current + 5)]}")
                 stack.pop()
+                if not stack:
+                    token += char
+                    follows_slash = False
+                    expecting_whitespace = True
+                    current += 1
+                    continue
 
             
             if char in splitters and not stack and not follows_slash:
@@ -490,13 +320,15 @@ class Player:
 
             else:
                 token += char
+                current += 1
 
             follows_slash = False
+            expecting_whitespace = False
         
         if stack:
             raise SyntaxError("Unmatched open parethesis")
 
-        # print(f"{string=} gave {result=}")
+        # print(result)
         return result
     
     def tokenize(self, string: str, locals: dict = None) -> dict:
@@ -525,16 +357,7 @@ class Player:
         e2 = r"(.+)?"
 
         tokenize_regex = e1 + func + inputs + modifiers + args + e2 
-        # print(tokenize_regex)
-
         error1, func_name, inputs, modifiers, args, error2 = re.findall(tokenize_regex, string, flags=re.DOTALL)[0]
-#         print(f"""Result for {string}: 
-# Error1: {error1}
-# Func: {func_name}
-# Inputs: {inputs}
-# Modifiers: {modifiers}
-# Args: {args}
-# Error2: {error2}""")
 
         if error1 and error1 != "-":
             
@@ -548,7 +371,7 @@ class Player:
             self.reverse = False
 
 
-        func = Player.FUNCTIONS.get(func_name)
+        func = self.FUNCTIONS.get(func_name)
         if func is None:
             func = self.local_funcs.get(func_name) # CHANGES
             if func is None:
@@ -566,7 +389,7 @@ class Player:
         keyword_args = {}
 
         # TEST TEST TEST!!!!!! -> removes "None" from the args
-        args = self.parse(args, splitters=",")
+        args = self.parse(args, splitters=",", strict_whitespace=False)
         # args = [x for x in self.parse(args, splitters=",") if x not in [None, "None"]]
         
         
@@ -595,7 +418,18 @@ class Player:
         else:
             modifiers = 0
 
-        if func.__name__ not in Player._can_have_modifiers and modifiers:
+        if self._can_have_input and func.__name__ not in self._can_have_input:
+            if inputs:
+                raise TypeError(f"{func.__name__}() cannot be modified by an input")
+            if self._fortyfive_methods and func.__name__ in self._fortyfive_methods:
+                inputs = "w"
+
+        elif not inputs:
+            inputs = "w"
+        elif inputs not in ["w","wa","wd", "s", "sa", "sd", "a", "d"]:
+            raise ValueError(f"function {func_name} received bad input '{inputs}', it can only be w, s, a, d, wa, wd, sa, wd.")
+
+        if func.__name__ not in self._can_have_modifiers and modifiers:
             raise TypeError(f"{func.__name__}() cannot be modified by a modifier")
         
         return {"function": func, "inputs": inputs, "modifiers": modifiers, "args": positional_args, "kwargs": keyword_args}
@@ -608,7 +442,8 @@ class Player:
             if a not in self.MODIFIERS:
                 raise TypeError(f"No such modifier '{a}'")
         return m
-    
+
+
     def check_types(self, func, args: list, kwargs: dict, locals = None):
         """
         Type checks each argument in `args` and `kwargs` according to the  annotations in `func`. If successful, returns a list of positional args and a dict of keyword args.
@@ -624,7 +459,6 @@ class Player:
         signature = inspect.signature(func).parameters.values()
 
         positional_only = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.POSITIONAL_ONLY and x.name != "self"}
-        # print(positional_only)
         positional_or_keyword = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD and x.name != "self"}
         keyword_only = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.KEYWORD_ONLY}
         var_positional = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.VAR_POSITIONAL}
@@ -639,7 +473,6 @@ class Player:
 
         ### Check the positional arguments ###
         can_be_positional = positional_only | positional_or_keyword
-        # print(can_be_positional)
 
         if len(required_positionals) > len(args):
             number_of_missing = len(required_positionals) - len(args)
@@ -647,7 +480,6 @@ class Player:
 
         for i in range(min(len(args), len(can_be_positional))):
 
-            # RISKY RISKY RISKY RISKY RISKY
             datatype = list(can_be_positional.values())[i]
             if datatype == inspect.Parameter.empty:
                 datatype = str
@@ -660,14 +492,12 @@ class Player:
                 elif converted_value is None:
                     converted_value = 1
             elif list(can_be_positional)[i] == "label":
-
                 if converted_value is None:
                     converted_value = func.__name__
 
 
             converted_args.append(converted_value)
         
-        # print(args, can_be_positional)
         if len(args) < len(can_be_positional):
             a = len(args) - len(can_be_positional)
             can_be_positional = {x:can_be_positional[x] for x in list(can_be_positional)[a:]}
@@ -676,7 +506,6 @@ class Player:
             for j in args[len(can_be_positional):]:
                 c = self.safe_eval(j, list(var_positional.values())[0], locals)
                 converted_args.append(c)
-                # print(converted_args)
         
         elif not var_positional and len(args) > len(can_be_positional):
             raise TypeError(f"{func.__name__} accepts at most {len(can_be_positional)} positional arguments, got {len(args)} instead")
@@ -687,14 +516,13 @@ class Player:
         for kw, value in kwargs.items():
             datatype = can_be_keyword.get(kw)
 
-            # print(kw, datatype)
-
             if datatype is None:
                 raise TypeError(f"{func.__name__} has no keyword argument '{kw}'")
             
             elif datatype in [int, float, f32]:
                 converted_kwargs[kw] = self.safe_eval(value, datatype, locals)
             else:
+
                 converted_kwargs[kw] = datatype(value)
                 
         
@@ -715,7 +543,6 @@ class Player:
         func = token["function"]
         self.inputs = token["inputs"]
         self.modifiers = token["modifiers"]
-        # print(self.modifiers)
         args = token["args"]
         kwargs = token["kwargs"]
 
@@ -725,26 +552,21 @@ class Player:
 
         parsed_tokens = self.parse(sequence)
 
-        # print(parsed_tokens)
 
         for token in parsed_tokens:
             runnable = self.tokenize(token, locals=locals)
-            # pp(runnable)
             self.run(runnable)
 
         
         if return_defaults and not self.output:
-            self.add_output_with_label("Y", self.y, "z-expr")
-            self.add_output_with_label("VY", self.vy, "z-expr")
+            self.show_default_output()
+            
+    def show_default_output(self): ...
+
     def show_output(self):
+        s = ""
         for tup in self.output:
-            print(tup[0])
-
-if __name__ == "__main__":
-    p = Player()
-    # s = "jump(15) outy slime outy a(7) outy"
-    s = "jump(12) outy y(0.125) jump(12) outy"
-    p.simulate(s)
-    p.show_output()
-
-    
+            ss = "".join(tup[1])
+            print(ss)
+            s += ss + "\n"
+        return s

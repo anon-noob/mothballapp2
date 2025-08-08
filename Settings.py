@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QColor
 from BaseCell import RenderViewer
 from Linters import CodeLinter, MDLinter
-import mothball_simulation_xz as mxz
+import MothballSimulationXZ as mxz
 from typing import Literal
 
 class SettingsWindow(QWidget):

@@ -142,6 +142,7 @@ class CodeEdit(QsciScintilla):
         self.setLexer(self.mainLexer)
         self.textChanged.connect(self.adjustHeight)
         self.setEolMode(QsciScintilla.EolMode.EolUnix)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
     def resizeEvent(self, e):
         self.adjustHeight()

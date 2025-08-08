@@ -5,8 +5,8 @@ Main code cell containing a `CodeEdit` text input and a `RenderViewer` output vi
 from PyQt5.QtWidgets import (
     QVBoxLayout, QLabel, QSizePolicy
 )
-import mothball_simulation_xz as mxz
-import mothball_simulation_y as my
+import MothballSimulationXZ as mxz
+import MothballSimulationY as my
 
 from PyQt5.QtCore import Qt
 
@@ -93,17 +93,16 @@ class SimulationSection(Cell):
         text = self.input_field.text()
         try:
             if self.mode == CellType.XZ:
-                p = mxz.Player()
+                p = mxz.PlayerSimulationXZ()
             elif self.mode == CellType.Y:
-                p = my.Player()
+                p = my.PlayerSimulationY()
             p.simulate(text)
             self.output_field.renderTextfromOutput(self.linter, p.output)
             self.raw_output = p.output
         except Exception as e:
-            output = [(f"Error: {e}", 'normal')]
+            output = [(ExpressionType.TEXT, (f"Error: {e}",))]
             self.output_field.renderTextfromOutput(self.linter, output)
             self.raw_output = output
-
     
     def resizeEvent(self, event):
         self.adjust_output_height()

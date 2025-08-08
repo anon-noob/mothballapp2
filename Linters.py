@@ -4,8 +4,8 @@ See `RenderViewer` in the `BaseCell` module for highlighting the outputs of code
 """
 
 import re
-import mothball_simulation_xz as mxz
-import mothball_simulation_y as my
+import MothballSimulationXZ as mxz
+import MothballSimulationY as my
 from utils import *
 import string
 from typing import Literal
@@ -26,22 +26,22 @@ class CodeLinter:
         self.text = ""
         self.bracket_colors = {0:Style.NEST1, 1:Style.NEST2, 2:Style.NEST0}
         if mode == CellType.XZ:
-            for i in mxz.Player.FUNCTIONS_BY_TYPE.values():
+            for i in mxz.PlayerSimulationXZ.FUNCTIONS_BY_TYPE.values():
                 self.words += i
 
             self.modifiers = ["water","wt", "lava","lv", "ladder", "ld", "block", "bl", "vine", "web"]
             self.inputs = ["w","s","a","d","wa","wd","sa","sd"]
 
-            for e, func_list in enumerate(mxz.Player.FUNCTIONS_BY_TYPE.values(),1):
+            for e, func_list in enumerate(mxz.PlayerSimulationXZ.FUNCTIONS_BY_TYPE.values(),1):
                 for word in func_list:
                     self.word_to_index[word] = e
         elif mode == CellType.Y:
-            for i in my.Player.FUNCTIONS_BY_TYPE.values():
+            for i in my.PlayerSimulationY.FUNCTIONS_BY_TYPE.values():
                 self.words += i
             self.modifiers = ["water","wt", "lava","lv", "ladder", "ld", "bl", "vine", "web"]
             self.inputs = []
 
-            for e, func_list in enumerate(my.Player.FUNCTIONS_BY_TYPE.values(),1):
+            for e, func_list in enumerate(my.PlayerSimulationY.FUNCTIONS_BY_TYPE.values(),1):
                 for word in func_list:
                     self.word_to_index[word] = e
         
@@ -90,7 +90,7 @@ class CodeLinter:
         last_nonspace_token = ""
         last_nonspace_token_index = -1
         index = -1
-        local_vars = [] + list(mxz.Player().local_vars)
+        local_vars = [] + list(mxz.PlayerSimulationXZ().local_vars)
         in_curly_brackets = False
         
         for token in listOfTokens:
@@ -295,9 +295,9 @@ class CodeLinter:
         Returns the Mothball function object given the function's `name` or alias.
         """
         if self.mode == CellType.XZ:
-            return mxz.Player.FUNCTIONS[name]
+            return mxz.PlayerSimulationXZ.FUNCTIONS[name]
         elif self.mode == CellType.Y:
-            return my.Player.FUNCTIONS[name]
+            return my.PlayerSimulationY.FUNCTIONS[name]
 
     def parseText(self):
         """
@@ -332,75 +332,95 @@ class CodeLinter:
         """
         Parse the output
         """
+        MAP = {ExpressionType.X_LABEL: Style.OUTPUT_XLABEL,
+         ExpressionType.X_LABEL_WITH_EXPRESSION: Style.OUTPUT_XLABEL,
+         ExpressionType.Z_LABEL: Style.OUTPUT_ZLABEL,
+         ExpressionType.Z_LABEL_WITH_EXPRESSION: Style.OUTPUT_ZLABEL,
+         ExpressionType.X_INERTIA_HIT: Style.OUTPUT_XLABEL,
+         ExpressionType.X_INERTIA_MISS: Style.OUTPUT_XLABEL,
+         ExpressionType.Z_INERTIA_HIT: Style.OUTPUT_ZLABEL,
+         ExpressionType.Z_INERTIA_MISS: Style.OUTPUT_ZLABEL,
+         ExpressionType.TEXT: Style.OUTPUT_TEXT,
+         ExpressionType.GENERAL_LABEL_WITH_NUMBER: Style.OUTPUT_LABEL,
+         ExpressionType.GENERAL_LABEL_WITH_EXPRESSION: Style.OUTPUT_LABEL,
+         ExpressionType.GENERAL_LABEL: Style.OUTPUT_LABEL,
+         ExpressionType.WARNING: Style.OUTPUT_WARNING}
+
         result = []
 
         for i, line in enumerate(outputLines):
-            string, expr_type = line
-            if i + 1 < len(outputLines):
-                string += "\n"
-            if expr_type == "normal":
-                result.append((string, Style.OUTPUT_TEXT, 0))
-            else:
-                result += self.separate(string, expr_type)
-        
+            expr_type, tokens = line
+            
+            match expr_type:
+                case ExpressionType.X_LABEL | ExpressionType.Z_LABEL | ExpressionType.GENERAL_LABEL_WITH_NUMBER: # outx: 1.23 --> [outx, : , 1.23]
+                    result.append((tokens[0], MAP[expr_type], 0))
+                    result.append((tokens[1], Style.DEFAULT, 0))
+                    if tokens[2][0] == "-":
+                        result.append((tokens[2][0], Style.DEFAULT, 0))
+                        result.append((tokens[2][1:], Style.OUTPUT_NEGATIVE, 0))
+                    else:
+                        result.append((tokens[2], Style.OUTPUT_POSITIVE, 0))
+
+                case ExpressionType.X_LABEL_WITH_EXPRESSION | ExpressionType.Z_LABEL_WITH_EXPRESSION | ExpressionType.GENERAL_LABEL_WITH_EXPRESSION: # outx: 1.27 - 0.04 --> [outx, : , 1.27,  - , 0.04]
+                    result.append((tokens[0], MAP[expr_type], 0))
+                    result.append((tokens[1], Style.DEFAULT, 0))
+                    if tokens[2][0] == "-":
+                        result.append((tokens[2][0], Style.DEFAULT, 0))
+                        result.append((tokens[2][1:], Style.OUTPUT_NEGATIVE, 0))
+                    else:
+                        result.append((tokens[2], Style.OUTPUT_POSITIVE, 0))
+                    negative = "-" in tokens[3]
+                    result.append((tokens[3], Style.DEFAULT, 0))
+                    if negative:
+                        result.append((tokens[4], Style.OUTPUT_NEGATIVE, 0))
+                    else:
+                        result.append((tokens[4], Style.OUTPUT_POSITIVE, 0))
+                
+                case ExpressionType.TEXT | ExpressionType.GENERAL_LABEL:
+                    result.append((tokens[0], MAP[expr_type], 0))
+                
+                case ExpressionType.WARNING:
+                    result.append((tokens[0], MAP[expr_type], 0))
+                    result.append((tokens[1], Style.DEFAULT, 0))
+                    result.append((tokens[2], Style.OUTPUT_TEXT, 0))
+                
+                case ExpressionType.X_INERTIA_HIT | ExpressionType.Z_INERTIA_HIT:
+                    result.append((tokens[0], MAP[expr_type], 0))
+                    result.append((tokens[1], Style.DEFAULT, 0))
+                    if tokens[2][0] == "-":
+                        result.append((tokens[2][0], Style.DEFAULT, 0))
+                        result.append((tokens[2][1:], Style.OUTPUT_NEGATIVE, 0))
+                    else:
+                        result.append((tokens[2], Style.OUTPUT_POSITIVE, 0))
+                    result.append((tokens[3], Style.DEFAULT, 0))
+                    result.append((tokens[4], Style.OUTPUT_POSITIVE, 0))
+                    result.append((tokens[5], Style.DEFAULT, 0))
+                case ExpressionType.X_INERTIA_MISS | ExpressionType.Z_INERTIA_MISS:
+                    result.append((tokens[0], MAP[expr_type], 0))
+                    result.append((tokens[1], Style.DEFAULT, 0))
+                    if tokens[2][0] == "-":
+                        result.append((tokens[2][0], Style.DEFAULT, 0))
+                        result.append((tokens[2][1:], Style.OUTPUT_NEGATIVE, 0))
+                    else:
+                        result.append((tokens[2], Style.OUTPUT_POSITIVE, 0))
+                    result.append((tokens[3], Style.DEFAULT, 0))
+                    result.append((tokens[4], Style.OUTPUT_NEGATIVE, 0))
+                    result.append((tokens[5], Style.DEFAULT, 0))
+
+            result.append(("\n",Style.DEFAULT,0))
+
+
         if result and result[-1][0] == "\n":
             result.pop()
-        if displayOutputBackground: # Set flag to 3
-            result = [(x[0], x[1], 3) for x in result]
-        return result
 
-    def separate(self, string: str, expr_type: str):
-        """
-        Internal function.
-        
-        Separates strings in the form `label: a` or `label: a + b` into a list `[label, :, a, +, b]` 
-        """
-        result: list[tuple[str, str]] = []
-
-        expr_type_to_tag_name = {
-            "expr": Style.OUTPUT_LABEL,
-            "x-expr": Style.OUTPUT_XLABEL,
-            "z-expr": Style.OUTPUT_ZLABEL,
-            "warning": Style.OUTPUT_WARNING
-        }
-
-        a, b = string.split(": ")
-        tag_name = expr_type_to_tag_name.get(expr_type)
-        if tag_name is None:
-            return [(string, Style.OUTPUT_TEXT, 0)]
-        result.append((a, tag_name, 0))
-        result.append((": ", Style.DEFAULT, 0))
-
-        if expr_type == "warning":
-            result.append((b, Style.OUTPUT_TEXT, 0))
-            return result
-        
-        b = b.split(" ")
-         
-        # Either 1 or 3 items
-        b_float = float(b[0])
-        if b_float >= 0: # positive number
-            result.append((b[0], Style.OUTPUT_POSITIVE, 0))
-        else: # Negative number
-            result.append(('-', Style.DEFAULT, 0))
-            result.append((b[0][1:], Style.OUTPUT_NEGATIVE, 0))
-
-        if len(b) == 3:
-            sign = b[1]
-            number = b[2]
-            result.append((f" {sign} ", Style.DEFAULT, 0))
-            result.append((number, Style.OUTPUT_POSITIVE if sign == '+' else Style.OUTPUT_NEGATIVE, 0))
-        
-        # result.append(("\n", self.STYLE_DEFAULT, 0))
-        # print(result)
         return result
 
     def getFunctionSignature(self, nameOrAlias):
-        func = mxz.Player.FUNCTIONS.get(nameOrAlias)
+        func = mxz.PlayerSimulationXZ.FUNCTIONS.get(nameOrAlias)
         if not func:
             return []
         func_name = func.__name__
-        aliases = mxz.Player.ALIASES.get(func_name)
+        aliases = mxz.PlayerSimulationXZ.ALIASES.get(func_name)
 
         params = inspect.signature(func).parameters.values()
         positional: list[inspect.Parameter] = []
