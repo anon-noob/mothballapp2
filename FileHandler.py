@@ -1,8 +1,9 @@
 import os, platform, json
 from DataStorage import CodeCell, TextCell, File
 from Enums import *
+from version import __version__
 
-VERSION = "v1.1.1" # Last release: 1.1.0
+VERSION = __version__ # Last release: 1.1.0
 
 default_code_colors = {
     StringLiterals.CODE: {
@@ -200,7 +201,6 @@ def loadFile(filepath):
             entries[i] = TextCell(**a)
         else:
             entries[i] = CodeCell(**a)
-
         i += 1
 
     return File(f['fileName'], f['version'], entries)
@@ -271,10 +271,10 @@ def versionIsOutdated(version_str: str):
     original_version = [int(x) for x in VERSION.split(".")]
     compared_to = [int(x) for x in version_str.split(".")]
 
-    for i in range(min(original_version, compared_to)):
-        if original_version[i] > compared_to[i]:
+    for i,j in zip(original_version, compared_to):
+        if i > j:
             return True
-        elif original_version[i] < compared_to[i]:
+        elif i < j:
             return False
     return False
 
@@ -297,11 +297,5 @@ def deleteAll():
     #     print("Cancelled")
 
 if __name__ == "__main__":
-    # For deleting unnecessary files
-    
-    
-    # deleteAll()
-
-    # print(getTextColorSettings())
-    # deleteAll()
+    # print(versionIsOutdated("1.0.29"))
     pass

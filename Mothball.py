@@ -23,6 +23,7 @@ import FileHandler
 import json
 import ParkourWordle
 from Enums import CellType, TextCellState
+from version import __version__
 
 # Scintilla resizing issue with newlines (prob show scrollbar?) <-- yep i set vertical scrollbar always on (Aug 5, 2025) but it doesn't fix the issue. 
 # Yes it does, just set the CodeEdit(QSciScintilla) to have a verical scroll policy always off (Aug 5, 2025)
@@ -192,12 +193,12 @@ class MainWindow(QMainWindow):
             FileHandler.deleteAll() # TEMP FIX!?
         except Exception as e:
             print(e)
-        try:
-            FileHandler.updateFiles() # TEMP FIX!?
-        except Exception as e:
-            print(e)
+        # try:
+        #     FileHandler.updateFiles() # TEMP FIX!?
+        # except Exception as e:
+        #     print(e)
         FileHandler.createDirectories()
-        self.version = FileHandler.VERSION
+        self.version = __version__
 
         # FileHandler.reindexFiles() # For update purposes only! (outdated?)
 
@@ -514,10 +515,17 @@ class MainWindow(QMainWindow):
                 return
 
         filepath = QFileDialog(self).getOpenFileName(self, "Open File", FileHandler.getNotebooks())[0]
+        errors = False
+        logs = None
+        warning = False
         if filepath:
             self.path = filepath
             self.clearAllCells()
-            f = FileHandler.loadFile(filepath)
+            try:
+                f = FileHandler.loadFile(filepath)
+            except Exception as logs:
+                QMessageBox.warning(self, "Failed to load", f"file {self.name} has encountered a fatal error. Please check and update the file!\nLogs: {logs}", QMessageBox.StandardButton.Ok)
+                return
             i = 0
             self.name = f.fileName
             same_version = self.version == f.version
@@ -526,26 +534,37 @@ class MainWindow(QMainWindow):
                 if cell is None:
                     break
 
-                if cell.cell_type == CellType.TEXT:
-                    b = self.addCell(cellType=cell.cell_type)
-                    b.input_field.setText(cell.raw_text)
-                    if cell.mode == "render" and same_version:
-                        b.renderText()
+                try:
+                    if cell.cell_type == CellType.TEXT:
+                        b = self.addCell(cellType=cell.cell_type)
+                        b.input_field.setText(cell.raw_text)
+                        if cell.mode == "render" and same_version:
+                            b.renderText()
+                        else:
+                            warning = True
 
-                else:
-                    b = self.addCell(cellType=cell.cell_type)
-                    b.input_field.setText(cell.code.rstrip())
-                    if same_version:
-                        b.output_field.renderTextfromOutput(b.linter, cell.raw_output)
-                        b.raw_output = cell.raw_output
-                    
+                    else:
+                        b = self.addCell(cellType=cell.cell_type)
+                        b.input_field.setText(cell.code.rstrip())
+                        if same_version:
+                            b.output_field.renderTextfromOutput(b.linter, cell.raw_output)
+                            b.raw_output = cell.raw_output
+                        else:
+                            warning = True
+                except Exception as e:
+                    errors = True
+                    # print("OPS")
                 i += 1
             self.unsaved_changes = False
             self.setWindowTitle("Mothball Notebook - " + f.fileName)
             self.actionStack.reset()
             QApplication.processEvents()
             QTimer.singleShot(100, self.continueOpenFileProcess)
-    
+            if errors:
+                QMessageBox.warning(self, "Failed to load", f"file {self.name} has failed to load completely. Please check and update the file!\nLogs: {logs}", QMessageBox.StandardButton.Ok)
+            elif warning:
+                QMessageBox.warning(self, "Failed to load", f"file {self.name} is outdated. You can update the file by running each cell and saving.", QMessageBox.StandardButton.Ok)
+
     def continueOpenFileProcess(self):
         """
         Resize cells after processing all events.
