@@ -58,6 +58,7 @@ class BasePlayer:
 
     @staticmethod
     def isfloat(string: str):
+        "Returns `True` if string is a float representation, including infinity, else `False`"
         try: 
             float(string)
             return True
@@ -105,7 +106,7 @@ class BasePlayer:
 
             case ExpressionType.TEXT:
                 self.output.append((expression_type, 
-                                    (self.formatted(string_or_num.strip()),)))
+                                    (BasePlayer.clean_backslashes(self.formatted(string_or_num.strip()),))))
             case ExpressionType.WARNING:
                 self.output.append((expression_type, 
                                     ("Warning", ": ", BasePlayer.clean_backslashes(self.formatted(string_or_num.strip())))))
@@ -117,7 +118,8 @@ class BasePlayer:
                 self.output.append((expression_type, (BasePlayer.clean_backslashes(self.formatted(label)),)))
     
     def truncate_number(self, value: float):
-        return f"{value:.{self.precision}f}"
+        "Round decimals to `self.precision` decimal places"
+        return f"{value:.{self.precision}f}".rstrip("0").rstrip(".")
     
     def formatted(self, string: str):
         "Formats string just like an f-string"
@@ -172,23 +174,18 @@ class BasePlayer:
         ...
 
     def get_suggestions(self, string: str):
-        """
-        Given `string`, return a list of suggestions from all possible mothball commands that best matches `string`.
-
-        For example, if `wtrsprint` was inputted, a possible suggestion is `sprintwater`.
-        """
+        "Return a list of suggestions from all available mothball commands that best matches `string`. For example, if `sprintsn` was inputted, a possible suggestion is `sneaksprint`."
         
         matches_start = []
         matches_part = [] # If string in word
         matches_char_count = {}
 
         for command in BasePlayer.FUNCTIONS.keys():
-            # 1. Matches start
-            if command.startswith(string):
+            if command.startswith(string): # 1. Matches start
                 matches_start.append(command)
-            elif string in command:
+            elif string in command: # 2. Matches part
                 matches_part.append(command)
-            else:
+            else: # 3. Count chars
                 cmd_count = Counter(command)
                 str_count = Counter(string)
 
@@ -204,9 +201,6 @@ class BasePlayer:
                 off_by += abs(len(command) - len(string))
                 if off_by < len(command): matches_char_count[command] = off_by
 
-                
-                
-        # pp(matches_char_count)
         matches_char_count = sorted(matches_char_count, key=lambda e: matches_char_count[e])
 
         return matches_start + matches_part + matches_char_count
@@ -227,7 +221,6 @@ class BasePlayer:
 
             if char == "\\" and not follows_slash:
                 follows_slash = True
-                
             
             else:
                 follows_slash = False
@@ -236,28 +229,12 @@ class BasePlayer:
 
     def parse(self, string: str, splitters: tuple = ("\n", " ", "\r", "\t"), strict_whitespace: bool = True) -> list: 
         """
-        Splits the string at any of the splitters that are outside of parenthesis. By default, it splits at any whitespace. 
-        
-        Returns a list of strings (or tokens), raises `SyntaxError` if parenthesis are unmatched.
-
-        ```py
-        >> tokens = Player.parse(\"walk(1) sprintjump.wa(2, 5) sprintair(10)\")
-        >> tokens
-        [\"walk(1)\", \"sprintjump.wa(2, 5)\", \"sprintair(10)\"]
-        ```
+        Splits the string at any of the splitters that are outside of parenthesis.
+        Returns the first layer list of strings (or tokens), raises `SyntaxError` if there are missing spaces, or parenthesis are unmatched.
 
         Comments are delimited by the `#` symbol. Anything between comments will be ignored.
 
-        ```py
-        >> tokens = Player.parse(
-        \"\"\"walkjump(1) 
-        # this is a comment # 
-        sprintair(11) sprint 
-        # and this is another comment\"\"\"
-        )
-        >> tokens
-        [\"walkjump(1)\", \"sprintair(11)\", \"sprint\"]
-        ```
+        `repeat(sprintjump(12), 3) sprint(2) outz(16)` parses into `[repeat(sprintjump(12), 3), sprint(2), outz(16)]`
         """
 
         result = []
@@ -271,7 +248,6 @@ class BasePlayer:
 
         follows_slash = False
 
-        # Delete comments
         string = self.remove_comments(string)
 
         # Regex to change '|' into 'x(0) z(0)'
@@ -281,6 +257,7 @@ class BasePlayer:
         for char in string + splitters[0]:
             if strict_whitespace:
                 if expecting_whitespace and not char.isspace():
+                    print(char)
                     if char in ")]":
                         raise SyntaxError(f"Unmatched brackets at character {current}: {string[max(0, current-5):min(high, current + 5)]}")
                     else:
@@ -308,11 +285,11 @@ class BasePlayer:
                 if not stack:
                     token += char
                     follows_slash = False
-                    expecting_whitespace = True
+                    if char == ")":
+                        expecting_whitespace = True
                     current += 1
                     continue
 
-            
             if char in splitters and not stack and not follows_slash:
                 token = token.strip()
                 result.append(token) if token else None
@@ -328,7 +305,6 @@ class BasePlayer:
         if stack:
             raise SyntaxError("Unmatched open parethesis")
 
-        # print(result)
         return result
     
     def tokenize(self, string: str, locals: dict = None) -> dict:
@@ -336,14 +312,16 @@ class BasePlayer:
         Tokenizes the string to a dictionary containing the function, positional arguments, and keyword arguments of appropiate types. 
         
         Returns as a dictionary in the form
-        ```py
-        {"function": function, "inputs": str, "args": list, "kwargs": dict}
+        ```
+        {"function": function, "inputs": str, "modifiers": int, "args": list, "kwargs": dict}
         ```
 
-        where `inputs` is a string which will be used as a function modifier. 
+        `inputs` is a 1-2 char string determining how key presses determine game movement, examples `wa` or `s`.  \
+        `modifiers` is an int which uses bit flags to indicate which modifiers are on or off. See the attribute `MODIFIERS`
 
         Raises `SyntaxError` if a positional argument follows a keyword argument. \\
-        Raises `TypeError` if these functions: (`stop`, `stopair`, `stopjump`, and 45 movement) recieves an input.
+        Raises `NameError` if a given function doesn't exist. \\
+        Raises `TypeError` if these functions: (`stop`-related, 45 movement, or non-movement functions) recieves an input.
         Raises any other error encountered while converting datatypes.
         """
 
@@ -388,11 +366,8 @@ class BasePlayer:
         positional_args = []
         keyword_args = {}
 
-        # TEST TEST TEST!!!!!! -> removes "None" from the args
         args = self.parse(args, splitters=",", strict_whitespace=False)
-        # args = [x for x in self.parse(args, splitters=",") if x not in [None, "None"]]
-        
-        
+
         keyword_regex = r"^\s*?(\w+)\s*=\s*(.+)\s*$"
         after_keyword = False
 
@@ -528,16 +503,12 @@ class BasePlayer:
         
         return converted_args, converted_kwargs
         
-    def run(self, token):
+    def run(self, token: dict):
         """
-        Runs the token.
-
-        `token` is a dictionary in the form
+        Runs the token. `token` is a dictionary in the form
         ```py
-        {"function": function, "inputs": str, "args": list, "kwargs": dict}
+        {"function": function, "inputs": str, "modifiers": int, "args": list, "kwargs": dict}
         ```
-        
-        where `inputs` is a string which will be used as a function modifier.
         """
 
         func = token["function"]
@@ -549,7 +520,7 @@ class BasePlayer:
         func(self, *args, **kwargs)
     
     def simulate(self, sequence: str, return_defaults = True, locals: dict = None):
-
+        "Execute Mothball Code. If no output was made and `return_defaults == True`, return the default output (see `show_default_output()`). `locals` is a dict of values for variables."
         parsed_tokens = self.parse(sequence)
 
 

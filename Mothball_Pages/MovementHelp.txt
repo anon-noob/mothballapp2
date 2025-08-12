@@ -24,20 +24,38 @@ In mothball, typing the function alone will simulate 1 tick of that movement. Fo
 
 While something like `sprint(4)` is identical to `sprint sprint sprint sprint`, this does not apply with jump functions. For jump functions, all ticks following the first are replaced with the respective air movement. For example, a `sprintjump` (we'll use its shorter alias `sj`) becomes `sprintair` on the following ticks (we'll use its shorter alias `sa`). Observe that
 
-```mothball/output
+```mothball
 sj(5)
+```
+```mothball/output
+z|Z/: /0.9607775//
+z|VZ/: /0.2236764//
+x|X/: /0//
+x|VX/: /0//
 ```
 
 is equivalent to
 
-```mothball/output
+```mothball
 sj sa(4)
+```
+```mothball/output
+z|Z/: /0.9607775//
+z|VZ/: /0.2236764//
+x|X/: /0//
+x|VX/: /0//
 ```
 
 and not equivalent to
 
-```mothball/output
+```mothball
 sj sj sj sj sj
+```
+```mothball/output
+z|Z/: /2.0943789//
+z|VZ/: /0.686152//
+x|X/: /0//
+x|VX/: /0//
 ```
 
 So in general, any jump function follows this formuula: `jump(t) = jump air(t-1)`.
@@ -47,16 +65,28 @@ So far, we have only simulated movement going forward, equivalent to pressing W 
 
 10 of the listed movement functions can have inputs attached to them. The only functions that can't are `stop` functions. To add inputs, we use the syntax `movement.keys` where `movement` is the movement function and `keys` are the inputs. So how do we walk 10 ticks with A?
 
-```mothball/output
+```mothball
 w.a(10)
+```
+```mothball/output
+z|Z/: /0//
+z|VZ/: /0//
+x|X/: /1.6842494//
+x|VX/: /0.2153508//
 ```
 
 Previously there has been no X movement, as you face 0 degrees by default, which in game points in the positive Z direction. In this case, we are moving directly to the side, resulting in only X movement, specifically towards negative X. The Minecraft coordinate system is different then the usual coordinate system you might know in math class.
 
 We are not limited to only specifying one input per function. We can specify two inputs! What if we want to sprint jump with W and A for 12 ticks?
 
-```mothball/output
+```mothball
 sj.wa(10)
+```
+```mothball/output
+z|Z/: /1.7701447//
+z|VZ/: /0.1918136//
+x|X/: /0.9273843//
+x|VX/: /0.140462//
 ```
 
 There are only 8 combinations of valid inputs, which are `.w .s .a .d .wa .wd .sa .sd.` Any other input given will raise an error. We enforce strictly the use these 8 inputs to make readability as consistent as possible, so even while `.ds` is functionally equivalent to `.sd` in game, when it comes to discussing and sharing strategies, we typically mention w/s before a/d.
@@ -98,20 +128,40 @@ Until now, everything has been done facing 0, but of course we can change that. 
 
 So to sprint with W and D for 4 ticks at a 36.7 degree angle,
 
-```mothball/output
+```mothball
 s.wd(4, 36.7)
+```
+```mothball/output
+z|Z/: /0.0823879//
+z|VZ/: /0.0376626//
+x|X/: /-0.5647369//
+x|VX/: /-0.2581625//
 ```
 
 In the above example, we sprinted for 4 ticks with W and D while facing 36.7 degrees. However,
 
-```mothball/output
+```mothball
 s.wd(4, 36.7) sj(3)
+# sprint wd facing 36.7, then sprint jump facing 0
+```
+```mothball/output
+z|Z/: /0.6834826//
+z|VZ/: /0.2215561//
+x|X/: /-1.0408186//
+x|VX/: /-0.0700358//
 ```
 
 is not equivalent to
 
-```mothball/output
+```mothball
 s.wd(4, 36.7) sj(3, 36.7)
+# sprint wd facing 36.7, then sprint jump facing 36.7
+```
+```mothball/output
+z|Z/: /0.5780995//
+z|VZ/: /0.179664//
+x|X/: /-1.358539//
+x|VX/: /-0.1963366//
 ```
 
 and that is because the angle specified only applies for that specific movement. What if we wanted it to apply to all movements?
@@ -121,8 +171,14 @@ Introducing the `face` function (alias `f`)! The facing function sets the defaul
 
 In the last example, we can rewrite the simulated sequence as
 
-```mothball/output
+```mothball
 f(36.7) s.wd(4) sj(3)
+```
+```mothball/output
+z|Z/: /0.5780995//
+z|VZ/: /0.179664//
+x|X/: /-1.358539//
+x|VX/: /-0.1963366//
 ```
 
 Of course, if we want to change the default facing later on, we can!
@@ -168,23 +224,44 @@ tq(1,2,3,4,5) s(3) sa.wd(2)
 # 45 Strafes
 A 45 strafe is when you face diagonally and counterstrafe in order to gain a speed boost. For example, sprinting 5 ticks gives
 
-```mothball/output
+```mothball
 s(5)
+```
+```mothball/output
+z|Z/: /0.8149782//
+z|VZ/: /0.2669999//
+x|X/: /0//
+x|VX/: /0//
 ```
 
 but with 45 strafes,
 
-```mothball/output
+```mothball
 s.wa(5, 45)
 ```
-
-The 45 strafe has more speed and therefore more distance! Almost all movement functions have a 4 ttrafe counterpart, of course the only ones that dont are `stop` functions. To make a movement function 45 strafed, append `45` at the end of the function, for example `s45 wj45 sna45`. You cannot append inputs on a 45 function. Doing so will give you this error
-
 ```mothball/output
-s45.wa
+z|Z/: /0.8316103//
+z|VZ/: /0.2724488//
+x|X/: /0//
+x|VX/: /0//
 ```
 
-But you can prepend a negative sign `-` to 45 strafe backward, for example `-w45`.
+The 45 strafe has more speed and therefore more distance! Almost all movement functions have a 45 strafe counterpart, of course the only ones that dont are `stop` functions. To make a movement function 45 strafed, append `45` at the end of the function, for example,
+
+```mothball
+s45 wj45 sna45 
+```
+
+You cannot append inputs on a 45 function. Doing so will give you this error
+
+```mothball
+s45.wa
+```
+```mothball/output
+t|Error: sprint45() cannot be modified by an input//
+```
+
+But you can prepend a negative sign `-` to 45 strafe backward, for example `-w45` is equivalent to `f(180) w45`.
 
 It can be hard to describe in words how 45s work for different movements, so below shows, using the language of Mothball, how 45s are defined.
 

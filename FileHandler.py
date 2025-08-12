@@ -66,7 +66,7 @@ default_text_colors = {
     },
     StringLiterals.OUTPUT_BACKGROUND: "#3e3e3e",
     StringLiterals.RENDER_BLOCK_BACKGROUND: "#242424",
-    StringLiterals.RENDER_CODE_BACKGROUND: "#2e2e2e",
+    StringLiterals.RENDER_CODE_BACKGROUND: "#4b4b4b",
     StringLiterals.RENDER_BACKGROUND: "#2e2e2e"
 }
 
@@ -303,5 +303,5 @@ if __name__ == "__main__":
     # deleteAll()
 
     # print(getTextColorSettings())
-    # updateFiles()
+    # deleteAll()
     pass

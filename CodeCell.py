@@ -30,7 +30,10 @@ class SimulationSection(Cell):
         self.linter = CodeLinter(generalOptions, colorOptions, textOptions, mode)
 
         content_layout = QVBoxLayout()
-        self.input_label = QLabel("Input:")
+        if mode == CellType.XZ:
+            self.input_label = QLabel("Input (XZ):")
+        else:
+            self.input_label = QLabel("Input (Y):")
         self.input_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)  # Keep label height fixed
         content_layout.addWidget(self.input_label)
 

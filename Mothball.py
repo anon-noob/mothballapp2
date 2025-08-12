@@ -23,13 +23,13 @@ import FileHandler
 import json
 import ParkourWordle
 from Enums import CellType, TextCellState
-from PyQt5.QtWidgets import QScrollBar
 
 # Scintilla resizing issue with newlines (prob show scrollbar?) <-- yep i set vertical scrollbar always on (Aug 5, 2025) but it doesn't fix the issue. 
-# Yes it does, just set the CodeEdit(QSciScintilla) to have a verical scroll policy (Aug 5, 2025)
+# Yes it does, just set the CodeEdit(QSciScintilla) to have a verical scroll policy always off (Aug 5, 2025)
 
 # Comments and docstring
 # Reorganize the help page
+# Separate file for help doc strings
 # MORE ENUMS
 # Fix settings
 # Add other remaining colors
@@ -37,8 +37,11 @@ from PyQt5.QtWidgets import QScrollBar
 # Better error msgs
 
 # Disable automatic execution in text cells (why tf is that a thing)
+#  CURRENTLY DOING TODO: Refactor text cell colorizing + fix get signature and code output, rewrite documentation as well
 
 # Debian Linux fix: run in console `sudo apt-get install libxcb-xinerama0`
+
+# Action stack is broken on undo: action.data['type'] -> keyerror
 
 
 """ERRORS:
@@ -118,16 +121,16 @@ class ActionStack:
                 adding.append(ActionStack.CreateCellAction(action.index, data))
 
             case self.CREATE_ACTION: # pop the create action, add the delete action
-                t = action.data['type']
-                if t == "text":
-                    cell = self.parent.addCell(action.index, cellType=action.data['type'], addActionStack=False)
+                t = action.data["cell_type"]
+                if t == CellType.TEXT:
+                    cell = self.parent.addCell(action.index, cellType=action.data['cell_type'], addActionStack=False)
                     cell.input_field.setText(action.data["raw_text"])
                     cell.render_field.renderTextfromMarkdown(cell.linter, action.data["raw_text"])
                     QApplication.processEvents()
                     QTimer.singleShot(100, lambda: self.continueProcess(cell))
                     adding.append(ActionStack.DeleteCellAction(action.index))
-                elif t == "code":
-                    cell = self.parent.addCell(action.index, cellType=action.data["mode"], addActionStack=False)
+                else:
+                    cell = self.parent.addCell(action.index, cellType=action.data["cell_type"], addActionStack=False)
                     cell.input_field.setText(action.data["code"])
                     cell.output_field.renderTextfromOutput(cell.linter, action.data["raw_output"])
                     cell.raw_output = action.data["raw_output"]
@@ -144,7 +147,6 @@ class ActionStack:
 
     def redo(self):
         self.executeAction(self.REDO)
-
 
     def reset(self):
         self.undoStack = []
@@ -518,6 +520,7 @@ class MainWindow(QMainWindow):
             f = FileHandler.loadFile(filepath)
             i = 0
             self.name = f.fileName
+            same_version = self.version == f.version
             while True:
                 cell = f.cells.get(i)
                 if cell is None:
@@ -526,14 +529,15 @@ class MainWindow(QMainWindow):
                 if cell.cell_type == CellType.TEXT:
                     b = self.addCell(cellType=cell.cell_type)
                     b.input_field.setText(cell.raw_text)
-                    if cell.mode == "render":
+                    if cell.mode == "render" and same_version:
                         b.renderText()
 
                 else:
                     b = self.addCell(cellType=cell.cell_type)
                     b.input_field.setText(cell.code.rstrip())
-                    b.output_field.renderTextfromOutput(b.linter, cell.raw_output)
-                    b.raw_output = cell.raw_output
+                    if same_version:
+                        b.output_field.renderTextfromOutput(b.linter, cell.raw_output)
+                        b.raw_output = cell.raw_output
                     
                 i += 1
             self.unsaved_changes = False

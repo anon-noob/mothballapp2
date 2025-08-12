@@ -15,44 +15,72 @@ Note that this is different from how Minecraft calculates movement in game, wher
 
 ## A Running Example
 Let's simulate sprinting. To simulate sprinting for 1t, we just write `sprint`. The code and output looks like this:
-```mothball/output
+```mothball
 sprint
+```
+```mothball/output
+z|Z/: /0//
+z|VZ/: /0.1274//
+x|X/: /0//
+x|VX/: /0//
 ```
 
 Great! Now `sprint` sprints for 1t, then if we want to sprint for 5t, we do
 
-```mothball/output
+```mothball
 sprint sprint sprint sprint sprint
 ```
+```mothball/output
+z|Z/: /0.8149782//
+z|VZ/: /0.2669999//
+x|X/: /0//
+x|VX/: /0//
+```
+
 
 Yea that is quite the hassle. Luckily, you don't need to write the same function 5 times. To sprint for multiple ticks, we add parenthesis after the function and put the number of ticks between the parenthesis. It looks like this:
 
-```mothball/output
+```mothball
 sprint(5)
+```
+```mothball/output
+z|Z/: /0.8149782//
+z|VZ/: /0.2669999//
+x|X/: /0//
+x|VX/: /0//
 ```
 
 Notice that it gives the same output as writing `sprint` 5 times.
 
 For the nerdy programmers (and also math nerds), they would recognize that this is how a function is normally called. In general, to repeat the same movement for multiple ticks, we write `movement(duration)` where duration is a nonnegative integer. Mothball will check if this number is nonnegative, otherwise you get this error.
 
-```mothball/output
+```mothball
 sprint(-3)
+```
+```mothball/output
+t|Error: Positional argument 'duration' should be a non-negative integer//
 ```
 
 But we be even more concise! Typing `sprint(5)` is pretty fast, but we can be faster. Many functions in Mothball has aliases, which are alternative names to invoke the same function. For example, `sprint` is the same as `s`, so `s(5)` should be equivalent to `sprint(5)`; indeed it is!
 
-```mothball/output
+```mothball
 s(5)
 ```
+```mothball/output
+z|Z/: /0.8149782//
+z|VZ/: /0.2669999//
+x|X/: /0//
+x|VX/: /0//
+```
 
-The idea behind aliases is because some functions are very common, so we make the common case faster, reducing the time it takes to type it out. Some function's full name can get very long, for example `sneaksprintjump` vs `snsj`. Aliases are almost always abbreviations (such as SNeakSprintJump) so they won't be a totally new thing to have to learn. And even if you forgot, Mothball's error message will provide suggestions, or you can use the help() function.
+The idea behind aliases is because some functions are very common, so we make the common case faster, reducing the time it takes to type it out. Some function's full name can get very long, for example `sneaksprintjump` vs `snsj`. Aliases are almost always abbreviations (such as SNeakSprintJump) so they won't be a totally new thing to have to learn. And even if you forgot, Mothball's error message will provide suggestions, or you can use the `help()` function.
 
 Now you know how to simulate sprinting. To check your understanding, use Mothball to approximate the max speed that you can reach by just sprinting. You should get approximately `0.2806167`.
 
 ## The First Leap - An Example with Jumping
 Recall that a jump normally lasts 12t, but it can last longer or shorter. Let's suppose you want to jump forward without sprinting for 15t. We will use the function `walkjump` ("without sprinting" implies walking). The simulation would be
 
-```mothball/output
+```mothball
 walkjump(15)
 ```
 
@@ -87,7 +115,7 @@ The last scenario needed to understand Mothball is var-positional arguments. It 
 ### Order of Positional and Keyword Arguments
 Positional arguments always go before keyword arguments. For example, the first argument of `sprint` is the duration, which is positional. The `speed` argument is a keyword argument. `sprint(3, speed=2)` means to sprint for 3t with the speed 2 potion effect. Swapping the arguments gives you this error.
 
-```mothball/output
+```mothball
 sprint(speed=2, 3)
 ```
 

@@ -586,26 +586,24 @@ class MDLinter:
                     tokens += self.lineParse(line + "\n")
             elif code_block:
                 if line.startswith("```"):
+                    code = code.strip()
                     if show_func_sig:
                         a = CodeLinter(self.options, self.colorOptions, self.textOptions, CellType.XZ)
-                        bb = [(x[0], x[1], 1) for x in a.getFunctionSignature(code[0:len(code)-1])]
+                        bb = [(x[0], x[1], 1) for x in a.getFunctionSignature(code)]
+                        # print("1", bb)
                         tokens += bb
 
-                    else: # Normal code
-                        a = CodeLinter(self.options, self.colorOptions, self.textOptions, CellType.XZ)
-                        bb = [(x[0], x[1], 1) for x in a.lintTexttoTokens(code[0:len(code)-1])]
+                    elif show_code_output:
+                        bb = [(x[0], x[1], 3) for x in self.parseTextToOutput(code)]
+                        # print("2", bb)
                         tokens += bb
-                        # print(tokens)
-                        
-                        if show_code_output:
-                            p=mxz.Player()
-                            try:
-                                p.simulate(code)
-                            except Exception as e:
-                                p.output = [(f"Error: {e}", "normal")]
-                            # print(code)
-                            # print("ADDING", p.output)
-                            tokens += a.parseOutput(p.output, True)
+                        pass
+
+                    else: # normal code
+                        a = CodeLinter(self.options, self.colorOptions, self.textOptions, CellType.XZ)
+                        bb = [(x[0], x[1], 1) for x in a.lintTexttoTokens(code)]
+                        # print("3", bb)
+                        tokens += bb
 
                     code = ""
                     code_block = False
@@ -616,36 +614,88 @@ class MDLinter:
         # print(tokens)
         return tokens
     
+    def parseTextToOutput(self, text: str):
+        MAP = {"x": ExpressionType.X_LABEL,
+         "xe": ExpressionType.X_LABEL_WITH_EXPRESSION,
+         "z": ExpressionType.Z_LABEL,
+         "ze": ExpressionType.Z_LABEL_WITH_EXPRESSION,
+         "xih": ExpressionType.X_INERTIA_HIT,
+         "xim": ExpressionType.X_INERTIA_MISS,
+         "zih": ExpressionType.Z_INERTIA_HIT,
+         "zim": ExpressionType.Z_INERTIA_MISS,
+         "t": ExpressionType.TEXT,
+         "gn": ExpressionType.GENERAL_LABEL_WITH_NUMBER,
+         "ge": ExpressionType.GENERAL_LABEL_WITH_EXPRESSION,
+         "g": ExpressionType.GENERAL_LABEL,
+         "w": ExpressionType.WARNING}
+        
+        # MAP2 = {ExpressionType.X_LABEL: Style.OUTPUT_XLABEL,
+        #  ExpressionType.X_LABEL_WITH_EXPRESSION: Style.OUTPUT_XLABEL,
+        #  ExpressionType.Z_LABEL: Style.OUTPUT_ZLABEL,
+        #  ExpressionType.Z_LABEL_WITH_EXPRESSION: Style.OUTPUT_ZLABEL,
+        #  ExpressionType.X_INERTIA_HIT: Style.OUTPUT_XLABEL,
+        #  ExpressionType.X_INERTIA_MISS: Style.OUTPUT_XLABEL,
+        #  ExpressionType.Z_INERTIA_HIT: Style.OUTPUT_ZLABEL,
+        #  ExpressionType.Z_INERTIA_MISS: Style.OUTPUT_ZLABEL,
+        #  ExpressionType.TEXT: Style.OUTPUT_TEXT,
+        #  ExpressionType.GENERAL_LABEL_WITH_NUMBER: Style.OUTPUT_LABEL,
+        #  ExpressionType.GENERAL_LABEL_WITH_EXPRESSION: Style.OUTPUT_LABEL,
+        #  ExpressionType.GENERAL_LABEL: Style.OUTPUT_LABEL,
+        #  ExpressionType.WARNING: Style.OUTPUT_WARNING}
+        
+        item = ""
+        components = []
+        style = []
+        outputLines = text.split("//\n")
+        # print(outputLines)
+        for i in outputLines:
+            l = i.split("|")
+            # print(l)
+            if l and not l[0]:
+                continue
+
+            try:
+                expr_type, expr_text = l
+                expr_type = MAP[expr_type.strip()]
+            except ValueError as e:
+                raise ValueError(f"Error at {i}: {e}")
+            
+            components.append((expr_type, expr_text.split("/")))
+
+        # print(components)
+        return CodeLinter(self.options, self.colorOptions, self.textOptions, CellType.XZ).parseOutput(components)
+    
     def parseTextToHighlight(self, text: str):
         """
         Parses `text`. Returns a list of 2-tuples, each tuple contains the text and the linting style.
         """
         # THIS MIGHT BE THE ISSUE TO THE LINUX PROBLEM
         self.raw_text = text
-        tokens = []
+        # tokens = []
         
-        # (NEW CODE ATTEMPT) First parse
-        results = []
+        # # (NEW CODE ATTEMPT) First parse
+        # results = []
 
-        item = ""
-        for char in text:
-            if char == "\n":
-                if item:
-                    results.append(item)
-                    results.append(char)
-                item = ""
-                continue
-            item += char
-        if item:
-            results.append(item)
+        # item = ""
+        # for char in text:
+        #     if char == "\n":
+        #         if item:
+        #             results.append(item)
+        #             results.append(char)
+        #         item = ""
+        #         continue
+        #     item += char
+        # if item:
+        #     results.append(item)
         
-        tokens = []
-        for i in results:
-            if i.startswith("# "):
-                tokens.append((i, Style.HEADER1))
-            else:
-                tokens.append((i, Style.DEFAULT))
-        return tokens
+        # tokens = []
+        # for i in results:
+        #     if i.startswith("# "):
+        #         tokens.append((i, Style.HEADER1))
+        #     else:
+        #         tokens.append((i, Style.DEFAULT))
+        return [(text, Style.DEFAULT)]
+        # return tokens
         
         
         

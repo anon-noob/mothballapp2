@@ -14,14 +14,23 @@ These functions include `bwmm xbwmm wall xwall blocks xblocks`. They take two ar
 ## Example using bwmm
 Let's look at an example. Suppose I would like to know how much speed I would need to fit `sj45(12)` into 1 block of momentum. The Mothball code is
 
-```mothball/output
+```mothball
 bwmm(1, sj45(12))
+```
+```mothball/output
+z|Vz Needed/: /-0.2929913//
+z|Zmm Used/: /1//
 ```
 
 so i would need a z speed of -0.2929913. To double check this, we can add a zmm(1) at the end to see that we really do use up exactly 1 block of momentum.
 
-```mothball/output
+```mothball
 bwmm(1, sj45(12)) zmm(1)
+```
+```mothball/output
+z|Vz Needed/: /-0.2929913//
+z|Zmm Used/: /1//
+ze|zmm/: /1/ - /0//
 ```
 
 Just a little note, putting `zmm(1)` inside or outside the `bwmm` doesn't make a difference, as `zmm(1)` is not a movement related function.
@@ -29,8 +38,13 @@ Just a little note, putting `zmm(1)` inside or outside the `bwmm` doesn't make a
 ## Example using wall
 Let's see another example. What if we wanted to fit `wj45 sa45(11) s45` into 1 block of distance, a 1bm frontwall if you will? Since we are dealing with a frontwall, we know that we want to optimize based on `outz(1)` so we use `wall` to do this.
 
-```mothball/output
+```mothball
 wall(1, wj45 sa45(11) s45) outz(1)
+```
+```mothball/output
+z|Vz Needed/: /-0.2009824//
+z|Z dist/: /1//
+ze|outz/: /1/ - /0//
 ```
 
 so we need -0.2009824 z speed.
@@ -38,8 +52,13 @@ so we need -0.2009824 z speed.
 ## Prefixing Optimization Functions
 So far, we have been doing this under the assumption that we are on the ground before the sequence inside the function begins. In the last example, Mothball said that we need -0.2009824 z speed to fit a 1bm frontwall momentum. That z speed must be achieved by running on the ground on the tick before the main sequence. What if instead we wanted the z speed to be for air? Simple, we let Mothball know by prefixing  an air movement function before the optimize function. It doesn't matter which function, as long as its air movement.
 
-```mothball/output
+```mothball
 sta wall(1, wj45 sa45(11) s45) outz(1)
+```
+```mothball/output
+z|Vz Needed/: /-0.1352749//
+z|Z dist/: /1//
+ze|outz/: /1/ - /0//
 ```
 
 Now the speed is different, although this is worse than getting the required speed on the ground. A good way to test this is to add `vec` at the end of the sequence and compare.
@@ -47,8 +66,14 @@ Now the speed is different, although this is worse than getting the required spe
 ## Inertia Issues and Workarounds
 But there's also another twist! Sometimes, the required z speed given yields an unexpected result! To see this, let's try optimizing for `zmm(2)` with the sequence `sj(12)`. Assume we are starting on ground, as that is typically the best strat.
 
-```mothball/output
+```mothball
 bwmm(2, sj(12)) zmm(2)
+```
+```mothball/output
+z|Vz Needed/: /-0.0065662//
+z|Zmm Used/: /2.0168653//
+w|Warning/: /encountered inertia on Z while optimizing!//
+ze|zmm/: /2/ + /0.0168653//
 ```
 
 See the warning? We've encountered inertia, and as a result, the actual momentum use does not equal 2. So what do we do!?
@@ -56,14 +81,24 @@ See the warning? We've encountered inertia, and as a result, the actual momentum
 ### Change the Angles
 One way to resolve this is by changing some angles.
 
-```mothball/output
+```mothball
 bwmm(2, sj(1, 10.01) sa(11)) zmm(2)
+```
+```mothball/output
+z|Vz Needed/: /0.0000019//
+z|Zmm Used/: /1.9999951//
+ze|zmm/: /2/ - /0.0000049//
 ```
 
 We can also try prefixing different movement. Let's try starting on air.
 
-```mothball/output
+```mothball
 sta bwmm(2, sj(1, 10.01) sa(11)) zmm(2)
+```
+```mothball/output
+z|Vz Needed/: /0.0000013//
+z|Zmm Used/: /1.9999944//
+ze|zmm/: /2/ - /0.0000056//
 ```
 
 In this case, this doesn't work, but there will be scenarios where it will be beneficial.
@@ -71,8 +106,13 @@ In this case, this doesn't work, but there will be scenarios where it will be be
 ### Different Strat
 Maybe the strat we thought would work just... can't work! In that case, we can find a different strat. For the `zmm(2)` case, there is a different strat. Don't worry if this strat is confusing.
 
+```mothball
+bwmm(2, s sj.wa | sa(11)) zmm(2)
+```
 ```mothball/output
-bwmm(2, sj(1, 10.01) sa(11)) zmm(2)
+z|Vz Needed/: /-0.1310404//
+z|Zmm Used/: /2//
+ze|zmm/: /2/ + /0//
 ```
 
 It is up to you to see how to work around inertia issues.
@@ -99,8 +139,14 @@ These functions take 2 main arguments. The first one is the Mothball code, and t
 
 Let's suppose we want to find potentially precise jumps for a 6 block momentum single 45 jump, and we want to look for jumps whose offset is less than 0.005.
 
-```mothball/output
+```mothball
 sj(12) sj(12) zmm(6) | poss(sj45(30), 0.005)
+```
+```mothball/output
+ze|zmm/: /6/ - /0.0202679//
+ze|Tick 2/: /1.5/ + /0.0027548//
+ze|Tick 9/: /3.875/ + /0.0018938//
+ze|Tick 18/: /6.6875/ + /0.0046809//
 ```
 
 Based on the result, we found 3 candidate jump distances with offsets less than 0.005. The choice of `sj45(30)` being 30 ticks is arbitrary. It just means we will see results up to 30 ticks of airtime.
@@ -108,23 +154,38 @@ Based on the result, we found 3 candidate jump distances with offsets less than 
 ### Calculating for `zb/outz/zmm`
 Mothball does the `poss` calcluations in terms of `zb` by default, which is the distance for "block to block" distance jumps. What if instead we wanted to find other landings, such as backwalled landings? We can tell Mothball to offset the numbers in its 3rd argument called `offset`. By default, this is set to `0.6` which is equivalent to `zb/xb`. Setting it to `0` makes it calculate like `outz/outx`, and `-0.6` for `zmm/xmm`. Let's see what backwalled landing we can find with the same momentum and strat.
 
-```mothball/output
+```mothball
 sj(12) sj(12) zmm(6) | poss(sj45(30), 0.005, 0)
+```
+```mothball/output
+ze|zmm/: /6/ - /0.0202679//
+ze|Tick 25/: /8.1875/ + /0.0047255//
 ```
 
 We only found one this time, at tick 25.
 
 The offset is the same even if we are going the opposite direction. Mothball will interpret `0.6` to mean "measure the distance in terms of `zb`", likewise for `0` and `-0.6`. Below, we show what happens when we face 180 instead of 0.
 
+```mothball
+f(180) sj(12) sj(12) zmm(-6) | poss(sj45(30), 0.005, 0)
+```
 ```mothball/output
-f(180) sj(12) sj(12) zmm(6) | poss(sj45(30), 0.005, 0)
+ze|zmm/: /-6/ + /0.0202679//
+ze|Tick 25/: /-8.1875/ - /0.0047258//
 ```
 
 ### Near Misses
 If you, for some reason, want to check if there are any near misses, you can! Using the keyword argument `miss = offset`, it will display all ticks where the distance traveled misses the next pixel distance by at most `offset`. In math equations, it displays `a * (0.0625) - b` with `b` being the offset.
 
-```mothball/output
+```mothball
 bwmm(2, sj45(12)) | poss( sj45(30), 0.01, miss=0.001)
+```
+```mothball/output
+z|Vz Needed/: /-0.0127614//
+z|Zmm Used/: /2//
+ze|Tick 15/: /5.5/ + /0.0021551//
+ze|Tick 27/: /9.0625/ - /0.0000212//
+ze|Tick 30/: /9.9375/ + /0.0026307//
 ```
 
 Yea... that tick 27 is one unfortunate miss.
@@ -132,8 +193,13 @@ Yea... that tick 27 is one unfortunate miss.
 ### Increments
 In modern versions, there are blocks that are not a pixel (0.0625) length; some are half a pixel. In order to be able to catch these distances, you can provide the `increment` keyword argument. By default, it is `0.0625`, incrementing by a pixel. For the half pixel case, we would set `increment=0.03125`. Here's what it looks like.
 
-```mothball/output
+```mothball
 bwmm(1, sj.wa(1, 35) sa45(11)) | poss(sj45(15), 0.0015, increment=0.03125)
+```
+```mothball/output
+z|Vz Needed/: /-0.2461407//
+z|Zmm Used/: /1//
+ze|Tick 12/: /4.40625/ + /0.0010543//
 ```
 
 See tick 12? `4.40625 = 4 + 0.0625 * (6.5)`.
@@ -147,14 +213,26 @@ This function simulates movement, then releases all inputs on the ground, or bas
 This function inputs Mothball sequences and integers. The syntax is `taps(seq1[, count1], seq2[, count2], ...)` which can accept any number of sequences and `countX` tells Mothball how many times to execute `seqX`. Anything in brackets is optional, that is, you are not required to pass an integer for each `count`. If you don't, its corresponding sequence will execute once.
 
 For example, if you want to do 3 shift taps, you would do
-```mothball/output
+```mothball
 taps(sneak, 3)
+```
+```mothball/output
+z|Z/: /0.162651//
+z|VZ/: /0//
+x|X/: /0//
+x|VX/: /0//
 ```
 
 and for 1 unshift tap W and 2 shift tap D,
+```mothball
+taps(walk, sneak.d, 2)
+# More explicitly: taps(walk, 1, sneak.d, 2)
+```
 ```mothball/output
-taps(walk, sneak, 2)
-# More explicitly: taps(walk, 1, sneak, 2)
+z|Z/: /0.2053845//
+z|VZ/: /0//
+x|X/: /-0.108434//
+x|VX/: /0//
 ```
 
 Sneak delay is toggled off while executing inside `taps`.
@@ -163,14 +241,25 @@ For air taps (or air movement in general), you should include all necessary air 
 
 For movement affected by modifiers (water, lava, etc), Mothball will assume that you will stop while inside these modifiers based on the last movement function. Example: 
 
-```mothball/output
+```mothball
 taps(walk[water](5))
+```
+```mothball/output
+z|Z/: /0.4673613//
+z|VZ/: /0//
+x|X/: /0//
+x|VX/: /0//
 ```
 
 will stop while inside water, while
 
-```mothball/output
+```mothball
 taps(walk[water](5) stop)
 ```
-
+```mothball/output
+z|Z/: /0.3322334//
+z|VZ/: /0//
+x|X/: /0//
+x|VX/: /0//
+```
 will stop on normal ground because the last movement function was `stop` with no modifiers.
