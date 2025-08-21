@@ -2,9 +2,8 @@ from numpy import float32 as f32
 from typing import Literal
 import re
 import inspect
-# from collections import Counter
 from Enums import ExpressionType
-from BaseMothballSimulation import BasePlayer, OverwriteError, MothballSequence
+from BaseMothballSimulation import BasePlayer, MothballSequence
 
 class PlayerSimulationY(BasePlayer):
 
@@ -155,13 +154,6 @@ class PlayerSimulationY(BasePlayer):
     def slime(self, height: float = 0.0):
         self.move(1, state=self.SLIME)
         self.y = height
-    
-    def repeat(self, sequence: MothballSequence, count: int = 1):
-        for _ in range(count):
-            self.simulate(sequence, return_defaults=False, locals=self.local_vars)
-    
-    def printdisplay(self, string:str = ""):
-        self.add_to_output(ExpressionType.TEXT, string_or_num=string)
 
     def setceiling(self, height: float = 0.0):
         if height == 0.0:
@@ -214,15 +206,13 @@ class PlayerSimulationY(BasePlayer):
         # print(f.__doc__)
         self.add_to_output(ExpressionType.GENERAL_LABEL, f.__doc__)
 
-    FUNCTIONS = {
+    FUNCTIONS = BasePlayer.FUNCTIONS | {
         "jump": jump, "j": jump,
         "outy": outy,
         "outvy": outvy,
         "sety": sety, "y": sety,
         "inertia": inertia,
         "air": air, "a": air,
-        "repeat": repeat, "r": repeat,
-        "print": printdisplay,
         "outty": outty, "outtopy": outty,
         "outsty": outsty, "outsneaktopy": outsty,
         "slime": slime,

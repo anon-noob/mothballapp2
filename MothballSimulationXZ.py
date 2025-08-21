@@ -3,8 +3,9 @@ from numpy import float32 as f32
 from typing import Literal
 import re
 import inspect
-from BaseMothballSimulation import BasePlayer, MothballSequence, OverwriteError
+from BaseMothballSimulation import BasePlayer, MothballSequence
 from Enums import ExpressionType
+from collections import deque
 
 class PlayerSimulationXZ(BasePlayer):
     pi = 3.14159265358979323846
@@ -72,7 +73,8 @@ class PlayerSimulationXZ(BasePlayer):
         self.last_rotation = f32(0.0)
         self.last_turn = f32(0.0)
 
-        self.rotation_queue: list[tuple[str, f32]] = []
+        self.angle_queue: deque[f32] = deque()
+        self.turn_queue: deque[f32] = deque()
         self.air_sprint_delay = True
         self.sneak_delay = False
         self.inertia_axis = 1
@@ -88,13 +90,10 @@ class PlayerSimulationXZ(BasePlayer):
     def get_angle(self):
         "Returns the next angle from the rotation queue or if no angle is in the rotation queue, return the default facing."
 
-        if self.rotation_queue:
-            turn_type, angle = self.rotation_queue.pop(0)
-            if turn_type == "angle":
-                self.rotation = angle
-            elif turn_type == "turn":
-                self.rotation += angle
-            return self.rotation
+        if self.angle_queue:
+            self.rotation = self.angle_queue.popleft()
+        if self.turn_queue:
+            self.rotation += self.turn_queue.popleft()
         return self.rotation
 
     def move(self, duration: int, rotation: f32 = None, rotation_offset: float = 0.0, slip: f32 = None, is_sprinting: bool = False, is_sneaking: bool = False, speed: int = None, slow: int = None, state: Literal["ground", "air", "jump"] = "ground"):
@@ -517,7 +516,7 @@ class PlayerSimulationXZ(BasePlayer):
         player.z = 0.0
         player.vx = 0.0
         player.vz = 0.0
-        player.rotation_queue = []
+        player.angle_queue = []
         player.rotation = 0.0
         if speed is not None:
             player.speed_effect = speed
@@ -582,11 +581,6 @@ class PlayerSimulationXZ(BasePlayer):
         multiplier = max((1 + (0.2 * speed)) * (1 - (0.15 * slow)), 0) * 100
         self.add_to_output(ExpressionType.GENERAL_LABEL, f"Speed {speed} Slow {slow} ({int(round(multiplier))}% base speed)")
 
-    def printdisplay(self, string: str = "", /):
-        if self.reverse:
-            string = "".join([x for x in reversed(string)])
-        self.add_to_output(ExpressionType.TEXT, string_or_num=string)
-
     # SETTERS
     def face(self, angle_in_degrees: f32, /):
         "Sets the player's default facing in degrees"
@@ -615,12 +609,6 @@ class PlayerSimulationXZ(BasePlayer):
     def setslip(self, value: f32, /):
         "Sets the player's ground slipperiness"
         self.default_ground_slip = value
-    
-    def setprecision(self, decimal_places: int, /):
-        "Sets the decimal precision for displaying outputs, must be an integer between `0` and `16` inclusive, raises `ValueError` otherwise."
-        if decimal_places < 0 or decimal_places > 16:
-            raise ValueError(f"precision() only takes integers between 0 to 16 inclusive, got {decimal_places} instead.")
-        self.precision = decimal_places
     
     def inertia(self, value: f32, /, single_axis: bool = False):
         "Sets the player's inertia threshold"
@@ -669,25 +657,27 @@ class PlayerSimulationXZ(BasePlayer):
     def version(self, string: str, /):
         "String should be in the form `1.n`, for example the minimum `1.8` is default. Max is currently `1.20`"
         components = string.split(".")
-        try:
+        if len(components) == 2:
             one, version_number = components
             patch_number = 0
-        except:
-            try:
-                one, version_number, patch_number = components
-            except:
-                raise ValueError(f"{string} is not a valid version")
-
-    
-        if one != "1":
+        elif len(components) == 3:
+            one, version_number, patch_number = components
+        else:
             raise ValueError(f"{string} is not a valid version")
-        if int(version_number) > 8:
+
+        one = int(one)
+        version_number = int(version_number)
+        patch_number = int(patch_number)
+    
+        if one != 1:
+            raise ValueError(f"{string} is not a valid version")
+        if version_number > 8:
             self.inertia(0.003)
-        if int(version_number) > 13:
+        if version_number > 13:
             self.sneakdelay("true")
-        if int(version_number) > 19 or (int(version_number) == 19 and patch_number > 3):
+        if version_number > 19 or (version_number == 19 and patch_number > 3):
             self.sprintairdelay(False)
-        if int(version_number) == 21 and int(patch_number) >= 5:
+        if version_number == 21 and patch_number >= 5:
             self.inertia_axis = 2
     
     def speed(self, multiplier: int, /):
@@ -714,44 +704,6 @@ class PlayerSimulationXZ(BasePlayer):
         if multiplier < 0 or 256 < multiplier:
             raise ValueError(f"slow() takes an integer between 0 and 256 inclusive, not {multiplier}")
         self.slow_effect = multiplier
-    
-    def var(self, variable_name: str, value: str):
-        """
-        Assigns `value` to `variable_name`
-        
-        A valid variable name is any sequence of alphabet letters a-z or A-Z, numerical digits (0-9), an underscore `_`, or any combination of them. \\
-        A number cannot be the first character in the variable name.
-
-        `var()` will attempt to convert the value to the appropiate datatype, which only supports
-        ```py
-        int | float | str
-        ```
-        """
-        # if len(variable_name) > 1 and variable_name in Player.FUNCTIONS.keys():
-        #     raise ValueError(f"There is no reason for you to name your variable '{variable_name}' as that is already a function.")
-
-        find_var_regex = r"^([a-zA-Z_][a-zA-Z0-9_]*)$"
-        if not re.findall(find_var_regex, variable_name): # Either has one match or no matches
-            raise SyntaxError(f"'{variable_name}' is not a valid variable name")
-        
-        try: value = int(value)
-        except ValueError: 
-            try: value = float(value)
-            except ValueError:
-                try: value = eval(value, {"__builtins__": {}}, self.local_vars)
-                except:
-                    try:  # PLEASE PREVENT OTHER FUNCTIONS
-                        self.simulate(value)
-                        value = self.output[-1][0].split()
-                        if len(value) == 2:
-                            value = float(value[-1])
-                        elif len(value) == 4:
-                            value = float(f"{value[-2]}{value[-1]}")
-                        
-                    except:
-                        pass
-        
-        self.local_vars[variable_name] = value
 
     # Setting rotations
     def anglequeue(self, *angles: f32):
@@ -761,8 +713,7 @@ class PlayerSimulationXZ(BasePlayer):
         In mothball syntax, `anglequeue(1,-2,3) walk(3)` is the same as `face(1) walk face(-2) walk face(3) walk`
         """
         for angle in angles:
-            self.rotation_queue.append(("angle", angle))
-            # print(self.rotation_queue)
+            self.angle_queue.append(angle)
     
     def turnqueue(self, *angles: float):
         """
@@ -771,19 +722,9 @@ class PlayerSimulationXZ(BasePlayer):
         In mothball syntax, `turnqueue(1,-2,3) walk(3)` is the same as `turn(1) walk turn(-2) walk turn(3) walk`
         """
         for angle in angles:
-            self.rotation_queue.append(("turn", angle))
+            self.turn_queue.append(angle)
 
     # Nested functions
-    @BasePlayer.record_to_call_stack
-    def repeat(self, sequence: MothballSequence, count: int, /):
-        "Run `sequence` for `count` times. Raises `ValueError` if `count < 0`"
-        if count < 0:
-            raise ValueError(f"repeat() must have a nonnegative argument 'count'")
-        
-        # self.stack_trace.append("repeat")
-        for _ in range(count):
-            self.simulate(sequence, return_defaults=False)
-        # self.stack_trace.pop()
     
     @BasePlayer.record_to_call_stack
     def possibilities(self, sequence: MothballSequence, min_distance: float, offset: float = 0.6, /, *, increment: float = 0.0625, miss: float = None):
@@ -924,16 +865,16 @@ class PlayerSimulationXZ(BasePlayer):
         self.add_to_output(ExpressionType.TEXT, string_or_num="Jump Dimension Info")
         self.add_to_output(ExpressionType.TEXT, string_or_num=f"\tA {x} × {z} block jump is equivalent to")
 
-        self.add_to_output(ExpressionType.TEXT, string_or_num=f"\t{self.truncate_number(PlayerSimulationXZ.dist_to_block(sqrt(PlayerSimulationXZ.block_to_dist(x)**2 + PlayerSimulationXZ.block_to_dist(z)**2)), return_as_string=True)} block jump.")
+        self.add_to_output(ExpressionType.TEXT, string_or_num=f"\t{self.truncate_number(PlayerSimulationXZ.dist_to_block(sqrt(PlayerSimulationXZ.block_to_dist(x)**2 + PlayerSimulationXZ.block_to_dist(z)**2)))} block jump.")
 
-        self.add_to_output(ExpressionType.TEXT, string_or_num=f"\tAngle: {self.truncate_number(deg(arctan(PlayerSimulationXZ.block_to_dist(z), PlayerSimulationXZ.block_to_dist(x))), return_as_string=True)}")
+        self.add_to_output(ExpressionType.TEXT, string_or_num=f"\tAngle: {self.truncate_number(deg(arctan(PlayerSimulationXZ.block_to_dist(z), PlayerSimulationXZ.block_to_dist(x))))}")
     
     
     @staticmethod
     def copy_player(player: "PlayerSimulationXZ"):
         "Copies the player"
         p = PlayerSimulationXZ()
-        p.rotation_queue = player.rotation_queue
+        p.angle_queue = player.angle_queue
         p.rotation = player.rotation
         p.state = player.state
         p.default_ground_slip = player.default_ground_slip
@@ -1100,66 +1041,6 @@ class PlayerSimulationXZ(BasePlayer):
         if abs(PlayerSimulationXZ.dist_to_block(self.x) - xb) > 1e-5:
             self.add_to_output(ExpressionType.WARNING, string_or_num="encountered inertia on X while optimizing!")
 
-    # We need to fix nested functions
-    @BasePlayer.record_to_call_stack
-    def function(self, name: str, *args: str, code: MothballSequence, docstring: str):
-        # `name` has to be checked which will be done later
-        name = self.formatted(name)
-        # parse args in python-like syntax (arg_name: type_anno = default_val)
-        param_regex = r"^([a-zA-Z][a-zA-Z0-9]*)(?:(?:\s*:\s*)([a-z0-9]+))?(?:(?:\s*=\s*)([a-zA-Z0-9]+))?$"
-        
-        if name in PlayerSimulationXZ.FUNCTIONS.keys():
-            raise OverwriteError(f"'{name}' is already a function for {PlayerSimulationXZ.FUNCTIONS[name].__name__}")
-        
-
-        arguments = []
-        current_arg_kind = inspect.Parameter.POSITIONAL_OR_KEYWORD
-
-        for arg in args:
-            arg = arg.strip()
-            
-            if arg == "/" and current_arg_kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
-                for i in range(len(arguments)):
-                    arguments[i] = (arguments[i][0], inspect.Parameter.POSITIONAL_ONLY)
-            
-            elif arg == "*":
-                current_arg_kind = inspect.Parameter.KEYWORD_ONLY
-            
-            else:
-                results = re.findall(param_regex, arg)
-                if not results:
-                    raise SyntaxError()
-
-                arguments.append((results[0], current_arg_kind))
-            
-        # these functions are for a custom object instance
-        args = ("self",) + args
-
-        # self.simulate() is handled by another python script
-        code_string = f"""
-def {name}({",".join(args)}):
-    '{docstring}'
-    l = {{}}
-
-    for x in inspect.signature({name}).parameters.keys():
-        x = x.split()
-        l[x[0]] = eval(x[0])
-    
-    self.local_vars |= l
-
-    # print(f'''Function {name} has local vars {{self.local_vars = }}''')
-    # print()
-
-    self.simulate('''{code}''', locals = self.local_vars, return_defaults=False)
-
-    self.local_vars = {{a:b for a,b in self.local_vars.items() if a not in l}}
-
-self.local_funcs['{name}'] = {name}
-    """
-        
-        exec(code_string, globals() | {'self': self})
-        # self.stack_trace.pop()
-
     def mcsin(self, rad):
         if self.total_angles == -1:
             return sin(rad)
@@ -1178,7 +1059,7 @@ self.local_funcs['{name}'] = {name}
             index = int(1 / (2 * PlayerSimulationXZ.pi) * self.total_angles * rad + self.total_angles / 4) & (self.total_angles - 1)
         return f32(sin(index * self.pi * 2.0 / self.total_angles))
     
-    FUNCTIONS = {"w":walk,"walk":walk,
+    FUNCTIONS = BasePlayer.FUNCTIONS | {"w":walk,"walk":walk,
             "sprint":sprint, "s": sprint,
             "walkair": walkair, "wa": walkair,
             "sprintair": sprintair, "sa": sprintair,
@@ -1222,7 +1103,6 @@ self.local_funcs['{name}'] = {name}
             "outangle": outangle, "outa": outangle, "outfacing": outangle, "outf": outangle,
             "outturn": outturn, "outt": outturn,
             "effectsmultiplier": effectsmultiplier, "effects": effectsmultiplier,
-            "print": printdisplay, "printdisplay": printdisplay,
             "f": face, "face": face, "facing": face,
             "turn": turn,
             "setposz": setposz, "z": setposz,
@@ -1230,7 +1110,6 @@ self.local_funcs['{name}'] = {name}
             "setposx": setposx, "x": setposx,
             "setvx": setvx, "vx": setvx,
             "setslip": setslip, "slip": setslip,
-            "setprecision": setprecision, "precision": setprecision, "pre": setprecision,
             "inertia": inertia,
             "sprintairdelay": sprintairdelay, "sdel": sprintairdelay,
             "sneakdelay": sneakdelay, "sndel": sneakdelay,
@@ -1238,11 +1117,8 @@ self.local_funcs['{name}'] = {name}
             "version": version, "v": version,
             "speed": speed,
             "slowness": slowness, "slow": slowness,
-            "var": var,
-            "function": function, "func": function,
             "anglequeue": anglequeue, "aq": anglequeue,
             "turnqueue": turnqueue, "tq": turnqueue,
-            "repeat": repeat, "r": repeat,
             "possibilities": possibilities, "poss": possibilities,
             "xpossibilities": xpossibilities, "xposs": xpossibilities,
             "xzpossibilities": xzpossibilities, "xzposs": xzpossibilities,
@@ -1259,7 +1135,7 @@ self.local_funcs['{name}'] = {name}
             "xinertialistener": xinertialistener, "xil": xinertialistener,
             "zinertialistener": zinertialistener, "zil": zinertialistener,
             }
-    ALIASES = {}
+    ALIASES = BasePlayer.ALIASES
     for alias, func in FUNCTIONS.items():
         if func.__name__ in ALIASES: 
             ALIASES[func.__name__].append(alias)
@@ -1283,7 +1159,10 @@ if __name__ == "__main__":
     # s = 'sta vx(0.005494505336154793) pre(16) outvx sa outvx'
     # s = """sj(12)"""
     # s = """sa() sj.wd(2)"""
-    a.simulate(s)
-    print("Parsed: ", s)
+    a.simulate("f(-18.285-45) sta pre(3) aq(-72.395,-99.81,-121.721,-135.676,-151.399,-180) r(sta outt, 7) ")
+    # a.simulate("""function(hello, name: str, amount: int, /, last: str = help, code=
+    #            r(print(hello {name} {amount} times!)
+    #            ,amount))  hello(tiktok, 3) outz""")
+    # print("Parsed: ", s)
     b = a.show_output()
     # print(a.output)

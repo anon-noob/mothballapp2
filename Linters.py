@@ -348,6 +348,8 @@ class CodeLinter:
 
         result = []
 
+        # print(outputLines)
+
         for i, line in enumerate(outputLines):
             expr_type, tokens = line
             
@@ -376,8 +378,8 @@ class CodeLinter:
                     else:
                         result.append((tokens[4], Style.OUTPUT_POSITIVE, 0))
                 
-                case ExpressionType.TEXT | ExpressionType.GENERAL_LABEL:
-                    result.append((tokens[0], MAP[expr_type], 0))
+                case ExpressionType.TEXT | ExpressionType.GENERAL_LABEL: # DANGER, add as tuple!!!
+                    result.append((tokens, MAP[expr_type], 0))
                 
                 case ExpressionType.WARNING:
                     result.append((tokens[0], MAP[expr_type], 0))

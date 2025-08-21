@@ -37,12 +37,9 @@ from version import __version__
 # Var should not lint as strings
 # Better error msgs
 
-# Disable automatic execution in text cells (why tf is that a thing)
-#  CURRENTLY DOING TODO: Refactor text cell colorizing + fix get signature and code output, rewrite documentation as well
+# Disable automatic execution in text cells (why tf is that a thing) done
 
 # Debian Linux fix: run in console `sudo apt-get install libxcb-xinerama0`
-
-# Action stack is broken on undo: action.data['type'] -> keyerror
 
 
 """ERRORS:

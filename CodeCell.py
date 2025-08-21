@@ -103,7 +103,7 @@ class SimulationSection(Cell):
             self.output_field.renderTextfromOutput(self.linter, p.output)
             self.raw_output = p.output
         except Exception as e:
-            output = [(ExpressionType.TEXT, (f"Error: {e}",))]
+            output = [(ExpressionType.TEXT, f"Error: {e}")]
             self.output_field.renderTextfromOutput(self.linter, output)
             self.raw_output = output
     

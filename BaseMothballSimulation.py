@@ -9,6 +9,7 @@ import functools
 from Enums import ExpressionType
 
 class OverwriteError(Exception):
+    "Attempted to overwrite a basic Mothball function"
     pass
 
 class MothballSequence(str):
@@ -16,11 +17,33 @@ class MothballSequence(str):
     pass
 
 class BasePlayer:
+    class CustomMothballFunction:
+        def __init__(self, name: str, sequence: MothballSequence, arguments: list[inspect.Parameter]):
+            self.name = name
+            self.__name__ = name
+            self.sequence = sequence
+            self.positional_only = []
+            self.positional_or_keyword = []
+            self.keyword_only = []
+            self.var_positional = []
+            for arg in arguments:
+                match arg.kind:
+                    case inspect.Parameter.POSITIONAL_ONLY:
+                        self.positional_only.append(arg)
+                    case inspect.Parameter.POSITIONAL_OR_KEYWORD:
+                        self.positional_or_keyword.append(arg)
+                    case inspect.Parameter.KEYWORD_ONLY:
+                        self.keyword_only.append(arg)
+                    case inspect.Parameter.VAR_POSITIONAL:
+                        self.var_positional.append(arg)
+        
+        def __repr__(self):
+            return f"CustomFunction({self.name})"
+
+
     pi = 3.14159265358979323846
     MODIFIERS = tuple()
     ALIAS_TO_MODIFIER = {}
-    FUNCTIONS = {}
-    ALIASES = {}
     FUNCTIONS_BY_TYPE = {}
     _can_have_modifiers=()
     _can_have_input=()
@@ -41,7 +64,7 @@ class BasePlayer:
 
         self.output: list[tuple[ExpressionType, tuple]] = []
 
-        self.closed_vars = {} # For declaring functions only
+        self.closed_vars: list[dict] = [] # For declaring functions only
 
         self.call_stack = [] # For debugging and error messaging
 
@@ -172,6 +195,94 @@ class BasePlayer:
     def move(self):
         "Implement in the subclasses"
         ...
+    
+    ###########################################################################
+    ### These functions come by default, meaning both the XZ and Y calculators will have these functions exposed to the user.
+    ### They are: custom_function, printdisplay, repeat, var, precision
+    ###########################################################################
+
+    @record_to_call_stack
+    def custom_function(self, name: str, *args: str, code: MothballSequence, docstring:str=""):
+        "Create a custom function"
+        curr_type = inspect.Parameter.POSITIONAL_OR_KEYWORD
+        parameters = []
+        for arg in args:
+            if arg.strip() == "/":
+                parameters.append((arg.strip(), "", ""))
+                curr_type = inspect.Parameter.POSITIONAL_ONLY
+            elif arg.strip() == "*":
+                parameters.append((arg.strip(), "", ""))
+            else:
+                a = re.findall(r"^\s*(\w+)(?:\s*:\s*(\w+))?(?:\s*=\s*(\w+))?\s*$", arg)[0]
+                parameters.append(a)
+        
+        mapping = {"str": str, "int": int, "float": float, "MothballSequence": MothballSequence}
+        p = []
+        for i in parameters:
+            arg_name, dtype, default = i
+            if arg_name == "/":
+                curr_type = inspect.Parameter.POSITIONAL_OR_KEYWORD
+            elif arg_name == "*":
+                curr_type = inspect.Parameter.KEYWORD_ONLY
+            else:
+                dtype = mapping.get(dtype, MothballSequence)
+                if default:
+                    p.append(inspect.Parameter(arg_name, curr_type, default=dtype(default), annotation=dtype))
+                else:
+                    p.append(inspect.Parameter(arg_name, curr_type, annotation=dtype))
+
+        self.local_funcs[name] = BasePlayer.CustomMothballFunction(name, code, p)
+    
+    @record_to_call_stack
+    def repeat(self, sequence: MothballSequence, count: int, /):
+        "Run `sequence` for `count` times. Raises `ValueError` if `count < 0`"
+        if count < 0:
+            raise ValueError(f"repeat() must have a nonnegative argument 'count'")
+        
+        for _ in range(count):
+            self.simulate(sequence, return_defaults=False)
+    
+    @record_to_call_stack
+    def printdisplay(self, string: str = "", /):
+        if self.reverse:
+            string = "".join([x for x in reversed(string)])
+        self.add_to_output(ExpressionType.TEXT, string_or_num=string)
+    
+    @record_to_call_stack
+    def var(self, variable_name: str, value: str):
+        """
+        Assigns `value` to `variable_name`
+        
+        A valid variable name is any sequence of alphabet letters a-z or A-Z, numerical digits (0-9), an underscore `_`, or any combination of them. \\
+        A number cannot be the first character in the variable name.
+
+        `var()` will attempt to convert the value to the appropiate datatype, which only supports
+        ```py
+        int | float | str
+        ```
+        """
+        find_var_regex = r"^([a-zA-Z_][a-zA-Z0-9_]*)$"
+        if not re.findall(find_var_regex, variable_name): # Either has one match or no matches
+            raise SyntaxError(f"'{variable_name}' is not a valid variable name")
+        if variable_name.strip() in self.FUNCTIONS:
+            raise OverwriteError(f"Cannot set variable name '{variable_name.strip()}' as it is a function name")
+        
+        try: value = int(value)
+        except ValueError: 
+            try: value = float(value)
+            except ValueError:
+                try: value = eval(value, {"__builtins__": {}}, self.local_vars)
+                except:
+                    pass
+        
+        self.local_vars[variable_name] = value
+    
+    def setprecision(self, decimal_places: int, /):
+        "Sets the decimal precision for displaying outputs, must be an integer between `0` and `16` inclusive, raises `ValueError` otherwise."
+        if decimal_places < 0 or decimal_places > 16:
+            raise ValueError(f"precision() only takes integers between 0 to 16 inclusive, got {decimal_places} instead.")
+        self.precision = decimal_places
+
 
     def get_suggestions(self, string: str):
         "Return a list of suggestions from all available mothball commands that best matches `string`. For example, if `sprintsn` was inputted, a possible suggestion is `sneaksprint`."
@@ -431,15 +542,23 @@ class BasePlayer:
         converted_args = []
         converted_kwargs = {}
 
-        signature = inspect.signature(func).parameters.values()
+        if isinstance(func, BasePlayer.CustomMothballFunction):
+            positional_only = {x.name:x.annotation for x in func.positional_only}
+            positional_or_keyword = {x.name:x.annotation for x in func.positional_or_keyword}
+            keyword_only = {x.name:x.annotation for x in func.keyword_only}
+            var_positional = {x.name:x.annotation for x in func.var_positional}
+            required_positionals = {x.name:x.annotation for x in func.positional_only if x.default == inspect.Parameter.empty}
 
-        positional_only = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.POSITIONAL_ONLY and x.name != "self"}
-        positional_or_keyword = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD and x.name != "self"}
-        keyword_only = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.KEYWORD_ONLY}
-        var_positional = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.VAR_POSITIONAL}
+        else:
+            signature = inspect.signature(func).parameters.values()
 
-        # Watch out for potential errors
-        required_positionals = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.POSITIONAL_ONLY and x.default == inspect.Parameter.empty and x.name != "self"}
+            positional_only = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.POSITIONAL_ONLY and x.name != "self"}
+            positional_or_keyword = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD and x.name != "self"}
+            keyword_only = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.KEYWORD_ONLY}
+            var_positional = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.VAR_POSITIONAL}
+
+            # Watch out for potential errors
+            required_positionals = {x.name:x.annotation for x in signature if x.kind == inspect.Parameter.POSITIONAL_ONLY and x.default == inspect.Parameter.empty and x.name != "self"}
 
         # Idea: First check the positional arguments using positional_only and positional_or_keyword. 
         # Once positional_only runs out, start using positional_or_keyword.
@@ -517,12 +636,28 @@ class BasePlayer:
         args = token["args"]
         kwargs = token["kwargs"]
 
-        func(self, *args, **kwargs)
+        if isinstance(func, BasePlayer.CustomMothballFunction):
+            # print(func.sequence)
+            d = {}
+            used = []
+            for i,j in zip(args, func.positional_only + func.positional_or_keyword):
+                d[j.name] = i
+                used.append(j.name)
+            for k in func.positional_or_keyword+func.keyword_only:
+                if k.name in kwargs:
+                    d[k.name] = kwargs[k.name]
+                elif k.name not in used:
+                    d[k.name] = k.default
+            x = self.local_vars | {}
+            self.local_vars = self.local_vars | d
+            self.simulate(func.sequence, self.local_vars)
+            self.local_vars = x
+        else:
+            func(self, *args, **kwargs)
     
     def simulate(self, sequence: str, return_defaults = True, locals: dict = None):
         "Execute Mothball Code. If no output was made and `return_defaults == True`, return the default output (see `show_default_output()`). `locals` is a dict of values for variables."
         parsed_tokens = self.parse(sequence)
-
 
         for token in parsed_tokens:
             runnable = self.tokenize(token, locals=locals)
@@ -541,3 +676,15 @@ class BasePlayer:
             print(ss)
             s += ss + "\n"
         return s
+    
+    FUNCTIONS = {"function": custom_function, "func":custom_function, "print": printdisplay, "repeat": repeat, "r": repeat, "setprecision":setprecision, "pre":setprecision}
+    ALIASES = {"function": ["function", "func"], "print": ["print"], "repeat": ["repeat", "r"], "setprecision": ["setprecision", "pre"]}
+    
+
+if __name__ == "__main__":
+    a = BasePlayer()
+    a.simulate("""function(hello, name: str, amount: int, /, last: str = help, code=
+               r(print(hello {name} {amount} times!),amount) print(last: {last})
+               )  hello(tiktok, 4)""")
+    b=a.show_output()
+    # print(a.output)
