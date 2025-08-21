@@ -11,12 +11,12 @@ if getattr(sys, "frozen", False):
 else:
     base_path = os.path.abspath(".")
 
-words_file_path = os.path.join(base_path, "Minigame_Files", "Five Letter Words.txt")
+# words_file_path = os.path.join(base_path, "Minigame_Files", "Five Letter Words.txt")
+words_file_path = os.path.join(base_path, "words_alpha.txt")
 with open(words_file_path) as f:
-    ALL_FIVE_LETTER_WORDS_SET = set(list(filter(lambda x: len(x) == 5, f.read().split("\n"))))
+    ALL_FIVE_LETTER_WORDS_SET: set = set(filter(lambda x: 3 <= len(x) <= 10, f.read().split("\n")))
     
-
-l = ['58541283804c', '5a24cd629f6b', '5dc81f9b3e54', '960b15c1feb', 'a781dac7e73', '68b076d38b8c', '585235332a05', 'a46503c0c7b', '68b19fe53e2c', 'a8f4da2aa2b', '593cabbbb42c', 'e8c375f0a0', '9498ca8666d', '94963bd16c3', '8ec41ea9e83', 'ae94bd7f1fa', '917a2047dbb', '5f98dae5217c', '593b45ed316c', '68afc34bfb24', '68b341b98d74', 'a78469df454', 'e8c8abd149', '90377a8d4d6', '10c024c6be3', '5a2278be24ec', '90377a8e478', '6b6a7d223c7b', '68b128ecde25', '5a241a923d74', 'a0076d76418', '65f581dc72f4', 'a78469de0da', 'a323d8a4bc5', '1105d6693c5', '8ec58eb3ed3', '91aa91aabe1', 'a3226914ca0', '6998d34efb03', '699aecb4063a', '585236180014', '98c0c84c893', 'a320eaf4b71', '68b0b1b73e6d', '593a92c13a33', '65f493253661', '977d019a653', 'e6c359a91d', '9493a0b90dd', 'a7841839a9c', '60835097dd33', '616d13f45c80', '9ec52626d7f', '6423d89252fb', '6422e9f98f33', '94975ac755d', '5eb041bc1881', '8ec1d505d63', 'a74e129f3eb', '68af1123b078', '1001122b17f', '67c63c6f1fbc']
+l = ['58541283804c', '5a24cd629f6b', '5dc81f9b3e54', '960b15c1feb', 'a781dac7e73', '68b076d38b8c', '585235332a05', '68b19fe53e2c', '593cabbbb42c', 'e8c375f0a0', '9498ca8666d', '94963bd16c3', '8ec41ea9e83', 'ae94bd7f1fa', '5f98dae5217c', '593b45ed316c', '68afc34bfb24', '68b341b98d74', 'a78469df454', '90377a8d4d6', '5a2278be24ec', '90377a8e478', '68b128ecde25', '5a241a923d74', 'a0076d76418', '65f581dc72f4', 'a78469de0da', 'a323d8a4bc5', '1105d6693c5', 'a3226914ca0', '699aecb4063a', '585236180014', '98c0c84c893', 'a320eaf4b71', '68b0b1b73e6d', '65f493253661', '977d019a653', 'e6c359a91d', '9493a0b90dd', 'a7841839a9c', '616d13f45c80', '94975ac755d', '5eb041bc1881', '68af1123b078', '1001122b17f', '67c63c6f1fbc', '2a15c3855', '2b40baec3', '253dfbf9d', '38d4fdf29b47b', '449c3c86', '1b7f9cf655', '248cafcbc', '1b08673f3a', '16d7b2e198', '248bbba76', '2ad47fa5b', '18b5129578', '6901220', '19a289b8b8', '8aeb0ed3392b852c', '606b5ff', '198f5db9e944e64', '2cb15578b', '26b6dad48c63fa', '27575e49f1b5137d3ca', '18e47021c000506', '51fbc7bbce003eb995df8c', '26c7f006c', '6aeae0c', '5d8e76c', '238452836e4afc', '1acd18e78f', '26a8b1a2c506d89a1fa', '171e0813e9cd6fa', '21df1deb2d20fb35a86', 'a1babd', '40f3af19', 'b5bc36', '171aecd1d0070f8e6a75', '55d9f485fe07826f4', '6cd49f6', 'a33995', '5439aaacdbc36fe6d', '28e5bfea13bb15', '26ffc6a5ce6af89df8c', '55d9f485fe0780f8c', '87259b49df2459873f78c', '25fc16d38cbedb7378c', '27d4b7d50fbab8', '9b95de8552d491b8', '63d92238ca3335784', '6900277', '47822829', '51291b85c621275a854fd9', '1a7257772a10eac', '1967878148', '5b2b227840443541d', '28f7aa4fb', '6cd0b80', '192beca3c8', 'a7cd80', '43b51366960c5', '416effc9ee0c5', 'b27bd8', '198ee92e0bda384', '91de9c01b13a63e5', '2005b2fd679bd549e68bf064', '271ad2886', '985adb5aed76bd6261654', '98571ff7b337112eef42c', '64b72dc117cabef3c', '613e54cf58a62dcfe', '198f3206e306548', '605f66044fbd8e578', '28d88f8be0d638', '5f359b4d64bafa326e2bec', '18603d502d66745401f6', '171aecf1c97a9e092364', '6120cf7aff731b605', '3a898c9d9a057', '352f3c50917d79cffd', '56f1eeeb76266943d85f89', '186074d31238ffb3ba57', '38d3b60f09fb4', '55f4dda0921412257', '2ae207455', '198ef7cdf872a05', '23910d9a886fc5', '19c8529d49e9c45', '2a23c536c', 'a320eaf4b71', '186005f0e9eb8d65a0eb', '63d83f21ba7138235', '18ab6c5f25ea9bc', '169ccf329b', '90668c35c9c76eed17cfe', '185fdc27a101ba019df8', '2700bb3a17c4455a874', '22db27746448dd', '187317a09fb7cfe', '19567737276d14d', '271e8c400d88bd', '2439dca61dad1b1d34691b64', '68b0761c708c', '6aeb9bf', '29050391e', '265c15ad4', '1674034c96f4104', '62559bc', '9a32f4170cb43674', '29f550430add0a', '634849c', '18e4c7752d15646', '973a4fe693162257', '9cc7696cfd69913a', 'e709ffaadd2120d2b324', '5dc344ae577f10b64', '23942d73ed35b872a38b852c', '3644601e314a7dccdd', '2a829109f', '2584ce27a13a6b9aa1de7646', '6dc6531', '9b96ee2cecda13dd', '167042096802848c36e584e64', '21eb83b11385434446e', '1accfa4b98', '22edea377d07c14c89d17646', '1787665ec45e6ab5e655', '3e060d0b3b2e56f6660a4ec', '62f789a611bccd41d', '18296edb25291a271fd5', '26681a3c9a6e7a']
 def e():
     globals()['\x63\x68\x72'] = chr
     globals()['\x69\x6e\x74'] = int
@@ -51,9 +51,11 @@ def e():
         return r
 
     return list(map(lambda x: g(f(x)), l))
-PARKOUR_FIVE_LETTER_WORDS = e()
-ALL_FIVE_LETTER_WORDS_SET = ALL_FIVE_LETTER_WORDS_SET.union(set(PARKOUR_FIVE_LETTER_WORDS))
-ALL_FIVE_LETTER_WORDS_LIST = list(ALL_FIVE_LETTER_WORDS_SET)
+
+PARKOUR_FIVE_LETTER_WORDS_LIST = e()
+PARKOUR_FIVE_LETTER_WORDS = set(PARKOUR_FIVE_LETTER_WORDS_LIST)
+ALL_FIVE_LETTER_WORDS_SET.update(PARKOUR_FIVE_LETTER_WORDS)
+random.seed(int(datetime.datetime.now(datetime.timezone.utc).toordinal()))
 
 GREEN = "#6aaa64"
 YELLOW = "#F8E300"
@@ -79,8 +81,8 @@ class GUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.help_window = None
-        random.seed(int(datetime.datetime.now(datetime.timezone.utc).toordinal()))
-        self.sol = random.choice(PARKOUR_FIVE_LETTER_WORDS)
+        self.max_letter_length = 10
+        self.sol = random.choice(PARKOUR_FIVE_LETTER_WORDS_LIST)
         self.gameState = self.IN_PROGRESS
 
         self.sol_letter_count = {}
@@ -97,7 +99,7 @@ class GUI(QMainWindow):
 
         central_widget = QWidget()
         central_widget.setStyleSheet("background-color: #2e2e2e;color: white")
-        central_widget.setMinimumWidth(800)
+        central_widget.setMinimumWidth(1000)
 
         self.main_layout = QHBoxLayout(central_widget)
 
@@ -118,16 +120,20 @@ class GUI(QMainWindow):
         for _ in range(6):
             row = QHBoxLayout()
             cells = []
-            for _ in range(5):
+            for __ in range(self.max_letter_length+1):
                 cell = QPushButton("")
                 cell.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
                 cell.setFixedSize(70,70)
-                cell.setStyleSheet("background-color: #444; color: white; font-size: 24px; border: 2px solid #666;")
                 cell.setEnabled(False)
+                if __ == self.max_letter_length:
+                    cell.setStyleSheet("background-color: #7A7A7A; color: white; font-size: 24px; border: 2px solid #666;")
+                else:
+                    cell.setStyleSheet("background-color: #444; color: white; font-size: 24px; border: 2px solid #666;")
                 row.addWidget(cell)
                 cells.append(cell)
             self.grid_layout.addLayout(row)
             self.display_buttons.append(cells)
+
         self.game_interface.addLayout(self.grid_layout)
 
         self.letter_pointer = 0
@@ -141,7 +147,7 @@ class GUI(QMainWindow):
         keys = [
             list("QWERTYUIOP"),
             list("ASDFGHJKL"),
-            ["DEL"] + list("ZXCVBNM") + ["ENTER"]
+            ["ENTER"] + list("ZXCVBNM") + ["DEL"]
         ]
         self.key_buttons = {}
         self.key_button_states = {}
@@ -199,7 +205,7 @@ class GUI(QMainWindow):
         rows = []
         for row in range(self.guess_count):
             squares = ""
-            for col in range(5):
+            for col in range(self.max_letter_length):
                 state = self.button_states[row][col]
                 if state == self.CORRECT:
                     squares += correct
@@ -225,14 +231,14 @@ class GUI(QMainWindow):
             self.contrast_mode = False
 
         for row in range(min(self.guess_count,6)):
-            for button in range(5):
+            for button in range(self.max_letter_length):
                 if self.button_states[row][button] == self.CORRECT:
                     self.display_buttons[row][button].setStyleSheet(
-                        "background-color:" + self.letterCorrectPositionColor() + "; color: black; font-size: 24pt; border: 2px solid #666;"
+                        "background-color:" + self.letterCorrectPositionColor() + "; color: black; font-size: 24px; border: 2px solid #666;"
                     )
                 elif self.button_states[row][button] == self.PARTIAL_CORRECT:
                     self.display_buttons[row][button].setStyleSheet(
-                        "background-color:" + self.letterInWordColor() + "; color: black; font-size: 24pt; border: 2px solid #666;"
+                        "background-color:" + self.letterInWordColor() + "; color: black; font-size: 24px; border: 2px solid #666;"
                     )
         
         for key, btn in self.key_buttons.items():
@@ -248,20 +254,33 @@ class GUI(QMainWindow):
         if "".join(self.current_letter_guesses).lower() not in ALL_FIVE_LETTER_WORDS_SET:
             self.info_label.setText("Not a valid word!")
             g = self.guess_count
-            for i in range(5):
+            for i in range(self.max_letter_length):
                 QTimer.singleShot(i*50, lambda x=i: self.animateCell(self.display_buttons[g][x], "#444", RED, duration=200))
                 QTimer.singleShot(i*50 + 200, lambda x=i: self.animateCell(self.display_buttons[g][x], RED, "#444", duration=200))
             return
 
         self.acceptInput = False
-        colored = [False, False, False, False, False]
+        colored = [False for _ in range(self.max_letter_length)]
         count = {} | self.sol_letter_count
-        self.button_states.append(['', '', '', '', ''])
+        self.button_states.append(['' for _ in range(self.max_letter_length)])
+
+        a = len(self.sol)
+        b = len(self.current_letter_guesses)
+        if a == b:
+            # self.display_buttons[self.guess_count][self.max_letter_length].setText("1")
+            QTimer.singleShot(500, lambda g=self.guess_count: self.animateCell(self.display_buttons[g][10], "#7A7A7A", GREEN))
+        elif a < b:
+            QTimer.singleShot(500, lambda g=self.guess_count: self.animateCell(self.display_buttons[g][10], "#7A7A7A", RED))
+            # self.display_buttons[self.guess_count][self.max_letter_length].setText("X")
+        elif a > b:
+            QTimer.singleShot(500, lambda g=self.guess_count: self.animateCell(self.display_buttons[g][10], "#7A7A7A", RED))
+            # self.display_buttons[self.guess_count][self.max_letter_length].setText("X")
+
 
         # Check for greens
         for i, letter in enumerate(self.current_letter_guesses):
             letter = letter.lower()
-            if letter == self.sol[i] and count[letter]:
+            if i < len(self.sol) and letter == self.sol[i] and count[letter]:
                 QTimer.singleShot(i*200, lambda g=self.guess_count, x=i: self.animateCell(self.display_buttons[g][x], "#444", self.letterCorrectPositionColor()))
                 count[letter] -= 1
                 colored[i] = True
@@ -271,10 +290,18 @@ class GUI(QMainWindow):
                     self.key_button_states[letter.upper()] = self.CORRECT
                     QTimer.singleShot(i*200, lambda y=letter.upper(): self.animateKey(self.key_buttons[y], curr, self.letterCorrectPositionColor()))
 
-        if all(colored):
-            self.guess_count += 1
-            QTimer.singleShot(1500, self.victory)
-            return
+        for _ in range(len(self.current_letter_guesses)):
+            if not colored[_]:
+                break
+        else:
+            if a == b:
+                self.guess_count += 1
+                QTimer.singleShot(1500, self.victory)
+                return
+        # if all(colored):
+        #     self.guess_count += 1
+        #     QTimer.singleShot(1500, self.victory)
+        #     return
 
         # Check for yellow
         for i, letter in enumerate(self.current_letter_guesses):
@@ -311,6 +338,7 @@ class GUI(QMainWindow):
         else:
             self.info_label.setText(f"Guessed {self.guess_count} of 6")
             QTimer.singleShot(1500, self.setAcceptInput)
+        
 
     def setAcceptInput(self):
         self.acceptInput = True
@@ -335,10 +363,10 @@ class GUI(QMainWindow):
                 self.display_buttons[self.guess_count][self.letter_pointer].setText(None)
                 self.current_letter_guesses.pop()
         elif key == "ENTER":
-            if self.letter_pointer == 5:
+            if 3 <= self.letter_pointer <= self.max_letter_length:
                 self.checkWord()
         else:
-            if self.letter_pointer < 5:
+            if self.letter_pointer < self.max_letter_length:
                 self.display_buttons[self.guess_count][self.letter_pointer].setText(key)
                 self.current_letter_guesses.append(key)
                 self.letter_pointer += 1
@@ -346,11 +374,12 @@ class GUI(QMainWindow):
     def resizeEvent(self, a0):
         a = self.grid_layout.geometry().height()
         b = self.grid_layout.geometry().width()
-        size = min(max(int(min(a,b)/7), 70),120)
+        size = min(max(int(min(a,b)/7), 50),120)
 
         for row in self.display_buttons:
             for cell in row:
                 cell.setFixedSize(size, size)
+    
 
         for key,cell in self.key_buttons.items():
             if key in ("ENTER", "DEL"):
@@ -449,20 +478,42 @@ class HelpWindow(QMainWindow):
         self.label.setText(self.text1())
         c.addWidget(self.label)
         
-        self.word = "GREAT"
+        self.word = "GOODLUCK"
         colors = self.getColors()
 
         example = QHBoxLayout()
         example.setAlignment(Qt.AlignCenter)
         self.buttons = []
-        for i, letter, color in zip(range(5), self.word, colors):
+        for i, letter, color in zip(range(10), self.word, colors):
             p = QPushButton(letter)
             p.setStyleSheet(
-                "background-color:" + color + "; color: black; font-size: 24pt; border: 2px solid #666;"
+                "background-color:" + color + "; color: black; font-size: 24px; border: 2px solid #666;"
             )
-            p.setFixedSize(100,100)
+            p.setFixedSize(70,70)
             self.buttons.append(p)
             example.addWidget(p)
+        
+        b = QPushButton()
+        b.setStyleSheet(
+            "background-color:" + color + "; color: black; font-size: 24px; border: 2px solid #666;"
+        )
+        b.setFixedSize(70,70)
+        self.buttons.append(b)
+        example.addWidget(b)
+        b = QPushButton()
+        b.setStyleSheet(
+            "background-color:" + color + "; color: black; font-size: 24px; border: 2px solid #666;"
+        )
+        b.setFixedSize(70,70)
+        self.buttons.append(b)
+        example.addWidget(b)
+        b = QPushButton()
+        b.setStyleSheet(
+            "background-color:" + RED + "; color: red; font-size: 24px; border: 2px solid #666;"
+        )
+        b.setFixedSize(70,70)
+        self.buttons.append(b)
+        example.addWidget(b)
 
         c.addLayout(example)
 
@@ -493,7 +544,7 @@ class HelpWindow(QMainWindow):
 
     def text1(self):
         return f"""<html><body style="background-color:#2e2e2e; color:#ffffff; font-size:16pt; white-space: pre-wrap;">
-<div>Guess the minecraft parkour word in 6 or fewer tries. <span style='color:{ORANGE if self.contrast_mode else GREEN}'>{'Orange' if self.contrast_mode else 'Green'}</span> letters indicate the letter is in the right place. <span style='color:{BLUE if self.contrast_mode else YELLOW}'>{'Blue' if self.contrast_mode else 'Yellow'}</span> letters indicate the letter is in the word but in the wrong place. <span style='color:{"#5f5f5f"}'>Gray</span> letters indicate the letter is not in the word.<div>
+<div>Guess the minecraft parkour word in 6 or fewer tries. The word can be 3 to 10 characters long. <span style='color:{ORANGE if self.contrast_mode else GREEN}'>{'Orange' if self.contrast_mode else 'Green'}</span> letters indicate the letter is in the right place. <span style='color:{BLUE if self.contrast_mode else YELLOW}'>{'Blue' if self.contrast_mode else 'Yellow'}</span> letters indicate the letter is in the word but in the wrong place. <span style='color:{"#5f5f5f"}'>Gray</span> letters indicate the letter is not in the word. The rightmost tile indicates whether the length of the word is correct or not. If it is correct, it is <span style='color:{ORANGE if self.contrast_mode else GREEN}'>{'orange' if self.contrast_mode else 'green'}</span>, otherwise it is <span style='color:{RED}'>red</span><div>
 </body></html>"""
 
     def text2(self):
@@ -507,7 +558,7 @@ class HelpWindow(QMainWindow):
 </body></html>"""
     
     def getColors(self):
-        return (BLUE, ORANGE, ORANGE, "#5f5f5f", BLUE) if self.contrast_mode else (YELLOW, GREEN, GREEN, "#5f5f5f", YELLOW)
+        return (BLUE, ORANGE, ORANGE, "#5f5f5f", BLUE, "#5f5f5f", "#5f5f5f", "#5f5f5f") if self.contrast_mode else (YELLOW, GREEN, GREEN, "#5f5f5f", YELLOW, "#5f5f5f", "#5f5f5f", "#5f5f5f")
     
     def changedContrastMode(self):
         self.contrast_mode = not self.contrast_mode
@@ -517,5 +568,14 @@ class HelpWindow(QMainWindow):
 
         for btn, color in zip(self.buttons, self.getColors()):
             btn.setStyleSheet(
-                "background-color:" + color + "; color: black; font-size: 24pt; border: 2px solid #666;"
+                "background-color:" + color + "; color: black; font-size: 24px; border: 2px solid #666;"
             )
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = GUI()
+    # window.resize(1200, 800)
+    window.show()
+    sys.exit(app.exec())
+
