@@ -11,8 +11,7 @@ if getattr(sys, "frozen", False):
 else:
     base_path = os.path.abspath(".")
 
-# words_file_path = os.path.join(base_path, "Minigame_Files", "Five Letter Words.txt")
-words_file_path = os.path.join(base_path, "words_alpha.txt")
+words_file_path = os.path.join(base_path, "Minigame_Files", "words_alpha.txt")
 with open(words_file_path) as f:
     ALL_FIVE_LETTER_WORDS_SET: set = set(filter(lambda x: 3 <= len(x) <= 10, f.read().split("\n")))
     
