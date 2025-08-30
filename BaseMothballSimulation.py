@@ -249,8 +249,14 @@ class BasePlayer:
         if count < 0:
             raise ValueError(f"repeat() must have a nonnegative argument 'count'")
         
+        parsed_tokens = self.parse(sequence)
+        runnables = []
+        for token in parsed_tokens:
+            runnable = self.tokenize(token, locals=self.local_vars)
+            runnables.append(runnable)
         for _ in range(count):
-            self.simulate(sequence, return_defaults=False)
+            for runnable in runnables:
+                self.run(runnable)
     
     @record_to_call_stack
     def printdisplay(self, string: str = "", /):
@@ -693,6 +699,9 @@ class BasePlayer:
 
 if __name__ == "__main__":
     a = BasePlayer()
-    # a.simulate("""""")
-    # b=a.show_output()
-    print(a.clean_backslashes(r"Alive \, or well\, it depends but i think 2 \= bell \\ nice"))
+    import time
+    xx = time.perf_counter()
+    a.simulate("""repeat(pre(12),10000)""")
+    yy = time.perf_counter()
+    b=a.show_output()
+    print(yy-xx)
