@@ -91,7 +91,17 @@ class BasePlayer:
     @staticmethod
     def clean_backslashes(string: str):
         "Replaces backslashes if possible. Anything with `\` followed by a char will be replaced."
-        return string.replace("\,", ",").replace("\(", "(").replace("\)", ")").replace("\#", "#").replace("\{", "{").replace("\}", "}").replace("\=", "=") # i hate myself
+        chars = [""] * len(string)
+        follows_backslash = False
+        prev_char = ""
+        for i, char in enumerate(string):
+            if char == "\\" and not follows_backslash:
+                follows_backslash = True
+            else:
+                follows_backslash = False
+                chars[i] = char
+        return "".join(chars)
+        # return string.replace("\,", ",").replace("\(", "(").replace("\)", ")").replace("\#", "#").replace("\{", "{").replace("\}", "}").replace("\=", "=") # i hate myself
 
     def safe_eval(self, expr: str, datatype: type, locals_dict: dict):
         "Evaluate and convert `expr` to `datatype`. If `datatype = str`, it returns the `expr` as normal."
@@ -683,8 +693,6 @@ class BasePlayer:
 
 if __name__ == "__main__":
     a = BasePlayer()
-    a.simulate("""function(hello, name: str, amount: int, /, last: str = help, code=
-               r(print(hello {name} {amount} times!),amount) print(last: {last})
-               )  hello(tiktok, 4)""")
-    b=a.show_output()
-    # print(a.output)
+    # a.simulate("""""")
+    # b=a.show_output()
+    print(a.clean_backslashes(r"Alive \, or well\, it depends but i think 2 \= bell \\ nice"))
