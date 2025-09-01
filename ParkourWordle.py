@@ -69,6 +69,16 @@ ORANGE = "#E75900"
 BLUE = "#0099FF"
 RED = "#ff0000"
 
+def createGameFiles():
+    path = os.path.join(base_path, "Minigame_Files")
+    os.makedirs(path, exist_ok=True)
+    if not os.path.exists(os.path.join(path, "WordleGameStats.json")):
+        with open(os.path.join(path, "WordleGameStats.json"), "w") as file:
+            json.dump({"wins": 0, "losses": 0, "1 guess": 0, "2 guess": 0, "3 guess": 0, "4 guess": 0, "5 guess": 0, "6 guess": 0}, file)
+    
+    if not os.path.exists(os.path.join(path, "WordleGameState.json")):
+        with open(os.path.join(path, "WordleGameStats.json"), "w") as file:
+            json.dump({"time": 0, "guesses": {}, "state": 0}, file)
 
 
 class GUI(QMainWindow):
@@ -85,6 +95,7 @@ class GUI(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        createGameFiles()
         self.help_window = None
         self.max_letter_length = 10
         self.sol = random.choice(PARKOUR_FIVE_LETTER_WORDS_LIST)
@@ -199,7 +210,7 @@ class GUI(QMainWindow):
         QTimer.singleShot(0, lambda: self.resizeEvent(None))
 
     def loadCurrentState(self):
-        with open(os.path.join("Minigame_Files", "WordleGameState.json")) as f:
+        with open(os.path.join(base_path, "Minigame_Files", "WordleGameState.json")) as f:
             saveState = json.load(f)
         
         if saveState['time'] != time_seed:
@@ -222,14 +233,14 @@ class GUI(QMainWindow):
             self.gameState = saveState['state']
 
     def addStat(self):
-        with open(os.path.join("Minigame_Files", "WordleGameStats.json"), "r") as f:
+        with open(os.path.join(base_path, "Minigame_Files", "WordleGameStats.json"), "r") as f:
             stats = json.load(f)
         if self.gameState == self.WIN:
             stats['wins'] += 1
             stats[f'{self.guess_count} guess'] += 1
         elif self.gameState == self.LOSE:
             stats['losses'] += 1
-        with open(os.path.join("Minigame_Files", "WordleGameStats.json"), "w") as f:
+        with open(os.path.join(base_path, "Minigame_Files", "WordleGameStats.json"), "w") as f:
             json.dump(stats, f)
             
 
@@ -509,7 +520,7 @@ class GUI(QMainWindow):
 
     def saveGameState(self):
         state = {'time': time_seed, "guesses": {i:j for i,j in self.guessed_words.items()}, "state": self.gameState}
-        with open(os.path.join("Minigame_Files", "WordleGameState.json"), "w") as f:
+        with open(os.path.join(base_path, "Minigame_Files", "WordleGameState.json"), "w") as f:
             json.dump(state, f)
 
 class HelpWindow(QMainWindow):
