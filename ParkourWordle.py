@@ -5,6 +5,10 @@ from typing import Literal, Union, Optional
 from PyQt5.QtCore import Qt, QTimer, QVariantAnimation
 from PyQt5.QtGui import QColor
 import random
+import os
+import json
+
+# FIX LOAD GAME STATE KEYBOARD COLORIRNG
 
 if getattr(sys, "frozen", False):
     base_path = sys._MEIPASS
@@ -55,7 +59,8 @@ def e():
 PARKOUR_FIVE_LETTER_WORDS_LIST = e()
 PARKOUR_FIVE_LETTER_WORDS = set(PARKOUR_FIVE_LETTER_WORDS_LIST)
 ALL_FIVE_LETTER_WORDS_SET.update(PARKOUR_FIVE_LETTER_WORDS)
-random.seed(int(datetime.datetime.now(datetime.timezone.utc).toordinal()))
+time_seed = int(datetime.datetime.now(datetime.timezone.utc).toordinal())
+random.seed(time_seed)
 
 GREEN = "#6aaa64"
 YELLOW = "#F8E300"
@@ -94,6 +99,7 @@ class GUI(QMainWindow):
 
         self.contrast_mode = False
         self.button_states: list[list[int]] = []
+        self.guessed_words: dict[int, str] = {}
 
         self.acceptInput = True
 
@@ -103,7 +109,7 @@ class GUI(QMainWindow):
 
         self.main_layout = QHBoxLayout(central_widget)
 
-        
+
         self.game_interface = QVBoxLayout()
         self.game_interface.setAlignment(Qt.AlignCenter)
         self.setCentralWidget(central_widget)
@@ -113,7 +119,7 @@ class GUI(QMainWindow):
         self.info_label.setAlignment(Qt.AlignCenter)
         self.game_interface.addWidget(self.info_label)
 
-        # Word grid (6 rows x 5 columns)
+        # Word grid
         self.grid_layout = QVBoxLayout()
         self.grid_layout.setAlignment(Qt.AlignCenter)
         self.display_buttons: list[list[QPushButton]] = []
@@ -150,7 +156,7 @@ class GUI(QMainWindow):
             ["ENTER"] + list("ZXCVBNM") + ["DEL"]
         ]
         self.key_buttons = {}
-        self.key_button_states = {}
+        self.key_button_states: dict[str, int] = {}
         for row_keys in keys:
             row_layout = QHBoxLayout()
             row_layout.setAlignment(Qt.AlignCenter)
@@ -188,7 +194,45 @@ class GUI(QMainWindow):
 
         self.main_layout.addLayout(self.right_sidebar)
 
+        self.loadCurrentState()
+
         QTimer.singleShot(0, lambda: self.resizeEvent(None))
+
+    def loadCurrentState(self):
+        with open(os.path.join("Minigame_Files", "WordleGameState.json")) as f:
+            saveState = json.load(f)
+        
+        if saveState['time'] != time_seed:
+            saveState['time'] = time_seed
+        else: # Equal -> load states
+            for guess_no, guess in saveState['guesses'].items():
+                self.current_letter_guesses = list(guess)
+                for i, letter in zip(self.display_buttons[int(guess_no)-1], self.current_letter_guesses):
+                    i.setText(letter.upper())
+                self.checkWord(False, False)
+
+            for key,value in self.key_button_states.items():
+                if value == self.INCORRECT:
+                    QTimer.singleShot(200, lambda y=key.upper(): self.animateKey(self.key_buttons[y], '#555', self.letterNotInWordColor()))
+                elif value == self.PARTIAL_CORRECT:
+                    QTimer.singleShot(200, lambda y=key.upper(): self.animateKey(self.key_buttons[y], '#555', self.letterInWordColor()))
+                elif value == self.CORRECT:
+                    QTimer.singleShot(200, lambda y=key.upper(): self.animateKey(self.key_buttons[y], '#555', self.letterCorrectPositionColor()))
+
+            self.gameState = saveState['state']
+
+    def addStat(self):
+        with open(os.path.join("Minigame_Files", "WordleGameStats.json"), "r") as f:
+            stats = json.load(f)
+        if self.gameState == self.WIN:
+            stats['wins'] += 1
+            stats[f'{self.guess_count} guess'] += 1
+        elif self.gameState == self.LOSE:
+            stats['losses'] += 1
+        with open(os.path.join("Minigame_Files", "WordleGameStats.json"), "w") as f:
+            json.dump(stats, f)
+            
+
 
     def shareToClipboard(self):
         if self.gameState == self.IN_PROGRESS:
@@ -258,14 +302,17 @@ class GUI(QMainWindow):
         if self.help_window is not None and self.help_window.isVisible():
             self.help_window.changedContrastMode()
 
-    def checkWord(self):
-        if "".join(self.current_letter_guesses).lower() not in ALL_FIVE_LETTER_WORDS_SET:
+    def checkWord(self, updateKeyboard:bool = True, updateStat:bool = True):
+        word = "".join(self.current_letter_guesses).lower()
+        if word not in ALL_FIVE_LETTER_WORDS_SET:
             self.info_label.setText("Not a valid word!")
             g = self.guess_count
             for i in range(self.max_letter_length):
                 QTimer.singleShot(i*50, lambda x=i: self.animateCell(self.display_buttons[g][x], "#444", RED, duration=200))
                 QTimer.singleShot(i*50 + 200, lambda x=i: self.animateCell(self.display_buttons[g][x], RED, "#444", duration=200))
             return
+        
+        self.guessed_words[self.guess_count+1] = "".join(self.current_letter_guesses).lower()
 
         self.acceptInput = False
         colored = [False for _ in range(self.max_letter_length)]
@@ -275,17 +322,14 @@ class GUI(QMainWindow):
         a = len(self.sol)
         b = len(self.current_letter_guesses)
         if a == b:
-            # self.display_buttons[self.guess_count][self.max_letter_length].setText("1")
             QTimer.singleShot(500, lambda g=self.guess_count: self.animateCell(self.display_buttons[g][10], "#7A7A7A", GREEN))
             self.button_states[self.guess_count][self.max_letter_length] = self.CORRECT
         elif a < b:
             QTimer.singleShot(500, lambda g=self.guess_count: self.animateCell(self.display_buttons[g][10], "#7A7A7A", RED))
             self.button_states[self.guess_count][self.max_letter_length] = self.INCORRECT
-            # self.display_buttons[self.guess_count][self.max_letter_length].setText("X")
         elif a > b:
             QTimer.singleShot(500, lambda g=self.guess_count: self.animateCell(self.display_buttons[g][10], "#7A7A7A", RED))
             self.button_states[self.guess_count][self.max_letter_length] = self.INCORRECT
-            # self.display_buttons[self.guess_count][self.max_letter_length].setText("X")
 
 
         # Check for greens
@@ -299,7 +343,8 @@ class GUI(QMainWindow):
                 if self.key_button_states[letter.upper()] != self.CORRECT:
                     curr = self.intToColor(self.key_button_states[letter.upper()])
                     self.key_button_states[letter.upper()] = self.CORRECT
-                    QTimer.singleShot(i*200, lambda y=letter.upper(): self.animateKey(self.key_buttons[y], curr, self.letterCorrectPositionColor()))
+                    if updateKeyboard:
+                        QTimer.singleShot(i*200, lambda y=letter.upper(): self.animateKey(self.key_buttons[y], curr, self.letterCorrectPositionColor()))
 
         for _ in range(len(self.current_letter_guesses)):
             if not colored[_]:
@@ -307,12 +352,8 @@ class GUI(QMainWindow):
         else:
             if a == b:
                 self.guess_count += 1
-                QTimer.singleShot(1500, self.victory)
+                QTimer.singleShot(1500, lambda: self.victory(updateStat))
                 return
-        # if all(colored):
-        #     self.guess_count += 1
-        #     QTimer.singleShot(1500, self.victory)
-        #     return
 
         # Check for yellow
         for i, letter in enumerate(self.current_letter_guesses):
@@ -326,7 +367,7 @@ class GUI(QMainWindow):
                 if self.key_button_states[letter.upper()] not in (self.CORRECT, self.PARTIAL_CORRECT):
                     curr = self.intToColor(self.key_button_states[letter.upper()])
                     self.key_button_states[letter.upper()] = self.PARTIAL_CORRECT
-                    QTimer.singleShot(i*200, lambda y=letter.upper(): self.animateKey(self.key_buttons[y], curr, self.letterInWordColor()))
+                    if updateKeyboard: QTimer.singleShot(i*200, lambda y=letter.upper(): self.animateKey(self.key_buttons[y], curr, self.letterInWordColor()))
                 
 
 
@@ -338,14 +379,14 @@ class GUI(QMainWindow):
                 if self.key_button_states[letter.upper()] == 0:
                     curr = self.intToColor(self.key_button_states[letter.upper()])
                     self.key_button_states[letter.upper()] = self.INCORRECT
-                    QTimer.singleShot(i*200, lambda y=letter.upper(): self.animateKey(self.key_buttons[y], curr, self.letterNotInWordColor()))
+                    if updateKeyboard: QTimer.singleShot(i*200, lambda y=letter.upper(): self.animateKey(self.key_buttons[y], curr, self.letterNotInWordColor()))
 
         self.guess_count += 1
         self.current_letter_guesses = []
         self.letter_pointer = 0
 
         if self.guess_count == 6:
-            QTimer.singleShot(1500, self.defeat)
+            QTimer.singleShot(1500, lambda: self.defeat(updateStat))
         else:
             self.info_label.setText(f"Guessed {self.guess_count} of 6")
             QTimer.singleShot(1500, self.setAcceptInput)
@@ -354,15 +395,17 @@ class GUI(QMainWindow):
     def setAcceptInput(self):
         self.acceptInput = True
 
-    def victory(self):
+    def victory(self, updateStat: bool = False):
         self.info_label.setText(f"Victory in {self.guess_count} guesses")
         self.setAcceptInput()
         self.gameState = self.WIN
+        if updateStat: self.addStat()
 
-    def defeat(self):
+    def defeat(self, updateStat: bool = False):
         self.info_label.setText(f"Defeat! Word was {self.sol.upper()}")
         self.setAcceptInput()
         self.gameState = self.LOSE
+        if updateStat: self.addStat()
 
     def pressedKey(self, key):
         if not self.acceptInput or self.gameState != self.IN_PROGRESS:
@@ -460,6 +503,14 @@ class GUI(QMainWindow):
         self.help_window = HelpWindow(self.contrast_mode, self)
         self.help_window.show()
 
+    def closeEvent(self, a0):
+        self.saveGameState()
+        return super().closeEvent(a0)
+
+    def saveGameState(self):
+        state = {'time': time_seed, "guesses": {i:j for i,j in self.guessed_words.items()}, "state": self.gameState}
+        with open(os.path.join("Minigame_Files", "WordleGameState.json"), "w") as f:
+            json.dump(state, f)
 
 class HelpWindow(QMainWindow):
     def __init__(self, contrast_mode: bool, parent=None):
