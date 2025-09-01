@@ -7,6 +7,21 @@ from BaseMothballSimulation import BasePlayer, MothballSequence
 from Enums import ExpressionType
 from collections import deque
 
+class Tick:
+    def __init__(self, w: bool, a: bool, s: bool, d: bool, sneak: bool, sprint: bool, space: bool, right_click: bool, last_turn: float):
+        self.w = w
+        self.a = a
+        self.s = s
+        self.d = d
+        self.sneak = sneak
+        self.sprint = sprint
+        self.space = space
+        self.right_click = right_click
+        self.last_turn = last_turn
+    
+    def __repr__(self):
+        return f"Tick({self.w=},{self.a=},{self.s=},{self.d=},{self.sneak=},{self.sprint=},{self.space=},{self.right_click=},{self.last_turn=})"
+
 class PlayerSimulationXZ(BasePlayer):
     pi = 3.14159265358979323846
 
@@ -51,7 +66,7 @@ class PlayerSimulationXZ(BasePlayer):
     ], "calculators": [
         "bwmm", "xbwmm", "wall", "xwall", "inv", "xinv", "blocks", "xblocks", "repeat", "r", "possibilities", "poss", "xpossibilities", "xposs", "xzpossibilities", "xzposs", 'taps'
     ], "setters": [
-        "face", "facing", "f", "turn", "setposz", "z", "setvz", "vz", "setposx", "x", "setvx", "vx", "setslip", "slip", "setprecision", "precision", "pre", "inertia", "sprintairdelay", "sdel", "version", "v", "anglequeue", "aq", "tq", "turnqueue", "speed", "slow", "slowness", "sndel", "sneakdelay", "var", "function", "func", "alias", "toggle", "singleaxisinertia","inertialistener", "il", "xinertialistener", "xil", "zinertialistener", "zil", "xzinertialistener", "xzil"
+        "face", "facing", "f", "turn", "setposz", "z", "setvz", "vz", "setposx", "x", "setvx", "vx", "setslip", "slip", "setprecision", "precision", "pre", "inertia", "sprintairdelay", "sdel", "version", "v", "anglequeue", "aq", "tq", "turnqueue", "speed", "slow", "slowness", "sndel", "sneakdelay", "var", "function", "custom_function", "func", "alias", "toggle", "singleaxisinertia","inertialistener", "il", "xinertialistener", "xil", "zinertialistener", "zil", "xzinertialistener", "xzil"
     ]}
 
     
@@ -86,6 +101,8 @@ class PlayerSimulationXZ(BasePlayer):
 
         self.speed_effect = 0
         self.slow_effect = 0
+
+        self.history: list[Tick] = []
 
     def get_angle(self):
         "Returns the next angle from the rotation queue or if no angle is in the rotation queue, return the default facing."
@@ -228,10 +245,12 @@ class PlayerSimulationXZ(BasePlayer):
             self.last_turn = rotation - self.last_rotation
             self.last_rotation = rotation
 
-            # Record possibilities
+            # Record possibilities and history
             self.possibilities_helper()
 
             self.inertialistener_helper()
+
+            self.history.append(Tick('w' in self.inputs, 'a' in self.inputs, 's' in self.inputs, 'd' in self.inputs, is_sneaking, is_sprinting, self.state == self.JUMP, bool(self.modifiers & self.BLOCK), self.last_turn))
 
     def get_inertia_speed(self):
         "Get the speed of hitting inertia, depending on whether the player is midair, on ground, and with what slipperiness."
@@ -614,9 +633,9 @@ class PlayerSimulationXZ(BasePlayer):
         "Sets the player's inertia threshold"
         self.inertia_threshold = value
         if single_axis:
-            self.inertia_axis = 2
-        else:
             self.inertia_axis = 1
+        else:
+            self.inertia_axis = 2
 
     def sprintairdelay(self, toggle: bool, /):
         """
@@ -833,28 +852,6 @@ class PlayerSimulationXZ(BasePlayer):
         self.simulate(sequence, return_defaults=False)
         self.record_inertia = {}
 
-    @BasePlayer.record_to_call_stack
-    def ballhelp(self, func: MothballSequence):
-        "Gets help about function `func`"
-        # NOTE: probably format the string better to include color, etc
-        f = PlayerSimulationXZ.FUNCTIONS.get(func)
-        if f is None:
-            f = self.local_funcs.get(func)
-            if f is None:
-                raise NameError(f"Function {func} not found")
-            
-
-        f_sig = inspect.signature(f).parameters
-        self.add_to_output(ExpressionType.TEXT, string_or_num=f"Help with {func}:")
-        self.add_to_output(ExpressionType.TEXT, string_or_num=f"  Arguments:")
-        
-
-        for y in f_sig.values(): # PLEASE ADD * and /
-            if y.name != "self":
-                self.add_to_output(ExpressionType.TEXT, string_or_num=f"    {y}")
-        
-        self.add_to_output(ExpressionType.TEXT, string_or_num=f.__doc__)
-
     # SOME EXTRA MISCS
     def dimensions(self, x: float, z: float, /): # NOT FINALIZED
         """
@@ -906,8 +903,6 @@ class PlayerSimulationXZ(BasePlayer):
         
         Example: `taps(walk[water](5))` walk while in water for 5t, then stops in water since the player was in water.
         """
-        # self.call_stack.append("taps")
-
         d = {}
         last_seq = ""
         after_num = False
@@ -935,8 +930,10 @@ class PlayerSimulationXZ(BasePlayer):
                     if self.modifiers & i:
                         modifier_list.append(j)
                 modifiers = ",".join(modifier_list)
+                # self.modifiers
                 while self.vx != 0 or self.vz != 0:
                     self.simulate(f"stop[{modifiers}]", return_defaults=False)
+                    # self.stop()
         if had_sneak_delay:
             self.sneak_delay = True
         
@@ -1059,6 +1056,14 @@ class PlayerSimulationXZ(BasePlayer):
             index = int(1 / (2 * PlayerSimulationXZ.pi) * self.total_angles * rad + self.total_angles / 4) & (self.total_angles - 1)
         return f32(sin(index * self.pi * 2.0 / self.total_angles))
     
+    def macro(self, name: str):
+        string = "X,Y,Z,YAW,PITCH,ANGLE_X,ANGLE_Y,W,A,S,D,SPRINT,SNEAK,JUMP,LMB,RMB,VEL_X,VEL_Y,VEL_Z\n"
+        for i in self.history:
+            string += f"0.0,0.0,0.0,0.0,0.0,{i.last_turn:.3f},0.0,{'true' if i.w else 'false'},{'true' if i.a else 'false'},{'true' if i.s else 'false'},{'true' if i.d else 'false'},{'true' if i.sprint else 'false'},{'true' if i.sneak else 'false'},{'true' if i.space else 'false'},false,{'true' if i.right_click else 'false'},0.0,0.0,0.0\n"
+        # FOR NOW
+        with open(f"{name}.csv", "w") as f:
+            f.write(string)
+
     FUNCTIONS = BasePlayer.FUNCTIONS | {"w":walk,"walk":walk,
             "sprint":sprint, "s": sprint,
             "walkair": walkair, "wa": walkair,
@@ -1122,7 +1127,6 @@ class PlayerSimulationXZ(BasePlayer):
             "possibilities": possibilities, "poss": possibilities,
             "xpossibilities": xpossibilities, "xposs": xpossibilities,
             "xzpossibilities": xzpossibilities, "xzposs": xzpossibilities,
-            "help": ballhelp, "ballhelp": ballhelp,
             "dimensions": dimensions, "dim": dimensions,
             "taps": taps,
             "bwmm": bwmm,
@@ -1153,16 +1157,9 @@ class PlayerSimulationXZ(BasePlayer):
 
 if __name__ == "__main__":
     a = PlayerSimulationXZ()
-    s = "print(A pixel is {px} blocks\, and 8 pixels is {8*px} blocks)"
+    # s = "print(A pixel is {px} blocks\, and 8 pixels is {8*px} blocks)"
     # s = 'f(-13.875) wa.a(6) x(0) xil(wj.a wa.d(8) wa.sd(2) wa.s) outx x(0) w.s outz z(0) zil( wj.sd wa.d(2) sa.wd(9)) outz s.wd outz xmm vec | aq(-16.255, -38.185, -62.88, -76.93, -84.985, -90) xil(sj sa45(5) zmm outx sa45(7)) outx'
-    # s = 'r(sj(3),2)'
-    # s = 'sta vx(0.005494505336154793) pre(16) outvx sa outvx'
-    # s = """sj(12)"""
-    # s = """sa() sj.wd(2)"""
-    a.simulate("f(-18.285-45) sta pre(3) aq(-72.395,-99.81,-121.721,-135.676,-151.399,-180) r(sta outt, 7) ")
-    # a.simulate("""function(hello, name: str, amount: int, /, last: str = help, code=
-    #            r(print(hello {name} {amount} times!)
-    #            ,amount))  hello(tiktok, 3) outz""")
-    # print("Parsed: ", s)
-    b = a.show_output()
-    # print(a.output)
+    s = 'help(r)'
+    a.simulate(s)
+    a.show_output()
+    a.macro('testgame')

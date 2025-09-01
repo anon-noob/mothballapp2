@@ -7,6 +7,7 @@ from collections import Counter
 from pprint import pp
 import functools
 from Enums import ExpressionType
+import json
 
 class OverwriteError(Exception):
     "Attempted to overwrite a basic Mothball function"
@@ -39,6 +40,9 @@ class BasePlayer:
         
         def __repr__(self):
             return f"CustomFunction({self.name})"
+
+    with open("HelpStrings.json") as f:
+        HELP_DOCSTRINGS = json.load(f)
 
 
     pi = 3.14159265358979323846
@@ -138,8 +142,10 @@ class BasePlayer:
                                     (BasePlayer.clean_backslashes(self.formatted(label)), ": ", self.truncate_number(string_or_num))))
 
             case ExpressionType.TEXT:
+                if strip_label:
+                    string_or_num = string_or_num.strip()
                 self.output.append((expression_type, 
-                                    (BasePlayer.clean_backslashes(self.formatted(string_or_num.strip()),))))
+                                    (BasePlayer.clean_backslashes(self.formatted(string_or_num),))))
             case ExpressionType.WARNING:
                 self.output.append((expression_type, 
                                     ("Warning", ": ", BasePlayer.clean_backslashes(self.formatted(string_or_num.strip())))))
@@ -208,7 +214,7 @@ class BasePlayer:
     
     ###########################################################################
     ### These functions come by default, meaning both the XZ and Y calculators will have these functions exposed to the user.
-    ### They are: custom_function, printdisplay, repeat, var, precision
+    ### They are: custom_function, printdisplay, repeat, var, precision, help
     ###########################################################################
 
     @record_to_call_stack
@@ -299,6 +305,30 @@ class BasePlayer:
             raise ValueError(f"precision() only takes integers between 0 to 16 inclusive, got {decimal_places} instead.")
         self.precision = decimal_places
 
+    @record_to_call_stack
+    def ballhelp(self, func: MothballSequence):
+        "Gets help about function `func`"
+        # NOTE: probably format the string better to include color, etc
+        f = self.FUNCTIONS.get(func)
+        if f is None:
+            f = self.local_funcs.get(func)
+            if f is None:
+                raise NameError(f"Function {func} not found")
+            
+        aliases = ', '.join(self.ALIASES.get(f.__name__))
+        f_sig = inspect.signature(f).parameters
+        self.add_to_output(ExpressionType.TEXT, string_or_num=f"Help with {f.__name__}:")
+        self.add_to_output(ExpressionType.TEXT, string_or_num=f"  Aliases: {aliases}", strip_label=False)
+        self.add_to_output(ExpressionType.TEXT, string_or_num=f"  Arguments:", strip_label=False)
+        
+
+        for y in f_sig.values(): # PLEASE ADD * and /
+            if y.name != "self":
+                self.add_to_output(ExpressionType.TEXT, string_or_num=f"    {y.name}: {y.annotation.__name__}", strip_label=False)
+        
+        
+        docstring = self.HELP_DOCSTRINGS.get(f.__name__)
+        self.add_to_output(ExpressionType.TEXT, string_or_num=docstring)
 
     def get_suggestions(self, string: str):
         "Return a list of suggestions from all available mothball commands that best matches `string`. For example, if `sprintsn` was inputted, a possible suggestion is `sneaksprint`."
@@ -693,15 +723,11 @@ class BasePlayer:
             s += ss + "\n"
         return s
     
-    FUNCTIONS = {"function": custom_function, "func":custom_function, "print": printdisplay, "repeat": repeat, "r": repeat, "setprecision":setprecision, "pre":setprecision}
-    ALIASES = {"function": ["function", "func"], "print": ["print"], "repeat": ["repeat", "r"], "setprecision": ["setprecision", "pre"]}
+    FUNCTIONS = {"function": custom_function, "func":custom_function, "print": printdisplay, "repeat": repeat, "r": repeat, "setprecision":setprecision, "pre":setprecision, "ballhelp": ballhelp, "help": ballhelp}
+    ALIASES = {"function": ["function", "func"], "print": ["print"], "repeat": ["repeat", "r"], "setprecision": ["setprecision", "pre"], "ballhelp":["ballhelp", "help"]}
     
 
 if __name__ == "__main__":
     a = BasePlayer()
-    import time
-    xx = time.perf_counter()
-    a.simulate("""repeat(pre(12),10000)""")
-    yy = time.perf_counter()
+    a.simulate("""help(help)""")
     b=a.show_output()
-    print(yy-xx)

@@ -90,8 +90,6 @@ class PlayerSimulationY(BasePlayer):
                         self.vy = 0.12 * 0.98
                     elif down:
                         self.vy = max(-0.15, self.vy)
-            
-            # idk
 
             if abs(self.vy) < self.inertia_threshold and not self.modifiers & self.WATER:
                 self.vy = 0
@@ -179,33 +177,6 @@ class PlayerSimulationY(BasePlayer):
         self.simulate(sequence, return_defaults=False)
         self.record = {}
 
-    def ballhelp(self, func: str):
-        "Gets help about function `func`"
-        f = PlayerSimulationY.FUNCTIONS.get(func)
-        if f is None:
-            f = self.local_funcs.get(func)
-            # print(self.local_funcs)
-            # print(f)
-            if f is None:
-                raise NameError(f"Function {func} not found")
-            
-
-        f_sig = inspect.signature(f).parameters
-        # print(f"Help with {func}\n-------------------")
-        # print('Arguments:')
-        self.add_to_output(ExpressionType.GENERAL_LABEL, f"Help with {func}:")
-        self.add_to_output(ExpressionType.GENERAL_LABEL, f"  Arguments:")
-        
-
-        # print(f_sig.values())
-        for y in f_sig.values(): # PLEASE ADD * and /
-            # print(f"\t{y}")
-            if y.name != "self":
-                self.add_to_output(ExpressionType.GENERAL_LABEL, f"    {y}")
-        
-        # print(f.__doc__)
-        self.add_to_output(ExpressionType.GENERAL_LABEL, f.__doc__)
-
     FUNCTIONS = BasePlayer.FUNCTIONS | {
         "jump": jump, "j": jump,
         "outy": outy,
@@ -219,10 +190,16 @@ class PlayerSimulationY(BasePlayer):
         "setceiling": setceiling, "setceil": setceiling, "ceil": setceiling,
         "vy": setvy, "setvy": setvy,
         "possibilities": possibilities, "poss": possibilities,
-        "ballhelp": ballhelp, "help": ballhelp,
         "up": up,
         "down": down
     }
+
+    ALIASES = BasePlayer.ALIASES
+    for alias, func in FUNCTIONS.items():
+        if func.__name__ in ALIASES: 
+            ALIASES[func.__name__].append(alias)
+        else:
+            ALIASES[func.__name__] = [alias]
 
     def show_default_output(self):
         self.add_to_output(ExpressionType.Z_LABEL, "Y", self.y)
@@ -231,7 +208,7 @@ class PlayerSimulationY(BasePlayer):
 if __name__ == "__main__":
     p = PlayerSimulationY()
     # s = "jump(15) outy slime outy a(7) outy"
-    s = "jump(12) outy y(0.125) jump(12) outy"
+    s = "help(jump)"
     # s = "jump"
     # s = "print(helo worlD) outy outvy"
     p.simulate(s)
