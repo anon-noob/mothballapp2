@@ -382,7 +382,7 @@ class CodeLinter:
                         result.append((tokens[4], Style.OUTPUT_POSITIVE, 0))
                 
                 case ExpressionType.TEXT | ExpressionType.GENERAL_LABEL: # DANGER, add as tuple!!!
-                    result.append((tokens, MAP[expr_type], 0))
+                    result.append((tokens[0], MAP[expr_type], 0))
                 
                 case ExpressionType.WARNING:
                     result.append((tokens[0], MAP[expr_type], 0))
@@ -616,7 +616,7 @@ class MDLinter:
                     show_func_sig = False
                 else:
                     code += line + "\n"
-        # print(tokens)
+        print(tokens)
         return tokens
     
     def parseTextToOutput(self, text: str):
@@ -633,20 +633,6 @@ class MDLinter:
          "ge": ExpressionType.GENERAL_LABEL_WITH_EXPRESSION,
          "g": ExpressionType.GENERAL_LABEL,
          "w": ExpressionType.WARNING}
-        
-        # MAP2 = {ExpressionType.X_LABEL: Style.OUTPUT_XLABEL,
-        #  ExpressionType.X_LABEL_WITH_EXPRESSION: Style.OUTPUT_XLABEL,
-        #  ExpressionType.Z_LABEL: Style.OUTPUT_ZLABEL,
-        #  ExpressionType.Z_LABEL_WITH_EXPRESSION: Style.OUTPUT_ZLABEL,
-        #  ExpressionType.X_INERTIA_HIT: Style.OUTPUT_XLABEL,
-        #  ExpressionType.X_INERTIA_MISS: Style.OUTPUT_XLABEL,
-        #  ExpressionType.Z_INERTIA_HIT: Style.OUTPUT_ZLABEL,
-        #  ExpressionType.Z_INERTIA_MISS: Style.OUTPUT_ZLABEL,
-        #  ExpressionType.TEXT: Style.OUTPUT_TEXT,
-        #  ExpressionType.GENERAL_LABEL_WITH_NUMBER: Style.OUTPUT_LABEL,
-        #  ExpressionType.GENERAL_LABEL_WITH_EXPRESSION: Style.OUTPUT_LABEL,
-        #  ExpressionType.GENERAL_LABEL: Style.OUTPUT_LABEL,
-        #  ExpressionType.WARNING: Style.OUTPUT_WARNING}
         
         item = ""
         components = []
