@@ -4,6 +4,8 @@ from Enums import *
 from version import __version__
 
 VERSION = __version__ # Last release: 1.1.0
+user_path = os.path.expanduser("~")
+operating_system = platform.system()
 
 default_code_colors = {
     StringLiterals.CODE: {
@@ -71,6 +73,32 @@ default_text_colors = {
     StringLiterals.RENDER_BACKGROUND: "#2e2e2e"
 }
 
+def getSettings(fileName):
+    "Get settings from `fileName`. For general settings, use `getGeneralSettings`"
+    path = os.path.join(getPathToSettings(), fileName)
+    with open(path) as file:
+        return convertKeysToInt(json.load(file))
+    
+def getCodeColorSettings():
+    "Get the color mapping for Mothball code highlighting"
+    return getSettings("Code Colors.json")
+
+def getTextColorSettings():
+    "Get the color mapping for markdown code highlighting and rendering. Mothball code blocks are handled by the code colors found by `getCodeColorSettings`."
+    return getSettings("Text Colors.json")
+    
+def getGeneralSettings():
+    "Get general settings"
+    return getSettings("Settings.json")
+
+def getNotebooks():
+    "Returns the path to the Mothball notebooks."
+    return os.path.join(user_path, "Documents", "Mothball", "Notebooks")
+
+def getMacros():
+    "Returns the path to the Mothball generated macros."
+    return os.path.join(user_path, "Documents", "Mothball", "Macros")
+
 default_settings = {
     "Ask before deleting a cell": False,
     "Max mothball code lines": 0,
@@ -79,12 +107,9 @@ default_settings = {
     "Max markdown output lines": 0,
     "Default Font": "Consolas",
     "Default Font Size": 14,
-    "Path to Minecraft Macro Folder": "",
+    "Path to Minecraft Macro Folder": getMacros(),
     "Version": VERSION
 }
-
-user_path = os.path.expanduser("~")
-operating_system = platform.system()
 
 def createDirectories():
     """
@@ -165,32 +190,6 @@ def convertKeysToInt(dictionary: dict):
             new_dict[key] = value
     
     return new_dict
-
-def getSettings(fileName):
-    "Get settings from `fileName`. For general settings, use `getGeneralSettings`"
-    path = os.path.join(getPathToSettings(), fileName)
-    with open(path) as file:
-        return convertKeysToInt(json.load(file))
-    
-def getCodeColorSettings():
-    "Get the color mapping for Mothball code highlighting"
-    return getSettings("Code Colors.json")
-
-def getTextColorSettings():
-    "Get the color mapping for markdown code highlighting and rendering. Mothball code blocks are handled by the code colors found by `getCodeColorSettings`."
-    return getSettings("Text Colors.json")
-    
-def getGeneralSettings():
-    "Get general settings"
-    return getSettings("Settings.json")
-
-def getNotebooks():
-    "Returns the path to the Mothball notebooks."
-    return os.path.join(user_path, "Documents", "Mothball", "Notebooks")
-
-def getMacros():
-    "Returns the path to the Mothball generated macros."
-    return os.path.join(user_path, "Documents", "Mothball", "Macros")
 
 def saveSettings(obj, fileName):
     path = os.path.join(getPathToSettings(), fileName)
