@@ -1,4 +1,5 @@
 from math import sin, cos, atan2 as arctan, sqrt, copysign, degrees as deg
+import os
 from numpy import float32 as f32
 from typing import Literal
 import re
@@ -8,6 +9,7 @@ from pprint import pp
 import functools
 from Enums import ExpressionType
 import json
+import sys
 
 class OverwriteError(Exception):
     "Attempted to overwrite a basic Mothball function"
@@ -41,7 +43,11 @@ class BasePlayer:
         def __repr__(self):
             return f"CustomFunction({self.name})"
 
-    with open("HelpStrings.json") as f:
+    if getattr(sys, "frozen", False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.abspath(".")
+    with open(os.path.join(base_path, "HelpStrings.json")) as f:
         HELP_DOCSTRINGS = json.load(f)
 
 
