@@ -616,7 +616,7 @@ class MDLinter:
                     show_func_sig = False
                 else:
                     code += line + "\n"
-        print(tokens)
+        # print(tokens)
         return tokens
     
     def parseTextToOutput(self, text: str):

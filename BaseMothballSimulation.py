@@ -145,7 +145,7 @@ class BasePlayer:
                 if strip_label:
                     string_or_num = string_or_num.strip()
                 self.output.append((expression_type, 
-                                    (BasePlayer.clean_backslashes(self.formatted(string_or_num),))))
+                                    (BasePlayer.clean_backslashes(self.formatted(string_or_num)),)))
             case ExpressionType.WARNING:
                 self.output.append((expression_type, 
                                     ("Warning", ": ", BasePlayer.clean_backslashes(self.formatted(string_or_num.strip())))))
