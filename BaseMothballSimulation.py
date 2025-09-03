@@ -11,6 +11,13 @@ from Enums import ExpressionType
 import json
 import sys
 
+if getattr(sys, "frozen", False):
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.abspath(".")
+with open(os.path.join(base_path, "Docstrings", "HelpStrings.json")) as f:
+    HELP_DOCSTRINGS = json.load(f)
+
 class OverwriteError(Exception):
     "Attempted to overwrite a basic Mothball function"
     pass
@@ -42,13 +49,6 @@ class BasePlayer:
         
         def __repr__(self):
             return f"CustomFunction({self.name})"
-
-    if getattr(sys, "frozen", False):
-        base_path = sys._MEIPASS
-    else:
-        base_path = os.path.abspath(".")
-    with open(os.path.join(base_path, "HelpStrings.json")) as f:
-        HELP_DOCSTRINGS = json.load(f)
 
 
     pi = 3.14159265358979323846
