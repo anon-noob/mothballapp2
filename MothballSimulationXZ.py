@@ -941,7 +941,7 @@ class PlayerSimulationXZ(BasePlayer):
         # self.call_stack.pop()
 
     
-    def optimize(self, x: float, z: float, sequence: str, conversion: "function" = lambda x: x, /) -> tuple[float, float] | float:
+    def optimize(self, x: float, z: float, sequence: str, conversion = lambda x: x, /) -> tuple[float, float] | float:
         p1 = PlayerSimulationXZ.copy_player(self)
         p1.inertia_threshold = 0.0
         p1.simulate(sequence)
