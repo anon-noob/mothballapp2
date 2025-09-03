@@ -79,6 +79,7 @@ default_settings = {
     "Max markdown output lines": 0,
     "Default Font": "Consolas",
     "Default Font Size": 14,
+    "Path to Minecraft Macro Folder": "",
     "Version": VERSION
 }
 
@@ -127,6 +128,7 @@ def createDirectories():
     
     # Make Saved Notebook Directory
     os.makedirs(os.path.join(user_path, "Documents", "Mothball", "Notebooks"),exist_ok=True)
+    os.makedirs(os.path.join(user_path, "Documents", "Mothball", "Macros"),exist_ok=True)
 
 def getPathToSettings():
     """
@@ -186,8 +188,27 @@ def getNotebooks():
     "Returns the path to the Mothball notebooks."
     return os.path.join(user_path, "Documents", "Mothball", "Notebooks")
 
+def getMacros():
+    "Returns the path to the Mothball generated macros."
+    return os.path.join(user_path, "Documents", "Mothball", "Macros")
+
+def saveSettings(obj, fileName):
+    path = os.path.join(getPathToSettings(), fileName)
+    with open(path, "w") as file:
+        json.dump(obj, file)
+
+def saveGeneralSettings(obj):
+    saveSettings(obj, "Settings.json")
+
+def saveCodeColorSettings(obj):
+    saveSettings(obj, "Code Colors.json")
+
+def saveTextColorSettings(obj):
+    saveSettings(obj, "Text Colors.json")
+
+
 def loadFile(filepath):
-    "Load and parse a file, returning a `File` object"
+    "Load and parse a Mothball file, returning a `File` object"
     with open(filepath) as file:
         f=json.load(file)
 
@@ -197,10 +218,17 @@ def loadFile(filepath):
         a = f.get(str(i))
         if a is None:
             break
-        if a['cell_type'] == CellType.TEXT:
-            entries[i] = TextCell(**a)
-        else:
-            entries[i] = CodeCell(**a)
+        try:
+            if a['cell_type'] == CellType.TEXT:
+                entries[i] = TextCell(**a)
+            else:
+                entries[i] = CodeCell(**a)
+        except Exception as e:
+            try:
+                entries[i] = CodeCell('',CellType.XZ,a['code'],None,False,[])
+            except Exception as ee:
+                entries[i] = CodeCell('',CellType.XZ,"# OOPS! I couldn't load this file!",None,False,[])
+
         i += 1
 
     return File(f['fileName'], f['version'], entries)

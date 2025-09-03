@@ -26,8 +26,8 @@ class Cell(QWidget):
     """
     Base `Cell` class, contains the left side panel framework and an empty main layout
     """
-    def __init__(self, generalOptions: dict, colorOptions: dict, textOptions: dict, cellType: CellType):
-        super().__init__()
+    def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, cellType: CellType):
+        super().__init__(parent)
         self.cellType = cellType
         self.colorOptions = colorOptions
         self.textOptions = textOptions
@@ -121,15 +121,6 @@ class CellLexer(QsciLexerCustom):
 
     def defaultColor(self, style: int):
         return QColor(self.defaultTextColor)
-
-    # def changeColor(self, styleString: str, newColor: str):
-    #     "Change the color of `styleString` to a new color `newColor`, typically represented in hex format. `styleString` are names of tokens such as 'returners', 'variables', etc."
-    #     if styleString in self.TOKEN_TO_CODE_COLOR_STYLE:
-    #         self.codeColorOptions[styleString] = newColor
-    #         self.setColor(QColor(self.codeColorOptions[styleString]), self.TOKEN_TO_CODE_COLOR_STYLE[styleString])
-    #     if styleString in self.TOKEN_TO_TEXT_COLOR_STYLE:
-    #         self.textColorOptions[styleString] = newColor
-    #         self.setColor(QColor(self.textColorOptions[styleString]), self.TOKEN_TO_TEXT_COLOR_STYLE[styleString])
 
 class CodeEdit(QsciScintilla):
     "Main code editor for code cells and markdown text edit cells."

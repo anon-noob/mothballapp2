@@ -62,7 +62,7 @@ class PlayerSimulationXZ(BasePlayer):
     ], "stoppers": [
         "stop", "stopground", "st", "stopair", "sta", "stopjump", "stj", "sneakstop", "sneakstopair", "sneakstopjump", "snst", "snsta", "snstj"
     ], "returners": [
-        "outz", "zmm", "zb", "outvz", "outx", "xmm", "xb", "outvx", "vec", "help", "print", "effectsmultiplier", "effects", "printdisplay", "dimensions", "dim", "outangle", "outa", "outfacing", "outf", "outturn", "outt"
+        "outz", "zmm", "zb", "outvz", "outx", "xmm", "xb", "outvx", "vec", "help", "print", "effectsmultiplier", "effects", "printdisplay", "dimensions", "dim", "outangle", "outa", "outfacing", "outf", "outturn", "outt", 'macro'
     ], "calculators": [
         "bwmm", "xbwmm", "wall", "xwall", "inv", "xinv", "blocks", "xblocks", "repeat", "r", "possibilities", "poss", "xpossibilities", "xposs", "xzpossibilities", "xzposs", 'taps'
     ], "setters": [
@@ -103,6 +103,7 @@ class PlayerSimulationXZ(BasePlayer):
         self.slow_effect = 0
 
         self.history: list[Tick] = []
+        self.macros: dict[str, str] = {}
 
     def get_angle(self):
         "Returns the next angle from the rotation queue or if no angle is in the rotation queue, return the default facing."
@@ -1056,13 +1057,21 @@ class PlayerSimulationXZ(BasePlayer):
             index = int(1 / (2 * PlayerSimulationXZ.pi) * self.total_angles * rad + self.total_angles / 4) & (self.total_angles - 1)
         return f32(sin(index * self.pi * 2.0 / self.total_angles))
     
-    def macro(self, name: str):
-        string = "X,Y,Z,YAW,PITCH,ANGLE_X,ANGLE_Y,W,A,S,D,SPRINT,SNEAK,JUMP,LMB,RMB,VEL_X,VEL_Y,VEL_Z\n"
-        for i in self.history:
-            string += f"0.0,0.0,0.0,0.0,0.0,{i.last_turn:.3f},0.0,{'true' if i.w else 'false'},{'true' if i.a else 'false'},{'true' if i.s else 'false'},{'true' if i.d else 'false'},{'true' if i.sprint else 'false'},{'true' if i.sneak else 'false'},{'true' if i.space else 'false'},false,{'true' if i.right_click else 'false'},0.0,0.0,0.0\n"
-        # FOR NOW
-        with open(f"{name}.csv", "w") as f:
-            f.write(string)
+    def macro(self, name: str, formatting: str = 'mpk', /):
+        formatting = formatting.lower().strip()
+        if formatting == 'mpk':
+            lines = ["X,Y,Z,YAW,PITCH,ANGLE_X,ANGLE_Y,W,A,S,D,SPRINT,SNEAK,JUMP,LMB,RMB,VEL_X,VEL_Y,VEL_Z"]
+            for i in self.history:
+                lines.append(f"0.0,0.0,0.0,0.0,0.0,{i.last_turn:.3f},0.0,{'true' if i.w else 'false'},{'true' if i.a else 'false'},{'true' if i.s else 'false'},{'true' if i.d else 'false'},{'true' if i.sprint else 'false'},{'true' if i.sneak else 'false'},{'true' if i.space else 'false'},false,{'true' if i.right_click else 'false'},0.0,0.0,0.0")
+            self.macros[name+'.csv'] = "\n".join(lines)
+        elif formatting == 'cyv': # CYV: WASD sprint sneak jump angle
+            lines = []
+            for i in self.history:
+                lines.append(['true' if i.w else 'false','true' if i.a else 'false','true' if i.s else 'false','true' if i.d else 'false','true' if i.sprint else 'false','true' if i.sneak else 'false','true' if i.space else 'false', f'{i.last_turn:.3f}', '0.0'])
+            self.macros[name+'.json'] = lines
+        else:
+            raise ValueError(f"No such formatting {formatting}, options are either 'mpk' or 'cyv'.")
+
 
     FUNCTIONS = BasePlayer.FUNCTIONS | {"w":walk,"walk":walk,
             "sprint":sprint, "s": sprint,
@@ -1138,6 +1147,7 @@ class PlayerSimulationXZ(BasePlayer):
             "inertialistener": inertialistener, "il": inertialistener, "xzinertialistener": inertialistener, "xzil": inertialistener,
             "xinertialistener": xinertialistener, "xil": xinertialistener,
             "zinertialistener": zinertialistener, "zil": zinertialistener,
+            "macro": macro
             }
     ALIASES = BasePlayer.ALIASES
     for alias, func in FUNCTIONS.items():

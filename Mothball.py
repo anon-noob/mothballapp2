@@ -24,6 +24,7 @@ import json
 import ParkourWordle
 from Enums import CellType, TextCellState
 from version import __version__
+import MacroViewer
 
 # Scintilla resizing issue with newlines (prob show scrollbar?) <-- yep i set vertical scrollbar always on (Aug 5, 2025) but it doesn't fix the issue. 
 # Yes it does, just set the CodeEdit(QSciScintilla) to have a verical scroll policy always off (Aug 5, 2025)
@@ -31,13 +32,14 @@ from version import __version__
 # Comments and docstring
 # Reorganize the help page
 # Separate file for help doc strings
-# MORE ENUMS
 # Fix settings
 # Add other remaining colors
 # Var should not lint as strings
-# Better error msgs
 
-# Disable automatic execution in text cells (why tf is that a thing) done
+# Linting in documentation with custom functions
+# Add basic macro creation
+
+# Disable automatic execution in text cells (why tf is that a thing) -> done
 
 # Debian Linux fix: run in console `sudo apt-get install libxcb-xinerama0`
 
@@ -179,25 +181,13 @@ class MainWindow(QMainWindow):
         self.actionStack: ActionStack = ActionStack(self)
         self.CELLS: list[Union[TextCell.TextSection, CodeCell.SimulationSection]] = []
 
-        # QScrollArea.setVerticalScrollBarPolicy = lambda self, policy: QScrollArea.verticalScrollBar(self).setVisible(True)
-        # QScrollArea.setHorizontalScrollBarPolicy = lambda self, policy: QScrollArea.horizontalScrollBar(self).setVisible(True)
         self.setWindowTitle("Mothball Notebook - Unnamed")
         self.name = ""
         self.path = ""
         self.unsaved_changes = False
         self.user = FileHandler.user_path
-        try:
-            FileHandler.deleteAll() # TEMP FIX!?
-        except Exception as e:
-            print(e)
-        # try:
-        #     FileHandler.updateFiles() # TEMP FIX!?
-        # except Exception as e:
-        #     print(e)
         FileHandler.createDirectories()
         self.version = __version__
-
-        # FileHandler.reindexFiles() # For update purposes only! (outdated?)
 
         self.codecell_colors = FileHandler.getCodeColorSettings()
         self.textcell_colors = FileHandler.getTextColorSettings()
@@ -207,6 +197,7 @@ class MainWindow(QMainWindow):
         self.about_page = None
         self.settings_page = None
         self.wordle_page = None
+        self.macro_viewer = None
 
         # Create a central widget and set layout
         central_widget = QWidget()
@@ -262,7 +253,7 @@ class MainWindow(QMainWindow):
         QApplication.processEvents()
 
         if cellType == CellType.XZ or cellType == CellType.Y:
-            section = CodeCell.SimulationSection(self.settings, self.codecell_colors, self.textcell_colors, self.removeCell, self.addCell, self.moveCell, self.onChangeDetected, mode=cellType)
+            section = CodeCell.SimulationSection(self, self.settings, self.codecell_colors, self.textcell_colors, self.removeCell, self.addCell, self.moveCell, self.onChangeDetected, mode=cellType)
         elif cellType == CellType.TEXT:
             section = TextCell.TextSection(self.settings, self.codecell_colors, self.textcell_colors, self.removeCell, self.addCell, self.moveCell, self.onChangeDetected, initialMode=initialMode)
         
@@ -386,9 +377,9 @@ class MainWindow(QMainWindow):
         """
         Opens the settings window.
         """
-        # self.settings_page = Settings.SettingsWindow(self.settings, self.codecell_colors, self.textcell_colors)
-        # self.settings_page.show()
-        QMessageBox.information(self, "Not Implemented", "Settings Page does not work at the moment, apologies for the inconvenience!")
+        self.settings_page = Settings.SettingsWindow(self, self.settings, self.codecell_colors, self.textcell_colors)
+        self.settings_page.show()
+        # QMessageBox.information(self, "Not Implemented", "Settings Page does not work at the moment, apologies for the inconvenience!")
 
     def collectCellData(self, index: int) -> dict:
         data = {}
@@ -550,7 +541,7 @@ class MainWindow(QMainWindow):
                             warning = True
                 except Exception as e:
                     errors = True
-                    # print("OPS")
+
                 i += 1
             self.unsaved_changes = False
             self.setWindowTitle("Mothball Notebook - " + f.fileName)
@@ -629,6 +620,20 @@ class MainWindow(QMainWindow):
             return
         self.wordle_page = ParkourWordle.GUI()
         self.wordle_page.show()
+    
+    def openMacroViewer(self, filename: str, macrodata, macroType):
+        if self.macro_viewer is not None and self.macro_viewer.isVisible():
+            self.macro_viewer.activateWindow()
+        else:
+            self.macro_viewer = MacroViewer.MacroViewer()
+            self.macro_viewer.show()
+
+        self.macro_viewer.addTab(filename, macrodata)
+    
+    def updateGeneralSettings(self, newsettings: dict):
+        for cell in self.CELLS:
+            if isinstance(cell, CodeCell.SimulationSection):
+                cell.mc_macros_folder = newsettings["Path to Minecraft Macro Folder"]
 
 
 if __name__ == "__main__":

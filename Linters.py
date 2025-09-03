@@ -44,6 +44,9 @@ class CodeLinter:
             for e, func_list in enumerate(my.PlayerSimulationY.FUNCTIONS_BY_TYPE.values(),1):
                 for word in func_list:
                     self.word_to_index[word] = e
+        else:
+            self.inputs = []
+            self.modifiers = []
         
     def lintTexttoTokens(self, text: str) -> list[tuple[str, int]]:
         """

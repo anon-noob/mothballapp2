@@ -3,13 +3,15 @@ Settings Window using `QTabWidget`.
 """
 import sys
 from PyQt5.QtWidgets import (
-    QApplication, QTabWidget, QWidget,QVBoxLayout, QGridLayout, QHBoxLayout, QPushButton, QTabBar, QLabel, QCheckBox, QLineEdit, QTextBrowser, QSizePolicy, QListWidget, QListWidgetItem, QColorDialog
+    QApplication, QTabWidget, QWidget,QVBoxLayout, QGridLayout, QHBoxLayout, QPushButton, QTabBar, QLabel, QCheckBox, QLineEdit, QTextBrowser, QSizePolicy, QListWidget, QListWidgetItem, QColorDialog, QFileDialog
 )
 from PyQt5.QtGui import QColor
 from BaseCell import RenderViewer
 from Linters import CodeLinter, MDLinter
 import MothballSimulationXZ as mxz
 from typing import Literal
+from Enums import *
+import FileHandler
 
 class SettingsWindow(QWidget):
     """
@@ -27,11 +29,12 @@ hello(mothballer)"""
     APPEND_ERROR = """
 # parenthesis # (( { ( {{}} ) } ))
 ( 4..5 #ERRORS#"""
-    def __init__(self, generalOptions: dict, colorOptions: dict, textOptions: dict):
+    def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict):
         super().__init__()
         self.generalOptions = generalOptions
         self.colorOptions = colorOptions
         self.textOptions = textOptions
+        self.p = parent
 
         self.setWindowTitle('QTabWidget Example')
         self.setGeometry(100, 100, 900, 600)
@@ -49,10 +52,11 @@ hello(mothballer)"""
         # Set tab contents
         self.tab_widget.addTab(self.tab1, "Code Editing")
         self.tab_widget.addTab(self.tab2, "Code Output")
-        self.tab_widget.addTab(self.tab3, "Preferences")
-        # self.tab_widget.addTab(self.tab4, "General")
+        self.tab_widget.addTab(self.tab3, "General")
 
+        #######################################################
         # Tab 1 content #######################################
+        #######################################################
         self.tab1_layout = QHBoxLayout()
         self.cell = RenderViewer(generalOptions, colorOptions, textOptions,self)
         self.mdlinter = MDLinter(generalOptions, colorOptions, textOptions)
@@ -61,12 +65,13 @@ hello(mothballer)"""
 
         self.tab1_layout.addWidget(self.cell)
         self.tab1.setLayout(self.tab1_layout)
-        self.colorsWidget = colorOptions["Code"]
-        self.outputWidget = colorOptions["Output"]
+        self.colorsWidget = colorOptions[StringLiterals.CODE]
+        
 
         self.listwidget = QListWidget()
-        for token, color in self.colorsWidget.items():
-            x = QListWidgetItem(token)
+        for style, color in zip(Style.STYLE_TO_NAME, self.colorsWidget.values()):
+            # print(token)
+            x = QListWidgetItem(Style.STYLE_TO_NAME[style])
             self.listwidget.addItem(x)
             x.setBackground(QColor(color))
             x.setForeground(QColor("#000000"))
@@ -74,19 +79,21 @@ hello(mothballer)"""
         self.tab1_layout.addWidget(self.listwidget)
         self.listwidget.itemDoubleClicked.connect(lambda i: self.colorDialog(i, 0))
 
-        # Tab 2 content ############################################
+        #######################################################
+        # Tab 2 content #######################################
+        #######################################################
         self.tab2_layout = QHBoxLayout()
         self.cell2 = RenderViewer(generalOptions,colorOptions,textOptions,self)
         self.colorCodeOutputDisplay()
 
         self.tab2_layout.addWidget(self.cell2)
         self.tab2.setLayout(self.tab2_layout)
-        self.colorsWidget = colorOptions["Code"]
-        self.outputWidget = colorOptions["Output"]
+        
+        self.outputWidget = colorOptions[StringLiterals.OUTPUT]
 
         self.listwidget2 = QListWidget()
         for token, color in self.outputWidget.items():
-            x = QListWidgetItem(token)
+            x = QListWidgetItem(Style.STYLE_TO_NAME[token])
             self.listwidget2.addItem(x)
             x.setBackground(QColor(color))
             x.setForeground(QColor("#000000"))
@@ -94,19 +101,39 @@ hello(mothballer)"""
         self.tab2_layout.addWidget(self.listwidget2)
         self.listwidget2.itemDoubleClicked.connect(lambda i: self.colorDialog(i, 1))
 
-        # Tab 3 content ######################################
+        #######################################################
+        # Tab 3 content #######################################
+        #######################################################
         self.tab3_layout = QGridLayout()
-        checkbox = QCheckBox("Ask before deleting a cell")
-        checkbox.setToolTip("When toggled on, always confirm twice before deleting a cell.")
-        checkbox.setStyleSheet("""QToolTip {background-color:" + "#D4C00C" + ";color:" + "#ffffff" + "}""")
-        self.tab3_layout.addWidget(checkbox, 1, 1,1,2)
-        self.tab3_layout.addWidget(QLineEdit(),2,1,1,1)
-        maxlines = QLabel("Max Lines")
-        maxlines.setToolTip("Cells display using at most x lines. Minimum 10 lines.\nSet to any number less than 10 to indicate infinite lines allowed.")
-        maxlines.setStyleSheet("""QToolTip {background-color:" + "#D4C00C" + ";color:" + "#ffffff" + "}""")
-        self.tab3_layout.addWidget(maxlines,2,2,1,1)
-        self.tab3_layout.addWidget(QPushButton("Save"),3,1,1,2)
+        # checkbox = QCheckBox("Ask before deleting a cell")
+        # checkbox.setToolTip("When toggled on, always confirm twice before deleting a cell.")
+        # checkbox.setStyleSheet("""QToolTip {background-color:" + "#D4C00C" + ";color:" + "#ffffff" + "}""")
+        # self.tab3_layout.addWidget(checkbox, 1, 1,1,2)
+        # self.tab3_layout.addWidget(QLineEdit(),2,1,1,1)
+
+
+        changepath = QPushButton("Change Path")
+        changepath.setToolTip("Set the path to transfer macro files (produced from simulations) to the appropiate Minecraft folder.")
+        changepath.setStyleSheet("""QToolTip {background-color:" + "#D4C00C" + ";color:" + "#ffffff" + "}""")
+        changepath.clicked.connect(self.openfiledialog)
+        self.pathdisplay = QLabel("No path set")
+        if self.generalOptions["Path to Minecraft Macro Folder"]:
+            self.pathdisplay.setText(self.generalOptions["Path to Minecraft Macro Folder"])
+        self.tab3_layout.addWidget(changepath,1,1,1,1)
+        self.tab3_layout.addWidget(self.pathdisplay,1,2,1,1)
+        
+        
+
+        # maxlines = QLabel("Max Lines")
+        # maxlines.setToolTip("Cells display using at most x lines. Minimum 10 lines.\nSet to any number less than 10 to indicate infinite lines allowed.")
+        # maxlines.setStyleSheet("""QToolTip {background-color:" + "#D4C00C" + ";color:" + "#ffffff" + "}""")
+        # self.tab3_layout.addWidget(maxlines,2,2,1,1)
+        # self.save_button = QPushButton("Save")
+        # self.save_button.clicked.connect(self.save)
+        # self.tab3_layout.addWidget(self.save_button,4,1,1,2)
         self.tab3.setLayout(self.tab3_layout)
+
+        
 
         # Set the layout for the main window
         main_layout = QVBoxLayout()
@@ -131,6 +158,15 @@ hello(mothballer)"""
             }
         """)
 
+    def openfiledialog(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select Folder")
+        if folder:
+            self.pathdisplay.setText(folder)
+            self.generalOptions["Path to Minecraft Macro Folder"] = folder
+            FileHandler.saveGeneralSettings(self.generalOptions)
+            self.p.updateGeneralSettings(self.generalOptions)
+
+
     def colorDialog(self, item: QListWidgetItem, mode: Literal[0,1]):
         """
         Opens the color dialog invoked by double clicking an item in the `QListWidget`.\\
@@ -151,7 +187,11 @@ hello(mothballer)"""
                 self.linter.colorOptions[item.text()] = c.name()
                 self.colorCodeOutputDisplay()
                 
-    
+    def save(self):
+        FileHandler.saveCodeColorSettings(self.colorOptions)
+        FileHandler.saveTextColorSettings(self.textOptions)
+        FileHandler.saveGeneralSettings(self.generalOptions)
+
     def colorCodeDisplay(self):
         """
         Colorize the code
@@ -163,7 +203,7 @@ hello(mothballer)"""
         '''
         Run mothball code and colorize the output
         '''
-        p=mxz.Player()
+        p=mxz.PlayerSimulationXZ()
         try:
             p.simulate(SettingsWindow.SAMPLE_CODE)
         except Exception as e:
@@ -171,7 +211,8 @@ hello(mothballer)"""
         self.cell2.renderTextfromOutput(self.linter, p.output)
 
 if __name__ == '__main__':
-    import FileHandler
+    
+    from PyQt5.QtWidgets import QFileDialog
     a=FileHandler.getCodeColorSettings()
     b=FileHandler.getGeneralSettings()
     c=FileHandler.getTextColorSettings()

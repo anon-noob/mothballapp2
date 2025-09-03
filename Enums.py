@@ -1,6 +1,7 @@
 class Style(int):
     "Styles for colorizing text"
     a = iter(range(64))
+    b = iter(range(64))
     
     # Default
     DEFAULT = next(a)
@@ -59,6 +60,51 @@ class Style(int):
     CODE_OUTPUT_STYLES = (OUTPUT_LABEL,OUTPUT_ZLABEL,OUTPUT_XLABEL,OUTPUT_WARNING,OUTPUT_POSITIVE,OUTPUT_NEGATIVE,OUTPUT_TEXT,OUTPUT_PLACEHOLDER)
     TEXT_RENDER_STYLES = (LINKS,RENDER_HEADER1,RENDER_HEADER2,RENDER_HEADER3,DATATYPE,POSITIONAL_PARAMETER,POSITIONAL_OR_KEYWORD_PARAMETER,KEYWORD_PARAMETER,VAR_POSITIONAL_PARAMETER)
 
+    STYLE_TO_NAME = {}
+    STYLE_TO_NAME[next(b)] = "Default"
+    STYLE_TO_NAME[next(b)] = "Fast Movers"
+    STYLE_TO_NAME[next(b)] = "Slow Movers"
+    STYLE_TO_NAME[next(b)] = "Stoppers"
+    STYLE_TO_NAME[next(b)] = "Returners"
+    STYLE_TO_NAME[next(b)] = "Calculators"
+    STYLE_TO_NAME[next(b)] = "Setters"
+    STYLE_TO_NAME[next(b)] = "Inputs"
+    STYLE_TO_NAME[next(b)] = "Modifier"
+    STYLE_TO_NAME[next(b)] = "Numbers"
+    STYLE_TO_NAME[next(b)] = "Comments"
+    STYLE_TO_NAME[next(b)] = "Keyword Argument"
+    STYLE_TO_NAME[next(b)] = "Bracket 0"
+    STYLE_TO_NAME[next(b)] = "Bracket 1"
+    STYLE_TO_NAME[next(b)] = "Bracket 2"
+    STYLE_TO_NAME[next(b)] = "Error"
+    STYLE_TO_NAME[next(b)] = "Variables"
+    STYLE_TO_NAME[next(b)] = "Strings"
+    STYLE_TO_NAME[next(b)] = "Backslash"
+    STYLE_TO_NAME[next(b)] = "Comment Backslash"
+    STYLE_TO_NAME[next(b)] = "Custom Functions"
+    STYLE_TO_NAME[next(b)] = "Custom Function Parameters"
+    STYLE_TO_NAME[next(b)] = "Boolean"
+    STYLE_TO_NAME[next(b)] = "General Label"
+    STYLE_TO_NAME[next(b)] = "Z Label"
+    STYLE_TO_NAME[next(b)] = "X Label"
+    STYLE_TO_NAME[next(b)] = "Warning"
+    STYLE_TO_NAME[next(b)] = "Positive Number"
+    STYLE_TO_NAME[next(b)] = "Negative Number"
+    STYLE_TO_NAME[next(b)] = "Text"
+    STYLE_TO_NAME[next(b)] = "Placeholder"
+    STYLE_TO_NAME[next(b)] = "Render Header 1"
+    STYLE_TO_NAME[next(b)] = "Render Header 2"
+    STYLE_TO_NAME[next(b)] = "Render Header 3"
+    STYLE_TO_NAME[next(b)] = "Datatype"
+    STYLE_TO_NAME[next(b)] = "Positional Only Parameter"
+    STYLE_TO_NAME[next(b)] = "Positional or Keyword Parameter"
+    STYLE_TO_NAME[next(b)] = "Keyword Only Parameter"
+    STYLE_TO_NAME[next(b)] = "Var Positional Parameter"
+    STYLE_TO_NAME[next(b)] = "Links"
+    STYLE_TO_NAME[next(b)] = "Header 1"
+    STYLE_TO_NAME[next(b)] = "Header 2"
+    STYLE_TO_NAME[next(b)] = "Header 3"
+    
     @classmethod
     def getCodeEditStyles(cls):
         return cls.CODE_EDIT_STYLES
@@ -108,3 +154,7 @@ class ExpressionType(int):
     Z_INERTIA_MISS = 10              # Z Inertia (miss): speed (diff)
     X_INERTIA_HIT = 11              # X Inertia (hit): speed (diff)
     X_INERTIA_MISS = 12             # X Inertia (miss): speed (diff)
+
+class MacroFileExtension(int):
+    CYV_JSON = 0
+    MPK_CSV = 1
