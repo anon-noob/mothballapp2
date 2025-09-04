@@ -193,7 +193,7 @@ class SimulationSection(Cell):
                     self.macros = p.macros
 
         except Exception as e:
-            output = [(ExpressionType.TEXT, f"Error: {e}")]
+            output = [(ExpressionType.TEXT, (f"Error: {e}",))]
             self.output_field.renderTextfromOutput(self.linter, output)
             self.raw_output = output
     
