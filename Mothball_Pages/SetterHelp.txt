@@ -74,24 +74,24 @@ slip(0.98) w(2) sj(12) s
 ## Inertia
 In Minecraft, inertia is when the player's speed is sufficiently low that its momentum becomes set to 0. It does this in order to prevent meaningless calculations. In particular for extremely small speeds, Minecraft avoids doing these calculations in order to improve performance. 
 
-There is an inertia threshold, which is the minimum speed required to not hit inertia. Let `i` be the inertia threshold, `sₜ` be the slipperiness at tick `t`, and `vₜ` be the velocity at tick `t`. If
+There is an inertia threshold, which is the minimum speed required to not hit inertia. Let `i` be the inertia threshold, `s_t` be the slipperiness at tick `t`, and `v_t` be the velocity at tick `t`. If
 
 ```mothball
-|0.91 × s_t × v_t| < i
+|0.91 * s_t * v_t| < i
 ```
 
 then at tick `t+1`, momentum is cancelled. In Minecraft 1.8, `i = 0.005`; in later versions, `i = 0.003`. 
 In Minecraft 1.8 - 1.21.4, inertia is calculated on separate axis meaning if `vx_t` and `vz_t` is the player's x and z velocity at tick `t` respectfully, then
 
 ```mothball
-if |0.91 × s_t × vx_t| < i   →   x momentum is cancelled.
-if |0.91 × s_t × vz_t| < i   →   z momentum is cancelled.
+if |0.91 * s_t * vx_t| < i   -->   x momentum is cancelled.
+if |0.91 * s_t * vz_t| < i   -->   z momentum is cancelled.
 ```
 
 In Minecraft 1.21.5+, inertia instead considers the player's total speed `v_t = sqrt(vx_t^2 + vz_t^2)` and
 
 ```mothball
-if |0.91 × s_t × v_t| = |0.91 × s_t × sqrt(vx_t^2 + vz_t^2)| < i    -->   all momentum is cancelled.
+if |0.91 * s_t * v_t| = |0.91 * s_t * sqrt(vx_t^2 + vz_t^2)| < i    -->   all momentum is cancelled.
 ```
 
 Use the `inertia` function to change the inertia threshold and set whether it should behave as 1.8 - 1.21.4 inertia, or 1.21.5 inertia.
