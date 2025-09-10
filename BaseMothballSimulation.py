@@ -1,7 +1,7 @@
 from math import sin, cos, atan2 as arctan, sqrt, copysign, degrees as deg
 import os
 from numpy import float32 as f32
-from typing import Literal
+from ExprEval import evaluate
 import re
 import inspect
 from collections import Counter
@@ -124,10 +124,11 @@ class BasePlayer:
                 else:
                     return bool(expr)
 
-            if "__" in expr:
-                    raise RuntimeError(f"Rejected unsafe expression {expr}")
+            # if "__" in expr:
+            #         raise RuntimeError(f"Rejected unsafe expression {expr}")
             
-            result = eval(expr, {"__builtins__": {}}, locals_dict)
+            # result = eval(expr, {"__builtins__": {}}, locals_dict)
+            result = evaluate(expr, locals_dict)
             converted_value = datatype(result) if result is not None else None
             return converted_value
         else: # strings
@@ -194,7 +195,7 @@ class BasePlayer:
 
                     item_to_eval = item_to_eval[1:len(item_to_eval) - 1]
                     if item_to_eval:
-                        x = eval(item_to_eval, {"__builtins__": {}}, self.local_vars)
+                        x = evaluate(item_to_eval, self.local_vars)
                         x = str(x)
 
                         formatted_string += x
@@ -299,7 +300,7 @@ class BasePlayer:
         except ValueError: 
             try: value = float(value)
             except ValueError:
-                try: value = eval(value, {"__builtins__": {}}, self.local_vars)
+                try: value = evaluate(value, self.local_vars)
                 except:
                     pass
         
@@ -333,7 +334,7 @@ class BasePlayer:
                 self.add_to_output(ExpressionType.TEXT, string_or_num=f"    {y.name}: {y.annotation.__name__}", strip_label=False)
         
         
-        docstring = self.HELP_DOCSTRINGS.get(f.__name__)
+        docstring = HELP_DOCSTRINGS.get(f.__name__)
         self.add_to_output(ExpressionType.TEXT, string_or_num=docstring)
 
     def get_suggestions(self, string: str):
