@@ -59,8 +59,6 @@ def e():
 PARKOUR_FIVE_LETTER_WORDS_LIST = e()
 PARKOUR_FIVE_LETTER_WORDS = set(PARKOUR_FIVE_LETTER_WORDS_LIST)
 ALL_FIVE_LETTER_WORDS_SET.update(PARKOUR_FIVE_LETTER_WORDS)
-time_seed = int(datetime.datetime.now(datetime.timezone.utc).toordinal())
-random.seed(time_seed)
 
 GREEN = "#6aaa64"
 YELLOW = "#F8E300"
@@ -96,6 +94,8 @@ class GUI(QMainWindow):
     def __init__(self):
         super().__init__()
         createGameFiles()
+        self.time_seed = int(datetime.datetime.now(datetime.timezone.utc).toordinal())
+        random.seed(self.time_seed)
         self.help_window = None
         self.max_letter_length = 10
         self.sol = random.choice(PARKOUR_FIVE_LETTER_WORDS_LIST)
@@ -213,8 +213,8 @@ class GUI(QMainWindow):
         with open(os.path.join(base_path, "Minigame_Files", "WordleGameState.json")) as f:
             saveState = json.load(f)
         
-        if saveState['time'] != time_seed:
-            saveState['time'] = time_seed
+        if saveState['time'] != self.time_seed:
+            saveState['time'] = self.time_seed
         else: # Equal -> load states
             for guess_no, guess in saveState['guesses'].items():
                 self.current_letter_guesses = list(guess)
@@ -519,7 +519,7 @@ class GUI(QMainWindow):
         return super().closeEvent(a0)
 
     def saveGameState(self):
-        state = {'time': time_seed, "guesses": {i:j for i,j in self.guessed_words.items()}, "state": self.gameState}
+        state = {'time': self.time_seed, "guesses": {i:j for i,j in self.guessed_words.items()}, "state": self.gameState}
         with open(os.path.join(base_path, "Minigame_Files", "WordleGameState.json"), "w") as f:
             json.dump(state, f)
 
