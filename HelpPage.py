@@ -17,38 +17,24 @@ else:
 
 directory = os.path.join(base_path, "Mothball_Pages")
 
-with open(os.path.join(base_path, "Mothball_Pages", "Introduction.txt")) as f:
-    introduction = f.read()
-
-with open(os.path.join(base_path, "Mothball_Pages", "DocumentationIntro.txt")) as f:
-    documentationIntro = f.read()
-
-with open(os.path.join(base_path, "Mothball_Pages", "LearnTheBasics.txt")) as f:
-    learnTheBasics = f.read()
-
-with open(os.path.join(base_path, "Mothball_Pages", "MovementDocumentation.txt")) as f:
-    movementDocumentation = f.read()
-
-with open(os.path.join(base_path, "Mothball_Pages", "MovementHelp.txt")) as f:
-    movementHelp = f.read()
-
-with open(os.path.join(base_path, "Mothball_Pages", "OptimizationHelp.txt")) as f:
-    optimizationHelp = f.read()
-
-with open(os.path.join(base_path, "Mothball_Pages", "OutputHelp.txt")) as f:
-    outputHelp = f.read()
-
-with open(os.path.join(base_path, "Mothball_Pages", "SetterHelp.txt")) as f:
-    setterHelp = f.read()
-
-with open(os.path.join(base_path, "Mothball_Pages", "WelcomePage.txt")) as f:
-    welcomePage = f.read()
-
-with open(os.path.join(base_path, "Mothball_Pages", "UsingTheIDE.txt")) as f:
-    usingTheIDE = f.read()
-
-with open(os.path.join(base_path, "Mothball_Pages", "SetterDocumentation.txt")) as f:
-    setterdocumentation = f.read()
+def loadPage(filename):
+    try:
+        with open(os.path.join(base_path, "Mothball_Pages", filename)) as f:
+            return f.read()
+    except Exception as e:
+        return f"Could not load page {filename}: {e}"
+    
+introduction = loadPage("Introduction.txt")
+documentationIntro = loadPage("DocumentationIntro.txt")
+learnTheBasics = loadPage("LearnTheBasics.txt")
+movementDocumentation = loadPage("MovementDocumentation.txt")
+movementHelp = loadPage("MovementHelp.txt")
+optimizationHelp = loadPage("OptimizationHelp.txt")
+outputHelp = loadPage("OutputHelp.txt")
+setterHelp = loadPage("SetterHelp.txt")
+welcomePage = loadPage("WelcomePage.txt")
+usingTheIDE = loadPage("UsingTheIDE.txt")
+setterdocumentation = loadPage("SetterDocumentation.txt")
 
 def getHeadings(text: str):
     """
