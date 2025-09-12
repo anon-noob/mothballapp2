@@ -24,7 +24,7 @@ class Optimizer:
             except:
                 extraVars[k] = 0
         self.variables = {'px': 0.0625} | extraVars
-        self.n = int(self.variables.get('num_ticks',12))
+        self.n = int(self.variables['num_ticks'])
     
     def setupConstants(self, imux, imuz, mmu):
         self.imux = np.array([evaluate(a, self.variables) for a in imux], dtype=float)
@@ -190,27 +190,24 @@ class Optimizer:
             return ("Something went wrong!", 'function was invalid. Report this bug.', '')    
 
         res = minimize(func, x0, method='SLSQP', constraints=self.constraints[1], bounds=None, options={'maxiter': 500, 'ftol': 1e-12})
-        self.F_opt = res.x
+        self.F_optimal = res.x
         self.res = res
-        m = [c['fun'](self.F_opt) for c in self.constraints[1]]
+        m = [c['fun'](self.F_optimal) for c in self.constraints[1]]
         return (res, (self.constraints[0], m)) # (res, (constraintnames, constraintvalues))
 
     def postprocess(self):
-        fopt = self.F_opt.copy()
+        fopt = self.F_optimal.copy()
         points = [[self.X(fopt, t) - self.X(fopt, 0),  self.Z(fopt, t) - self.Z(fopt, 0)] for t in range(0, self.n+1) ]
-        fopt_deg = fopt * 180.0 / np.pi
-        fopt2 = np.round(1000.0 * (np.mod(fopt_deg + 180.0, 360.0) - 180.0)) * 0.001
-        diffs = np.diff(fopt2)
-        
-        x = [i[0] for i in points]
-        y = [j[1] for j in points]
+        f_optimal_degrees = fopt * 180.0 / np.pi
+        # fopt2 = np.round(1000.0 * (np.mod(f_optimal_degrees + 180.0, 360.0) - 180.0)) * 0.001
+        # diffs = np.diff(fopt2)
 
         return {
             'points': points,
-            'fopt_deg': fopt_deg,
-            'fopt2': fopt2,
-            'diffs': diffs
+            'fopt_deg': f_optimal_degrees,
         }
+            # 'diffs': diffs
+            # 'fopt2': fopt2,
 
 # if __name__ == "__main__":
 #     a = Optimizer()

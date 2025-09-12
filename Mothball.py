@@ -139,9 +139,9 @@ class ActionStack:
                     adding.append(ActionStack.DeleteCellAction(action.index))
                 elif t == CellType.OPTIMIZE:
                     cell = self.parent.addCell(action.index, cellType=action.data["cell_type"], addActionStack=False)
-                    cell.te_model.basicSetup(action.data['variables'])
-                    cell.setup.basicSetup(action.data['drags'])
-                    cell.lst.basicSetup(action.data['constraints'])
+                    cell.var_box_model.basicSetup(action.data['variables'])
+                    cell.drag_and_accel_model.basicSetup(action.data['drags'])
+                    cell.constraints_model.basicSetup(action.data['constraints'])
                     cell.toConsole(action.data['output'])
 
             case self.MOVE_ACTION: # pop the move action, add the same move action
@@ -423,9 +423,9 @@ class MainWindow(QMainWindow):
                 "cell_type": self.CELLS[index].cellType,
                 "axis": self.CELLS[index].axis_to_optimize,
                 "mode": self.CELLS[index].max_or_min,
-                "variables": self.CELLS[index].te_model.getData(),
-                "drags": self.CELLS[index].setup.getData(),
-                "constraints": self.CELLS[index].lst.getData(),
+                "variables": self.CELLS[index].var_box_model.getData(),
+                "drags": self.CELLS[index].drag_and_accel_model.getData(),
+                "constraints": self.CELLS[index].constraints_model.getData(),
                 "output": self.CELLS[index].console.toPlainText(),
                 "points": self.CELLS[index].points
             }
@@ -576,11 +576,11 @@ class MainWindow(QMainWindow):
                         if cell.mode == 'max':
                             b.choose_max_or_min_button.click()
                         b = self.addCell(cellType=cell.cell_type)
-                        b.te_model.basicSetup(cell.variables)
-                        b.setup.basicSetup(cell.drags)
-                        b.lst.basicSetup(cell.constraints)
+                        b.var_box_model.basicSetup(cell.variables)
+                        b.drag_and_accel_model.basicSetup(cell.drags)
+                        b.constraints_model.basicSetup(cell.constraints)
                         b.toConsole(cell.output)
-                        b.graph.setData(cell.points[0], cell.points[1])
+                        b.plot.setData(cell.points[0], cell.points[1])
                 except Exception as e:
                     errors = True
 

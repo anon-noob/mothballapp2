@@ -10,6 +10,7 @@ from matplotlib.ticker import MultipleLocator
 from matplotlib.figure import Figure
 
 class PlotWidget(FigureCanvas):
+    "Widget for displaying a plot"
     def __init__(self, parent=None):
         fig = Figure(figsize=(5, 3.5), facecolor="#393939") # in inches, change this to change initial setup
         self.ax = fig.add_subplot(111)
@@ -28,6 +29,7 @@ class PlotWidget(FigureCanvas):
         self.plot()
 
     def plot(self):
+        "Plot the graph with data given from `self.x`, `self.y`"
         self.ax.clear()
         self.ax.set_facecolor("#5B5B5B")
         self.ax.tick_params(colors="white")
@@ -45,11 +47,13 @@ class PlotWidget(FigureCanvas):
         self.draw()
 
     def setData(self, x,y):
+        "Set the x and y coordinates"
         self.x = x
         self.y = y
         self.plot()
 
 class Worker(QObject):
+    "Worker for executing angle optimizations using threading"
     finished = pyqtSignal(object, object, object)
 
     def __init__(self, axis_to_optimize, max_or_min, variables: dict, data: list[list], constraints: list[list]):
@@ -77,6 +81,7 @@ class Worker(QObject):
         self.isrunning = False
 
 class ComboBoxDelegate(QItemDelegate):
+    "Set a combobox item delegate containing `items`"
     def __init__(self, items: list[str]):
         super().__init__()
         self.items = items
@@ -93,10 +98,15 @@ class ComboBoxDelegate(QItemDelegate):
     def setModelData(self, editor, model, index: QModelIndex):
         model.setData(index, editor.currentText(), Qt.EditRole)
 
-class AddandDelModel(QStandardItemModel):
+class AddandDeleteModel(QStandardItemModel):
+    """
+    Model for a tableview, supports adding/deleting rows or columns, depending on the direction of expansion.
+
+    Supports setting indexes constant (cannot be changed or deleted), constant rows, index rows for autoindexing, and default value when adding cells.
+    """
     ROW = 0
     COLUMN = 1
-    DISABLED_ROLE = Qt.UserRole + 1
+    DISABLED_ROLE = Qt.ItemDataRole.UserRole + 1
     def __init__(self, row, col, addingRowOrColumn, parent: QTableView):
         super().__init__(row, col, parent)
         self.setParent(parent)
@@ -109,7 +119,7 @@ class AddandDelModel(QStandardItemModel):
 
     def flags(self, index):
         item = self.itemFromIndex(index)
-        if item is not None and item.data(AddandDelModel.DISABLED_ROLE):
+        if item is not None and item.data(AddandDeleteModel.DISABLED_ROLE):
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled
         if index.row() in self.constantRows or (index.row(), index.column()) in self.constantIndexes:
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled
@@ -139,12 +149,12 @@ class AddandDelModel(QStandardItemModel):
             if index.column() == self.columnCount() - 1:
                 x = self.newListOfItems(self.rowCount())
                 self.appendColumn(x)
-        elif self.addingRowOrColumn == self.ROW: # If clicked on the last column, add a new column
+        elif self.addingRowOrColumn == self.ROW: # If clicked on the last row, add a new row
             if index.row() == self.rowCount() - 1:
                 x = self.newListOfItems(self.columnCount())
                 self.appendRow(x)
 
-    def deleteIndexes(self, indexes: list):
+    def deleteIndexes(self, indexes: list): # this code is ugly hELP
         if self.addingRowOrColumn == self.COLUMN:
             if not all(self.data(index) in ('',None) for index in indexes if index.row() not in self.constantRows):
                 for index in indexes:
@@ -195,6 +205,7 @@ class AddandDelModel(QStandardItemModel):
         return super().setData(index, value, role)
 
     def basicSetup(self, data: list[list]):
+        "Set some data to the entire model"
         if self.addingRowOrColumn == self.COLUMN:
             self.removeRows(1, self.rowCount())
             self.removeColumns(0, self.columnCount())
@@ -217,6 +228,7 @@ class AddandDelModel(QStandardItemModel):
         self.indexRows[row] = label
 
     def getData(self):
+        "Get all data returned as a 2-d array"
         all_data = []
         for row in range(self.rowCount()):
             row_data = []
@@ -231,7 +243,7 @@ class AddandDelModel(QStandardItemModel):
         return all_data
         
 class OptimizationSection(Cell):
-    "Mothball Code Cell, `CodeEdit` as the input field, `RenderViewer` as the output viewer. The actual highlighting is done here, and the highlighting logic is computed in its linter `self.linter`."
+    "Mothball Angle Optimizer, for optimizing specific sequences of angles."
     MAX = 'max'
     MIN = 'min'
     def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback):
@@ -239,7 +251,7 @@ class OptimizationSection(Cell):
         self.mode = CellType.OPTIMIZE
         self.p = parent # The main Mothball instance 
         self.worker = None
-        self.t = None
+        self.the_thread = None
         self.points = [[],[]]
 
         self.left_content_layout = QVBoxLayout()
@@ -249,7 +261,7 @@ class OptimizationSection(Cell):
         self.top_panel.setSizeConstraint(self.top_panel.SizeConstraint.SetFixedSize)
         self.bottom_panel = QHBoxLayout()
 
-        splitter = QSplitter(Qt.Horizontal)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setStyleSheet("QSplitter::handle {background-color: "+"#595959"+"; border-radius: 3px}")
         left_widget = QWidget()
         left_widget.setLayout(self.left_content_layout)
@@ -261,7 +273,7 @@ class OptimizationSection(Cell):
         splitter.setStretchFactor(1, 1)
         self.main_layout.addWidget(splitter)
         
-        # Choose axis X or Z Button
+        # Help Button (TO CHANGE)
         self.help_button = QPushButton("Help")
         self.help_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.help_button.setStyleSheet("background-color: #363636")
@@ -269,6 +281,7 @@ class OptimizationSection(Cell):
         self.help_button.clicked.connect(self.displayHelp)
         self.top_panel.addWidget(self.help_button, stretch=0)
 
+        # References (TO CHANGE)
         self.reference_values = QPushButton("Reference Values")
         self.reference_values.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.reference_values.setStyleSheet("background-color: #363636")
@@ -276,6 +289,7 @@ class OptimizationSection(Cell):
         self.reference_values.clicked.connect(self.displayReferenceValues)
         self.top_panel.addWidget(self.reference_values, stretch=0)
 
+        # Choose axis X or Z Button
         self.axis_to_optimize = OptimizeCellAxis.X # dont worry, this is toggleable
         self.choose_axis_button = QPushButton(f"Axis: {self.axis_to_optimize}")
         self.choose_axis_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
@@ -296,27 +310,27 @@ class OptimizationSection(Cell):
 
         self.left_content_layout.addLayout(self.top_panel)
 
+        # Box for setting variables
         self.var_box = QTableView()
         self.var_box.setHorizontalHeader(None)
         style = "QHeaderView::section {background-color: "+"#363636" + ";color: white;font-weight: bold;} QTableCornerButton::section {background-color: #2e2e2e;}"
         self.var_box.setStyleSheet(style)
 
         # Set the model first to get row count
-        self.te_model = AddandDelModel(2,1,AddandDelModel.COLUMN, self.var_box)
-        self.te_model.setVerticalHeaderLabels(["Variable", "Value"])
-        self.te_model.basicSetup([['init', 'num_ticks', 'wad_spd', 'wdwa_spd', 'wdwa_angle'], [0.3, 12, 0.3274, 0.3060548, 17.4786858]])
-        self.te_model.setConstantIndexes(0,0)
-        self.te_model.setConstantIndexes(0,1)
-        self.var_box.setModel(self.te_model)
+        self.var_box_model = AddandDeleteModel(2,1,AddandDeleteModel.COLUMN, self.var_box)
+        self.var_box_model.setVerticalHeaderLabels(["Variable", "Value"])
+        self.var_box_model.basicSetup([['init', 'num_ticks', 'wad_spd', 'wdwa_spd', 'wdwa_angle'], [0.3, 12, 0.3274, 0.3060548, 17.4786858]])
+        self.var_box_model.setConstantIndexes(0,0)
+        self.var_box_model.setConstantIndexes(0,1)
+        self.var_box.setModel(self.var_box_model)
         self.var_box.horizontalHeader().hide()
-        self.te_model.dataChanged.connect(change_callback)
+        self.var_box_model.dataChanged.connect(change_callback)
 
-        # Calculate height: header + (row count * row height)
-        row_count = self.te_model.rowCount()
+        row_count = self.var_box_model.rowCount()
         row_height = 40
-        total_heighty = (row_height * row_count) + 2
-        self.var_box.setMaximumHeight(total_heighty)
-        self.var_box.setMinimumHeight(total_heighty)
+        h = (row_height * row_count) + 2
+        self.var_box.setMaximumHeight(h)
+        self.var_box.setMinimumHeight(h)
         self.var_box.horizontalHeader().hide()
         self.var_box.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.var_box.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -326,55 +340,56 @@ class OptimizationSection(Cell):
         self.var_box.horizontalHeader().setDefaultSectionSize(100)
         self.left_content_layout.addWidget(self.var_box)
 
-        # View Initials and variables
-        self.a = QTableView()
-        self.a.setStyleSheet(style)
-        self.setup = AddandDelModel(4, 1, AddandDelModel.COLUMN, self.a)
-        self.setup.setVerticalHeaderLabels(["Angles", "Drag X", "Drag Z", "Accel"])
-        self.setup.basicSetup([[f'F{i}' for i in range(12)], [0.546, 0.546] + [0.91]*10, [0.546, 0.546]+[0.91]*10, ['init', 0.3274]+[0.026]*10])
-        self.a.setModel(self.setup)
-        self.setup.setIndexedRows(0,'F')
-        self.setup.setConstantRows(0)
-        self.setup.setDefaultValues(['','0.91','0.91','0.026'])
-        total_height = self.a.horizontalHeader().height() + (40 * self.setup.rowCount()) + 2
-        self.a.setMaximumHeight(total_height)
-        self.a.setMinimumHeight(total_height)
-        self.a.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.a.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.a.resizeRowsToContents()
-        self.a.resizeColumnsToContents()
-        self.a.horizontalHeader().setDefaultSectionSize(100)
-        self.setup.dataChanged.connect(change_callback)
+        # View Constants
+        self.drag_and_accel_table = QTableView()
+        self.drag_and_accel_table.setStyleSheet(style)
+        self.drag_and_accel_model = AddandDeleteModel(4, 1, AddandDeleteModel.COLUMN, self.drag_and_accel_table)
+        self.drag_and_accel_model.setVerticalHeaderLabels(["Angles", "Drag X", "Drag Z", "Accel"])
+        self.drag_and_accel_model.basicSetup([[f'F{i}' for i in range(12)], [0.546, 0.546] + [0.91]*10, [0.546, 0.546]+[0.91]*10, ['init', 0.3274]+[0.026]*10])
+        self.drag_and_accel_table.setModel(self.drag_and_accel_model)
+        self.drag_and_accel_model.setIndexedRows(0,'F')
+        self.drag_and_accel_model.setConstantRows(0)
+        self.drag_and_accel_model.setDefaultValues(['','0.91','0.91','0.026'])
+        total_height = self.drag_and_accel_table.horizontalHeader().height() + (40 * self.drag_and_accel_model.rowCount()) + 2
+        self.drag_and_accel_table.setMaximumHeight(total_height)
+        self.drag_and_accel_table.setMinimumHeight(total_height)
+        self.drag_and_accel_table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.drag_and_accel_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.drag_and_accel_table.resizeRowsToContents()
+        self.drag_and_accel_table.resizeColumnsToContents()
+        self.drag_and_accel_table.horizontalHeader().setDefaultSectionSize(100)
+        self.drag_and_accel_model.dataChanged.connect(change_callback)
         
 
-        self.left_content_layout.addWidget(self.a)
+        self.left_content_layout.addWidget(self.drag_and_accel_table)
 
-        self.constraintsView = QTableView()
-        self.constraintsView.setStyleSheet(style)
+        # Constraints
+        self.constraints_table = QTableView()
+        self.constraints_table.setStyleSheet(style)
 
         
-        self.lst = AddandDelModel(0, 8, AddandDelModel.ROW, self.constraintsView)
-        self.lst.setHorizontalHeaderLabels(["Use?", "Name","Type", "t1", "+-", "t2", "<=>", "Number"])
-        self.lst.setDefaultValues(["YES", "", "X", "", "-", "", ">", ""])
-        self.constraintsView.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.constraintsView.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.constraints_model = AddandDeleteModel(0, 8, AddandDeleteModel.ROW, self.constraints_table)
+        self.constraints_model.setHorizontalHeaderLabels(["Use?", "Name","Type", "t1", "+-", "t2", "<=>", "Number"])
+        self.constraints_model.setDefaultValues(["YES", "", "X", "", "-", "", ">", ""])
+        self.constraints_table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.constraints_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.active = ComboBoxDelegate(['YES', 'no'])
         self.constraintType = ComboBoxDelegate(["X","Z","F"])
         self.operation = ComboBoxDelegate(['-','+'])
         self.comparison = ComboBoxDelegate(['>','<','=','>=','<='])
-        self.constraintsView.setItemDelegateForColumn(0, self.active)
-        self.constraintsView.setItemDelegateForColumn(2, self.constraintType)
-        self.constraintsView.setItemDelegateForColumn(4, self.operation)
-        self.constraintsView.setItemDelegateForColumn(6, self.comparison)
-        self.lst.basicSetup([["YES", "", "X", "", "-", "", ">", ""]])
-        self.constraintsView.setModel(self.lst)
-        self.constraintsView.horizontalHeader().setDefaultSectionSize(50)
-        self.constraintsView.setColumnWidth(1, 150)
-        self.constraintsView.setColumnWidth(7, 150)
-        self.constraintsView.setMinimumHeight(300)
-        self.lst.dataChanged.connect(change_callback)
+        self.constraints_table.setItemDelegateForColumn(0, self.active)
+        self.constraints_table.setItemDelegateForColumn(2, self.constraintType)
+        self.constraints_table.setItemDelegateForColumn(4, self.operation)
+        self.constraints_table.setItemDelegateForColumn(6, self.comparison)
+        self.constraints_model.basicSetup([["YES", "", "X", "", "-", "", ">", ""]])
+        self.constraints_table.setModel(self.constraints_model)
+        self.constraints_table.horizontalHeader().setDefaultSectionSize(50)
+        self.constraints_table.setColumnWidth(1, 150)
+        self.constraints_table.setColumnWidth(7, 150)
+        self.constraints_table.setMinimumHeight(300)
+        self.constraints_model.dataChanged.connect(change_callback)
 
-        self.left_content_layout.addWidget(self.constraintsView)
+        self.left_content_layout.addWidget(self.constraints_table)
 
         # View results
         self.console = QTextEdit()
@@ -382,8 +397,8 @@ class OptimizationSection(Cell):
         self.right_content_layout.addWidget(self.console)
 
         # View graph
-        self.graph = PlotWidget()
-        self.right_content_layout.addWidget(self.graph)
+        self.plot = PlotWidget()
+        self.right_content_layout.addWidget(self.plot)
 
         self.run_button.clicked.connect(self.runSolver)
 
@@ -445,53 +460,67 @@ A row should read like an inequality, for example, "Z(8) - Z(1) > 1.6".
 If you are incorporating inertia, be sure to add the constraint which restricts the distance traveled on the inertia tick. For example, "X(4) - X(3) < 0.005/0.91". Here, `0.005/0.91` is the speed needed to hit inertia.""")
 
     def runSolver(self):
-
-        names, values = self.te_model.getData()
+        names, values = self.var_box_model.getData()
         variables = {n:v for n,v in zip(names, values)}
+        data = self.drag_and_accel_model.getData()
 
-
-        data = self.setup.getData()
-
-        if not data or len(data[0]) < int(variables['num_ticks']):
-            raise RuntimeError(f"Data has fewer columns than num_ticks = {int(variables['num_ticks'])}")
+        try:
+            m = variables['num_ticks']
+        except KeyError:
+            self.toConsole(f"Error: Something went wrong, couldn't find 'num_ticks'")
+            return
         
-        constraints = self.lst.getData()
+        try:
+            m = int(m)
+        except ValueError:
+            self.toConsole(f"Error: I don't understand what num_ticks={m} means. It should be a positive integer.")
+            return
+        
+        if not data or len(data[0]) < m:
+            self.toConsole(f"Error: Drag and Accel data has fewer columns than num_ticks = {m}")
+            return
+        
+        constraints = self.constraints_model.getData()
 
-        self.t = QThread()
+        self.the_thread = QThread()
         self.worker = Worker(self.axis_to_optimize, self.max_or_min, variables, data, constraints)
-        self.worker.moveToThread(self.t)
+        self.worker.moveToThread(self.the_thread)
 
-        self.t.started.connect(self.worker.run)
+        self.the_thread.started.connect(self.worker.run)
         self.worker.finished.connect(self.onCompletion)
-        self.worker.finished.connect(self.t.quit)
+        self.worker.finished.connect(self.the_thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
-        self.t.finished.connect(self.t.deleteLater)
+        self.the_thread.finished.connect(self.the_thread.deleteLater)
 
         self.run_button.setDisabled(True)
 
-        self.t.start()
+        self.the_thread.start()
 
-    def onCompletion(self, res, c, d):
+    def onCompletion(self, res, constraint_values, postprocess_dict):
+        # Constraint_values are the constraint functions evaluated with the optimiized output.
+        # When the values are close to 0, then it is binding. 
         self.run_button.setEnabled(True)
         if isinstance(res, str):
-            self.toConsole(f"{res} {c}")
+            self.toConsole(f"{res} {constraint_values}")
             return
 
-        pts = d['points']
+        pts = postprocess_dict['points']
         x_pts = [round(l[0],6) for l in pts]
         z_pts = [round(i[1],6) for i in pts]
         self.points = [x_pts, z_pts]
-        self.graph.setData(x_pts, z_pts)
+        self.plot.setData(x_pts, z_pts)
 
         
 
-        name, value = c
+        name, value = constraint_values
         offset = res.fun
         success = res.success
         message = res.message
         x = [round(math.degrees(p),3) for p in res.x]
         consecutive_diffs = [round(x[l]-x[l-1],3) for l in range(1, len(x))]
-        
+        x_velocities = [round(x_pts[j]-x_pts[j-1],7) for j in range(1, len(x_pts))]
+        z_velocities = [round(z_pts[j]-z_pts[j-1],7) for j in range(1, len(z_pts))]
+
         lines = []
         lines.append(message)
         lines.append(f"Success: {success}")
@@ -507,12 +536,21 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
                 lines.append(f"{n}: {v}")
         else:
             lines.append("No Constraints")
+        
+        lines.append("")
+        lines.append("(X,Z) position")
+        for i,j in zip(x_pts, z_pts):
+            lines.append(f"  {i}, {j}")
+        lines.append("")
+        lines.append("(X,Z) velocities")
+        for i,j in zip(x_velocities, z_velocities):
+            lines.append(f"  {i}, {j}")
         self.toConsole("\n".join(lines))
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Backspace:
             focused = self.focusWidget()
-            if focused == self.var_box or focused == self.a or focused == self.constraintsView:
+            if focused == self.var_box or focused == self.drag_and_accel_table or focused == self.constraints_table:
                 selected_indexes = focused.selectionModel().selectedIndexes()
                 if selected_indexes:
                     focused.model().deleteIndexes(selected_indexes)
