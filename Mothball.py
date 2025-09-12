@@ -571,17 +571,18 @@ class MainWindow(QMainWindow):
                             warning = True
                     
                     elif cell.cell_type == CellType.OPTIMIZE:
+                        b = self.addCell(cellType=cell.cell_type)
                         if cell.axis == 'Z': 
                             b.choose_axis_button.click()
                         if cell.mode == 'max':
                             b.choose_max_or_min_button.click()
-                        b = self.addCell(cellType=cell.cell_type)
                         b.var_box_model.basicSetup(cell.variables)
                         b.drag_and_accel_model.basicSetup(cell.drags)
                         b.constraints_model.basicSetup(cell.constraints)
                         b.toConsole(cell.output)
                         b.plot.setData(cell.points[0], cell.points[1])
                 except Exception as e:
+                    print(e)
                     errors = True
 
                 i += 1
