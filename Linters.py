@@ -29,7 +29,7 @@ class CodeLinter:
             for i in mxz.PlayerSimulationXZ.FUNCTIONS_BY_TYPE.values():
                 self.words += i
 
-            self.modifiers = ["water","wt", "lava","lv", "ladder", "ld", "block", "bl", "vine", "web"]
+            self.modifiers = ["water","wt", "lava","lv", "ladder", "ld", "block", "bl", "vine", "web",'soulsand','ss']
             self.inputs = ["w","s","a","d","wa","wd","sa","sd"]
 
             for e, func_list in enumerate(mxz.PlayerSimulationXZ.FUNCTIONS_BY_TYPE.values(),1):
@@ -316,7 +316,7 @@ class CodeLinter:
                 results.append(item)
                 item = ""
             elif not follows_backslash:
-                if char in "(){}[]\\ .,/|-=+*#\n":
+                if char in "(){}[]\\ .,/|-=+*#\n\t":
                     if item:
                         results.append(item)
                     item = ""
