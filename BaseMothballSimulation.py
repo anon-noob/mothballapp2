@@ -78,6 +78,11 @@ class BasePlayer:
 
         self.call_stack = [] # For debugging and error messaging
 
+        self.stop_flag = False
+
+    def stop_execution(self):
+        self.stop_flag = True
+
     @staticmethod
     def record_to_call_stack(func):
         "Decorator which appends and pops from call stack for functions which accept a `MothballSequence`"
@@ -268,6 +273,8 @@ class BasePlayer:
             runnable = self.tokenize(token, locals=self.local_vars)
             runnables.append(runnable)
         for _ in range(count):
+            if self.stop_flag:
+                raise InterruptedError("Stopped execution")
             for runnable in runnables:
                 self.run(runnable)
     
@@ -710,16 +717,23 @@ class BasePlayer:
     
     def simulate(self, sequence: str, return_defaults = True, locals: dict = None):
         "Execute Mothball Code. If no output was made and `return_defaults == True`, return the default output (see `show_default_output()`). `locals` is a dict of values for variables."
-        parsed_tokens = self.parse(sequence)
+        try:
+            parsed_tokens = self.parse(sequence)
 
-        for token in parsed_tokens:
-            runnable = self.tokenize(token, locals=locals)
-            self.run(runnable)
+            for token in parsed_tokens:
+                if self.stop_flag:
+                    raise InterruptedError("Stopped execution")
+                runnable = self.tokenize(token, locals=locals)
+                if self.stop_flag:
+                    raise InterruptedError("Stopped execution")
+                self.run(runnable)
 
         
-        if return_defaults and not self.output:
-            self.show_default_output()
-            
+            if return_defaults and not self.output:
+                self.show_default_output()
+        except Exception as e:
+            self.add_to_output(ExpressionType.TEXT, string_or_num=f"Error ({type(e).__name__}): {str(e)}")
+
     def show_default_output(self): ...
 
     def show_output(self):
@@ -736,5 +750,9 @@ class BasePlayer:
 
 if __name__ == "__main__":
     a = BasePlayer()
-    a.simulate("""help(help)""")
+    # import time
+    # m = time.perf_counter()
+    a.simulate("""r(pre(16), 10)""")
+    # n = time.perf_counter()
+    # print(n-m)
     b=a.show_output()
