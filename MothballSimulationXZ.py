@@ -1,5 +1,5 @@
-from math import sin, cos, atan2 as arctan, sqrt, copysign, degrees as deg
-from numpy import float32 as f32
+from math import sin, cos, atan2 as arctan, sqrt, copysign, degrees as deg, asin, acos
+from numpy import float32 as f32, uint64 as u64, int32 as i32
 from typing import Literal
 import re
 import inspect
@@ -46,14 +46,15 @@ class PlayerSimulationXZ(BasePlayer):
     AIR = 2
 
     # Modifiers Enums (yes they're in binary)
-    WATER =  0b1
-    LAVA =   0b10
-    WEB =    0b100
-    BLOCK =  0b1000
-    LADDER = 0b10000
+    WATER =     0b1
+    LAVA =      0b10
+    WEB =       0b100
+    BLOCK =     0b1000
+    LADDER =    0b10000
+    SOULSAND =  0b100000
 
-    MODIFIERS = (WATER, WEB, LAVA, BLOCK, LADDER)
-    ALIAS_TO_MODIFIER = {"water": WATER,"wt": WATER,"lv": LAVA,"lava": LAVA,"web": WEB,"block": BLOCK,"bl": BLOCK,"ladder": LADDER,"ld": LADDER,"vine": LADDER}
+    MODIFIERS = (WATER, WEB, LAVA, BLOCK, LADDER, SOULSAND)
+    ALIAS_TO_MODIFIER = {"water": WATER,"wt": WATER,"lv": LAVA,"lava": LAVA,"web": WEB,"block": BLOCK,"bl": BLOCK,"ladder": LADDER,"ld": LADDER,"vine": LADDER, "soulsand": SOULSAND, "ss": SOULSAND}
 
     FUNCTIONS_BY_TYPE = {"fast-movers": [
         "sprint", "s", "sprint45", "s45", "sprintjump", "sprintjump45", "sj", "sj45", "sprintair", "sa", "sprintair45", "sa45", "sprintstrafejump", "sprintstrafejump45", "strafejump", "strafejump45", "stfj", "stfj45", "sneaksprint", "sneaksprintair", "sneaksprintjump", "sns", "snsa", "snsj", "sneaksprint45", "sneaksprintair45", "sneaksprintjump45", "sns45", "snsa45", "snsj45"
@@ -163,6 +164,10 @@ class PlayerSimulationXZ(BasePlayer):
             # MOVING THE PLAYER
             self.x += self.vx
             self.z += self.vz
+
+            if self.modifiers & self.SOULSAND: # Like 13 df accurate minimum
+                self.vx *= 0.4
+                self.vz *= 0.4
 
             forward, strafe = self.movement_values()
 
@@ -600,6 +605,24 @@ class PlayerSimulationXZ(BasePlayer):
 
         multiplier = max((1 + (0.2 * speed)) * (1 - (0.15 * slow)), 0) * 100
         self.add_to_output(ExpressionType.GENERAL_LABEL, f"Speed {speed} Slow {slow} ({int(round(multiplier))}% base speed)")
+
+    def angleinfo(self, angle: f32 = f32(0.0)):
+        angle_rad = angle * f32(self.pi) / f32(180)
+        sin_index = u64(i32(angle_rad * f32(10430.378)) & 65535)
+        cos_index = u64(i32(angle_rad * f32(10430.378) + f32(16384.0)) & 65535)
+        sin_value = sin(sin_index * self.pi * 2.0 / 65536)
+        cos_value = sin(cos_index * self.pi * 2.0 / 65536)
+        cos_index_adj = (int(cos_index) - 16384) % 65536
+        # sin_value = self.mcsin(angle_rad)
+        # cos_value = self.mccos(angle_rad)
+        sin_angle = deg(asin(sin_value))
+        cos_angle = deg(asin(cos_value))
+        normal = sqrt(sin_value**2.0 + cos_value**2.0)
+        print(angle, 'Sin', 'Cos', 'Normal')
+        print('value', sin_value, cos_value, normal)
+        print('angle', sin_angle, cos_angle)
+        print('index', sin_index, cos_index_adj, cos_index)
+        # print(sin_value, cos_value, sqrt(sin_value ** 2.0 + cos_value ** 2.0))
 
     # SETTERS
     def face(self, angle_in_degrees: f32, /):
@@ -1117,6 +1140,7 @@ class PlayerSimulationXZ(BasePlayer):
             "outangle": outangle, "outa": outangle, "outfacing": outangle, "outf": outangle,
             "outturn": outturn, "outt": outturn,
             "effectsmultiplier": effectsmultiplier, "effects": effectsmultiplier,
+            'angleinfo': angleinfo, 'ai': angleinfo,
             "f": face, "face": face, "facing": face,
             "turn": turn,
             "setposz": setposz, "z": setposz,
@@ -1169,7 +1193,7 @@ if __name__ == "__main__":
     a = PlayerSimulationXZ()
     # s = "print(A pixel is {px} blocks\, and 8 pixels is {8*px} blocks)"
     # s = 'f(-13.875) wa.a(6) x(0) xil(wj.a wa.d(8) wa.sd(2) wa.s) outx x(0) w.s outz z(0) zil( wj.sd wa.d(2) sa.wd(9)) outz s.wd outz xmm vec | aq(-16.255, -38.185, -62.88, -76.93, -84.985, -90) xil(sj sa45(5) zmm outx sa45(7)) outx'
-    s = 'help(r)'
+    # s = 'angleinfo(-45.01)'
+    s = 'pre(16) r(s[ss] outvz,3) r(st[ss] outvz, 3)'
     a.simulate(s)
     a.show_output()
-    a.macro('testgame')
