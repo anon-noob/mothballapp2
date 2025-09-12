@@ -26,7 +26,7 @@ class Cell(QWidget):
     """
     Base `Cell` class, contains the left side panel framework and an empty main layout
     """
-    def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, cellType: CellType):
+    def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, cellType: CellType):
         super().__init__(parent)
         self.cellType = cellType
         self.colorOptions = colorOptions
@@ -49,6 +49,7 @@ class Cell(QWidget):
         self.add_xz_button = QPushButton("+X")
         self.add_y_button = QPushButton("+Y")
         self.add_text_button = QPushButton("T")
+        self.add_optimize_button = QPushButton("Op")
         self.delete_button = QPushButton("🗑")
         self.setStyleSheet("""QToolTip { 
                            background-color: #2e2e2e; 
@@ -65,17 +66,28 @@ class Cell(QWidget):
         self.add_y_button.setToolTip("Add Y Section Below")
         self.add_text_button.setToolTip("Add Text Section Below")
         self.delete_button.setToolTip("Delete Section")
+        self.add_optimize_button.setToolTip("Add Optimization Section Below")
 
         self.side_panel_layout.addWidget(self.run_button)
         self.side_panel_layout.addWidget(self.add_xz_button)
         self.side_panel_layout.addWidget(self.add_y_button)
         self.side_panel_layout.addWidget(self.add_text_button)
+        self.side_panel_layout.addWidget(self.add_optimize_button)
         self.side_panel_layout.addWidget(self.delete_button)
         self.side_panel_layout.addWidget(self.up_button)
         self.side_panel_layout.addWidget(self.down_button)
         self.side_panel_layout.addStretch(1)
         self.side_panel.setFixedWidth(40)
         self.main_layout.addWidget(self.side_panel)
+
+        self.up_button.clicked.connect(lambda: move_callback(self, -1))
+        self.down_button.clicked.connect(lambda: move_callback(self, 1))
+        self.run_button.clicked.connect(change_callback)
+        self.delete_button.clicked.connect(lambda: remove_callback(self))
+        self.add_xz_button.clicked.connect(lambda: add_callback(self, CellType.XZ))
+        self.add_y_button.clicked.connect(lambda: add_callback(self, CellType.Y))
+        self.add_text_button.clicked.connect(lambda: add_callback(self, CellType.TEXT))
+        self.add_optimize_button.clicked.connect(lambda: add_callback(self, CellType.OPTIMIZE))
 
 class CellLexer(QsciLexerCustom):
     "Lexer for notebook cells, both code and text cells. The actual lexing is manually done at `CodeCell` and `TextCell`."
@@ -149,6 +161,9 @@ class CodeEdit(QsciScintilla):
             new_height += (wrap if wrap > 0 else 1) * line_height
 
         self.setFixedHeight(new_height + 2)
+
+
+
 
 class RenderViewer(QTextBrowser):
     def __init__(self, generalOptions: dict, colorOptions: dict, textOptions: dict, parent):

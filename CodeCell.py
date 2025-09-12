@@ -8,40 +8,62 @@ from PyQt5.QtWidgets import (
 import MothballSimulationXZ as mxz
 import MothballSimulationY as my
 
-from PyQt5.QtCore import Qt
-
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QObject
+import FileHandler
 from PyQt5.QtGui import QColor
 from BaseCell import Cell, CodeEdit, RenderViewer
 from Linters import CodeLinter
 from Enums import *
-from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QFileDialog, QWidget, QComboBox
+from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget, QComboBox
 import os, json
-# import glob
-# from pathlib import Path
 
+class Worker(QObject):
+    finished = pyqtSignal(list, dict)
 
-## Delete newline when ctrl v
-## Extend codelinter to handle outputs
+    def __init__(self, input_str, simulation_type):
+        super().__init__()
+        self.input_str = input_str
+        self.simulation_type = simulation_type
+        self.p = None
+        self.isrunning = False
 
-if 0:
-    import Mothball
+    def run(self):
+        self.isrunning = True
+        try:
+            if self.simulation_type == CellType.XZ:
+                self.p = mxz.PlayerSimulationXZ()
+                self.p.simulate(self.input_str)
+                self.finished.emit(self.p.output, self.p.macros)
+            elif self.simulation_type == CellType.Y:
+                self.p = my.PlayerSimulationY()
+                self.p.simulate(self.input_str)
+                self.finished.emit(self.p.output, {})
+        except Exception as e:
+            self.finished.emit([f"Error occurred: {str(e)}"], {})
+        self.isrunning = False
+
+    def cancel(self):
+        if self.p:
+            self.p.stop_execution()
 
 class SimulationSection(Cell):
     "Mothball Code Cell, `CodeEdit` as the input field, `RenderViewer` as the output viewer. The actual highlighting is done here, and the highlighting logic is computed in its linter `self.linter`."
     def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, mode: CellType):
-        super().__init__(parent, generalOptions, colorOptions, textOptions, mode)
+        super().__init__(parent, generalOptions, colorOptions, textOptions, remove_callback, add_callback, move_callback, change_callback, mode)
         self.mode = mode
         self.words = []
         self.raw_output = []
         self.linter = CodeLinter(generalOptions, colorOptions, textOptions, mode)
-        self.mc_macros_folder = generalOptions["Path to Minecraft Macro Folder"]
+        self.mc_macros_folder = generalOptions.get("Path to Minecraft Macro Folder", '')
         self.macros = {}
-        self.p: Mothball.MainWindow = parent # The main Mothball instance 
+        self.worker = None
+        self.t = None
+        self.p = parent # The main Mothball instance 
 
         content_layout = QVBoxLayout()
         if mode == CellType.XZ:
             self.input_label = QLabel("Input (XZ):")
-        else:
+        elif mode == CellType.Y:
             self.input_label = QLabel("Input (Y):")
         self.input_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)  # Keep label height fixed
         content_layout.addWidget(self.input_label)
@@ -103,18 +125,12 @@ class SimulationSection(Cell):
 
         content_layout.addWidget(self.output_field)
 
-        content_layout.addStretch(1)  # Add stretch at the end to push widgets up
+        content_layout.addStretch(1)
 
         self.main_layout.addLayout(content_layout)
         self.setLayout(self.main_layout)
 
-        self.up_button.clicked.connect(lambda: move_callback(self, -1))
-        self.down_button.clicked.connect(lambda: move_callback(self, 1))
         self.run_button.clicked.connect(self.run_simulation)
-        self.delete_button.clicked.connect(lambda: remove_callback(self))
-        self.add_xz_button.clicked.connect(lambda: add_callback(self, CellType.XZ))
-        self.add_y_button.clicked.connect(lambda: add_callback(self, CellType.Y))
-        self.add_text_button.clicked.connect(lambda: add_callback(self, CellType.TEXT))
 
         self.adjust_output_height()
 
@@ -130,11 +146,7 @@ class SimulationSection(Cell):
 
     def saveToFolder(self):
         if not self.mc_macros_folder:
-            # self.message_label.setText(f"No folder destination was set")
-            # self.message_label.setStyleSheet("background-color: " + "#dff0d8" "; color: "+"#763c3c"+"; border: 1px solid "+"#763c3c"+"; padding: 4px;")
-            # self.message_label.show()
-            # return
-            self.mc_macros_folder = r"C:\Users\bryan\AppData\Roaming\.minecraft\MPKMod\macros"
+            self.mc_macros_folder = FileHandler.getMacros()
         if os.path.exists(self.mc_macros_folder):
             file = self.artifacts_list.currentText()
             _ , ext = os.path.splitext(file)
@@ -172,35 +184,50 @@ class SimulationSection(Cell):
     def run_simulation(self):
         "Execute the Mothball code and show its output."
         text = self.input_field.text()
-        try:
-            if self.mode == CellType.XZ:
-                p = mxz.PlayerSimulationXZ()
-            elif self.mode == CellType.Y:
-                p = my.PlayerSimulationY()
-            p.simulate(text)
-            self.output_field.renderTextfromOutput(self.linter, p.output)
-            self.raw_output = p.output
-            
-            if self.mode == CellType.XZ:
-                if p.macros:
-                    self.artifacts_list.clear()
-                    self.artifacts_produced_label.show()
-                    self.artifacts_list.show()
-                    self.view_macro.show()
-                    self.save_to_folder_button.show()
-                    for name, artifact in p.macros.items():
-                        self.artifacts_list.addItem(name)
-                    self.macros = p.macros
 
-        except Exception as e:
-            output = [(ExpressionType.TEXT, (f"Error: {e}",))]
-            self.output_field.renderTextfromOutput(self.linter, output)
-            self.raw_output = output
+        self.t = QThread()
+        self.worker = Worker(text, self.mode)
+        self.worker.moveToThread(self.t)
+
+        self.t.started.connect(self.worker.run)
+        self.worker.finished.connect(self.onSimulationCompletion)
+        self.worker.finished.connect(self.t.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.t.finished.connect(self.t.deleteLater)
+
+        self.run_button.clicked.disconnect()
+        self.run_button.clicked.connect(self.cancel)
+
+        self.t.start()
+
+    def cancel(self):
+        if self.worker:
+            self.worker.cancel()
+        self.run_button.clicked.disconnect()
+        self.run_button.clicked.connect(self.run_simulation)
+        
+
+    def onSimulationCompletion(self, output, macros):
+        self.output_field.renderTextfromOutput(self.linter, output)
+        self.raw_output = output
+        
+        if self.mode == CellType.XZ:
+            if macros:
+                self.artifacts_list.clear()
+                self.artifacts_produced_label.show()
+                self.artifacts_list.show()
+                self.view_macro.show()
+                self.save_to_folder_button.show()
+                for name, artifact in macros.items():
+                    self.artifacts_list.addItem(name)
+                self.macros = macros
+
+        self.run_button.clicked.disconnect()
+        self.run_button.clicked.connect(self.run_simulation)
     
     def resizeEvent(self, event):
         self.adjust_output_height()
         super().resizeEvent(event)
     
     def closeEvent(self, a0):
-
         return super().closeEvent(a0)

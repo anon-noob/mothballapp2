@@ -15,8 +15,8 @@ class TextSection(Cell):
     Markdown Cell with a `CodeEdit` input and a `RenderViewer` output. This cell alternates between showing `CodeEdit` in edit mode, and `RenderViewer` in render mode.
     """
 
-    def __init__(self, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, initialMode: TextCellState):
-        super().__init__(generalOptions, colorOptions, textOptions, CellType.TEXT)
+    def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, initialMode: TextCellState):
+        super().__init__(parent, generalOptions, colorOptions, textOptions, remove_callback, add_callback, move_callback, change_callback, CellType.TEXT)
         self.mode = initialMode
         self.linter = MDLinter(generalOptions, colorOptions, textOptions)
         self.raw_text = ""
@@ -46,13 +46,13 @@ class TextSection(Cell):
         self.main_layout.addLayout(content_layout)
         self.setLayout(self.main_layout)
 
-        self.up_button.clicked.connect(lambda: move_callback(self, -1))
-        self.down_button.clicked.connect(lambda: move_callback(self, 1))
+        # self.up_button.clicked.connect(lambda: move_callback(self, -1))
+        # self.down_button.clicked.connect(lambda: move_callback(self, 1))
         self.run_button.clicked.connect(self.renderText)
-        self.delete_button.clicked.connect(lambda: remove_callback(self))
-        self.add_xz_button.clicked.connect(lambda: add_callback(self, CellType.XZ))
-        self.add_y_button.clicked.connect(lambda: add_callback(self, CellType.Y))
-        self.add_text_button.clicked.connect(lambda: add_callback(self, CellType.TEXT))
+        # self.delete_button.clicked.connect(lambda: remove_callback(self))
+        # self.add_xz_button.clicked.connect(lambda: add_callback(self, CellType.XZ))
+        # self.add_y_button.clicked.connect(lambda: add_callback(self, CellType.Y))
+        # self.add_text_button.clicked.connect(lambda: add_callback(self, CellType.TEXT))
     
     def adjust_output_height(self):
         """
