@@ -81,6 +81,8 @@ def _evaluate(tokens, variables):
     precedence = {'+': 1, '-': 1, '*': 2, '/': 2, '**': 3, 'UNARY_MINUS': 4}
     operands = []
     operators = []
+    prevkind = None
+    prevvalue = None
     for kind, value in tokens:
         if kind == 'NUMBER':
             operands.append(value)
