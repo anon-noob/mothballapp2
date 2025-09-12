@@ -123,11 +123,16 @@ class CellType(int):
     XZ = 0
     Y = 1
     TEXT = 2
+    OPTIMIZE = 3
 
 class TextCellState(int):
     "State of a text cell, either in `render` or `edit` mode"
     RENDER = 0
     EDIT = 1
+
+class OptimizeCellAxis(str):
+    Z = 'Z'
+    X = 'X'
 
 class StringLiterals(str):
     CODE = "code"

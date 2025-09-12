@@ -3,12 +3,6 @@ from Enums import *
 
 @dataclass
 class CodeCell:
-    """
-    name: name of file \\
-    mode: `xz` or `y` \\
-    code: the code string \\
-    raw_output: the raw output of the code, as a `list[tuple]`
-    """
     name: str
     cell_type: CellType
     code: str
@@ -18,15 +12,21 @@ class CodeCell:
 
 @dataclass
 class TextCell:
-    """
-    name: name of file \\
-    mode: `edit` or `render` \\
-    raw_text: the raw output of the code, as a `list[tuple]`
-    """
     cell_type: CellType
     mode: StringLiterals
     has_changed: bool
     raw_text: str
+
+@dataclass
+class AngleOptimizerCell:
+    cell_type: CellType
+    axis: OptimizeCellAxis
+    mode: str
+    variables: list[list]
+    drags: list[list]
+    constraints: list[list]
+    output: str
+    points: list[list[int],list[int]]
 
 @dataclass
 class File:
@@ -37,4 +37,4 @@ class File:
     """
     fileName: str
     version: str
-    cells: dict[int,CodeCell | TextCell]
+    cells: dict[int,CodeCell | TextCell | AngleOptimizerCell]

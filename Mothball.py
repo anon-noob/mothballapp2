@@ -17,8 +17,7 @@ import Settings
 import AboutMothball
 from PyQt5.QtCore import Qt, QTimer
 from utils import * 
-import CodeCell
-import TextCell
+import CodeCell, TextCell, AngleOptimizerCell
 import FileHandler
 import json
 import ParkourWordle
@@ -29,6 +28,7 @@ import MacroViewer
 # Scintilla resizing issue with newlines (prob show scrollbar?) <-- yep i set vertical scrollbar always on (Aug 5, 2025) but it doesn't fix the issue. 
 # Yes it does, just set the CodeEdit(QSciScintilla) to have a verical scroll policy always off (Aug 5, 2025)
 
+# add presets to the optimize cell
 # Comments and docstring
 # Reorganize the help page
 # Separate file for help doc strings
@@ -37,12 +37,12 @@ import MacroViewer
 # Var should not lint as strings
 
 # Linting in documentation with custom functions
-# Add basic macro creation
+# Fix and expand basic macro creation
+# Angle Optimization
 
 # Disable automatic execution in text cells (why tf is that a thing) -> done
 
 # Debian Linux fix: run in console `sudo apt-get install libxcb-xinerama0`
-
 
 """ERRORS:
 (Linux) Type in Text Cells does this error
@@ -129,7 +129,7 @@ class ActionStack:
                     QApplication.processEvents()
                     QTimer.singleShot(100, lambda: self.continueProcess(cell))
                     adding.append(ActionStack.DeleteCellAction(action.index))
-                else:
+                elif t == CellType.XZ or t == CellType.Y:
                     cell = self.parent.addCell(action.index, cellType=action.data["cell_type"], addActionStack=False)
                     cell.input_field.setText(action.data["code"])
                     cell.output_field.renderTextfromOutput(cell.linter, action.data["raw_output"])
@@ -137,6 +137,12 @@ class ActionStack:
                     QApplication.processEvents()
                     QTimer.singleShot(100, lambda: self.continueProcess(cell))
                     adding.append(ActionStack.DeleteCellAction(action.index))
+                elif t == CellType.OPTIMIZE:
+                    cell = self.parent.addCell(action.index, cellType=action.data["cell_type"], addActionStack=False)
+                    cell.te_model.basicSetup(action.data['variables'])
+                    cell.setup.basicSetup(action.data['drags'])
+                    cell.lst.basicSetup(action.data['constraints'])
+                    cell.toConsole(action.data['output'])
 
             case self.MOVE_ACTION: # pop the move action, add the same move action
                 self.parent.moveCell(action.source, action.direction, addActionStack=False)
@@ -179,7 +185,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.actionStack: ActionStack = ActionStack(self)
-        self.CELLS: list[Union[TextCell.TextSection, CodeCell.SimulationSection]] = []
+        self.CELLS: list[Union[TextCell.TextSection, CodeCell.SimulationSection, AngleOptimizerCell.OptimizationSection]] = []
 
         self.setWindowTitle("Mothball Notebook - Unnamed")
         self.name = ""
@@ -217,12 +223,15 @@ class MainWindow(QMainWindow):
         self.empty_add_xz_button = QPushButton("+X")
         self.empty_add_y_button = QPushButton("+Y")
         self.empty_add_text_button = QPushButton("T")
+        self.empty_add_optimize_button = QPushButton("Op")
         self.empty_add_xz_button.setToolTip("Add XZ Section")
         self.empty_add_y_button.setToolTip("Add Y Section")
         self.empty_add_text_button.setToolTip("Add Text Section")
+        self.empty_add_optimize_button.setToolTip("Add Optimization Section")
         empty_layout.addWidget(self.empty_add_xz_button)
         empty_layout.addWidget(self.empty_add_y_button)
         empty_layout.addWidget(self.empty_add_text_button)
+        empty_layout.addWidget(self.empty_add_optimize_button)
         self.empty_add_widget.hide()  # Hide initially
 
         self.section_container.addWidget(self.empty_add_widget)
@@ -240,12 +249,13 @@ class MainWindow(QMainWindow):
         self.empty_add_xz_button.clicked.connect(lambda: self.addCell(cellType=CellType.XZ))
         self.empty_add_y_button.clicked.connect(lambda: self.addCell(cellType=CellType.Y))
         self.empty_add_text_button.clicked.connect(lambda: self.addCell(cellType=CellType.TEXT))
+        self.empty_add_optimize_button.clicked.connect(lambda: self.addCell(cellType=CellType.OPTIMIZE))
 
         self.createMenus()
         self.unsaved_changes = False
         
     
-    def addCell(self, after_cell_or_at_index: Optional[Union[CodeCell.SimulationSection, TextCell.TextSection, int]] = None, cellType: CellType = CellType.XZ, addActionStack:bool = True, *, initialMode: TextCellState = TextCellState.EDIT):
+    def addCell(self, after_cell_or_at_index: Optional[Union[CodeCell.SimulationSection, TextCell.TextSection, AngleOptimizerCell.OptimizationSection, int]] = None, cellType: CellType = CellType.XZ, addActionStack:bool = True, *, initialMode: TextCellState = TextCellState.EDIT):
         """
         Add a new xz (horizontal), y (vertical), or text (markdown) cell below. Returns the new cell.
         """
@@ -255,8 +265,10 @@ class MainWindow(QMainWindow):
         if cellType == CellType.XZ or cellType == CellType.Y:
             section = CodeCell.SimulationSection(self, self.settings, self.codecell_colors, self.textcell_colors, self.removeCell, self.addCell, self.moveCell, self.onChangeDetected, mode=cellType)
         elif cellType == CellType.TEXT:
-            section = TextCell.TextSection(self.settings, self.codecell_colors, self.textcell_colors, self.removeCell, self.addCell, self.moveCell, self.onChangeDetected, initialMode=initialMode)
-        
+            section = TextCell.TextSection(self, self.settings, self.codecell_colors, self.textcell_colors, self.removeCell, self.addCell, self.moveCell, self.onChangeDetected, initialMode=initialMode)
+        elif cellType == CellType.OPTIMIZE:
+            section = AngleOptimizerCell.OptimizationSection(self, self.settings, self.codecell_colors, self.textcell_colors, self.removeCell, self.addCell, self.moveCell, self.onChangeDetected)
+
         if after_cell_or_at_index is None: # Add to the bottom end
             self.section_container.addWidget(section)
             self.CELLS.append(section)
@@ -274,7 +286,7 @@ class MainWindow(QMainWindow):
             self.actionStack.addDeleteAction(self.section_container.indexOf(section)-1)
         return section
         
-    def removeCell(self, cell_or_index: Union[CodeCell.SimulationSection, TextCell.TextSection, int], addActionStack: bool = True):
+    def removeCell(self, cell_or_index: Union[CodeCell.SimulationSection, TextCell.TextSection, AngleOptimizerCell.OptimizationSection, int], addActionStack: bool = True):
         """
         Remove the cell `section`. If there are no more cells, show the empty cell widget.
         """
@@ -284,6 +296,13 @@ class MainWindow(QMainWindow):
         else:
             cell = cell_or_index
             index = self.CELLS.index(cell)
+        
+        if isinstance(cell, CodeCell.SimulationSection):
+            if cell.worker is not None:
+                cell.cancel()
+        elif isinstance(cell, AngleOptimizerCell.OptimizationSection):
+            if cell.worker is not None and cell.worker.isrunning:
+                return
 
         data = self.collectCellData(index)
         self.section_container.removeWidget(cell)
@@ -297,7 +316,7 @@ class MainWindow(QMainWindow):
             self.actionStack.addCreateAction(index, data)
         return data
 
-    def moveCell(self, cell_or_index: Union[CodeCell.SimulationSection, TextCell.TextSection, int], direction: Literal[-1,1], addActionStack: bool = True):
+    def moveCell(self, cell_or_index: Union[CodeCell.SimulationSection, TextCell.TextSection, AngleOptimizerCell.OptimizationSection, int], direction: Literal[-1,1], addActionStack: bool = True):
         """
         Swap with the cell up (`direction = -1`) or down (`direction = 1`)
         """
@@ -398,6 +417,17 @@ class MainWindow(QMainWindow):
                 "cell_type": self.CELLS[index].cellType,
                 "mode": self.CELLS[index].mode,
                 "has_changed": False
+            }
+        elif isinstance(self.CELLS[index], AngleOptimizerCell.OptimizationSection):
+            data = {
+                "cell_type": self.CELLS[index].cellType,
+                "axis": self.CELLS[index].axis_to_optimize,
+                "mode": self.CELLS[index].max_or_min,
+                "variables": self.CELLS[index].te_model.getData(),
+                "drags": self.CELLS[index].setup.getData(),
+                "constraints": self.CELLS[index].lst.getData(),
+                "output": self.CELLS[index].console.toPlainText(),
+                "points": self.CELLS[index].points
             }
         return data
 
@@ -531,7 +561,7 @@ class MainWindow(QMainWindow):
                         else:
                             warning = True
 
-                    else:
+                    elif cell.cell_type == CellType.XZ or cell.cell_type == CellType.Y:
                         b = self.addCell(cellType=cell.cell_type)
                         b.input_field.setText(cell.code.rstrip())
                         if same_version:
@@ -539,6 +569,18 @@ class MainWindow(QMainWindow):
                             b.raw_output = cell.raw_output
                         else:
                             warning = True
+                    
+                    elif cell.cell_type == CellType.OPTIMIZE:
+                        if cell.axis == 'Z': 
+                            b.choose_axis_button.click()
+                        if cell.mode == 'max':
+                            b.choose_max_or_min_button.click()
+                        b = self.addCell(cellType=cell.cell_type)
+                        b.te_model.basicSetup(cell.variables)
+                        b.setup.basicSetup(cell.drags)
+                        b.lst.basicSetup(cell.constraints)
+                        b.toConsole(cell.output)
+                        b.graph.setData(cell.points[0], cell.points[1])
                 except Exception as e:
                     errors = True
 
@@ -558,8 +600,9 @@ class MainWindow(QMainWindow):
         Resize cells after processing all events.
         """
         for cell in self.CELLS:
-            cell.input_field.adjustHeight()
-            cell.adjust_output_height()
+            if cell.cellType != CellType.OPTIMIZE:
+                cell.input_field.adjustHeight()
+                cell.adjust_output_height()
         QApplication.processEvents()
 
     def clearAllCells(self):

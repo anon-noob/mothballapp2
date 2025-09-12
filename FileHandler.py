@@ -1,5 +1,5 @@
 import os, platform, json
-from DataStorage import CodeCell, TextCell, File
+from DataStorage import CodeCell, TextCell, AngleOptimizerCell, File
 from Enums import *
 from version import __version__
 
@@ -220,8 +220,12 @@ def loadFile(filepath):
         try:
             if a['cell_type'] == CellType.TEXT:
                 entries[i] = TextCell(**a)
-            else:
+            elif a['cell_type'] == CellType.XZ or a['cell_type'] == CellType.Y:
                 entries[i] = CodeCell(**a)
+            elif a['cell_type'] == CellType.OPTIMIZE:
+                entries[i] = AngleOptimizerCell(**a)
+            else:
+                entries[i] = CodeCell('',CellType.XZ,"# OOPS! I couldn't load this file!",None,False,[])
         except Exception as e:
             try:
                 entries[i] = CodeCell('',CellType.XZ,a['code'],None,False,[])
