@@ -21,6 +21,7 @@ import CodeCell, TextCell, AngleOptimizerCell
 import FileHandler
 import json
 import ParkourWordle
+import ReferencePage
 from Enums import CellType, TextCellState
 from version import __version__
 import MacroViewer
@@ -29,6 +30,7 @@ import MacroViewer
 # Yes it does, just set the CodeEdit(QSciScintilla) to have a verical scroll policy always off (Aug 5, 2025)
 
 # add presets to the optimize cell
+# Fix syntax error logging
 # Comments and docstring
 # Reorganize the help page
 # Separate file for help doc strings
@@ -204,6 +206,7 @@ class MainWindow(QMainWindow):
         self.settings_page = None
         self.wordle_page = None
         self.macro_viewer = None
+        self.reference_page = None
 
         # Create a central widget and set layout
         central_widget = QWidget()
@@ -348,6 +351,7 @@ class MainWindow(QMainWindow):
         menuBar.addMenu(fileMenu)
         editMenu = menuBar.addMenu("&Edit")
         settingsMenu = menuBar.addMenu("&Settings")
+        macroView = menuBar.addMenu("&Macros")
         helpMenu = menuBar.addMenu("&Help")
         minigameMenu = menuBar.addMenu("&Minigames")
         
@@ -364,8 +368,12 @@ class MainWindow(QMainWindow):
         open_settings = settingsMenu.addAction("Settings")
         fileMenu.addSeparator()
 
+        openMacroView = macroView.addAction("Open Macro Viewer")
+        fileMenu.addSeparator()
+
         about_action = helpMenu.addAction("About Mothball")
         documetation_action = helpMenu.addAction("Mothball Documentation")
+        reference_values = helpMenu.addAction("Reference Values")
         fileMenu.addSeparator()
         
         open_wordle_action = minigameMenu.addAction("Pk Wordle")
@@ -381,8 +389,11 @@ class MainWindow(QMainWindow):
 
         open_settings.triggered.connect(self.openSettings)
 
+        openMacroView.triggered.connect(self.openMacroViewer)
+
         about_action.triggered.connect(self.openAbout)
         documetation_action.triggered.connect(self.openDocumentation)
+        reference_values.triggered.connect(self.openReferenceWindow)
 
         open_wordle_action.triggered.connect(self.openPkWordle)
     
@@ -665,14 +676,23 @@ class MainWindow(QMainWindow):
         self.wordle_page = ParkourWordle.GUI()
         self.wordle_page.show()
     
-    def openMacroViewer(self, filename: str, macrodata, macroType):
+    def openReferenceWindow(self):
+        if self.reference_page is not None and self.reference_page.isVisible():
+            self.reference_page.activateWindow()
+            return
+        self.reference_page = ReferencePage.MainWindow(self.settings, self.codecell_colors, self.textcell_colors)
+        self.reference_page.show()
+    
+    def openMacroViewer(self, filename: str = None, macrodata = None, macroType = None):
         if self.macro_viewer is not None and self.macro_viewer.isVisible():
             self.macro_viewer.activateWindow()
         else:
             self.macro_viewer = MacroViewer.MacroViewer()
+            self.macro_viewer.resize(650, 650)
             self.macro_viewer.show()
 
-        self.macro_viewer.addTab(filename, macrodata)
+        if filename is not None and macrodata is not None and macroType:
+            self.macro_viewer.addTab(filename, macrodata)
     
     def updateGeneralSettings(self, newsettings: dict):
         for cell in self.CELLS:
