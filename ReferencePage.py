@@ -14,7 +14,7 @@ class MainWindow(QMainWindow):
         self.generalOptions = generalOptions
         self.colorOptions = colorOptions
         self.textOptions = textOptions
-        self.setWindowTitle("About")
+        self.setWindowTitle("Reference Values")
         self.setGeometry(100, 100, 900, 600)
 
         self.pages = {}
