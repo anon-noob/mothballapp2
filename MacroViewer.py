@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTableView, QVBoxLayout, QWidget, QMenu, QFileDialog, QMessageBox, QTabWidget
 from PyQt5.QtCore import QAbstractTableModel, Qt
 from PyQt5.QtGui import QColor
-import sys
+import json
 import FileHandler
 from Enums import MacroFileExtension
 import os
@@ -191,17 +191,3 @@ class MacroViewer(QMainWindow):
                 self.addTab(file_path, data)
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to open file:\n{e}")
-
-if __name__ == "__main__":
-    import json
-    app = QApplication(sys.argv)
-    with open(r"C:\Users\bryan\Downloads\[169] 4bm triple to ladder.json") as f: # JSON TEST
-        a = json.load(f)
-
-    # with open(r"C:\Users\bryan\AppData\Roaming\.minecraft\MPKMod\macros\loop.csv") as f: # CSV TEST
-        # a = f.read()
-
-    window = MacroViewer()
-    window.addTab(r"C:\Users\bryan\Downloads\[169] 4bm triple to ladder.json", a)
-    window.show()
-    sys.exit(app.exec_())
