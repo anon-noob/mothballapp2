@@ -14,17 +14,24 @@ class Optimizer:
         self.imuz = np.array([0.546, 0.546] + [0.91]*10)
         self.mmu  = np.array([0.31, 0.3274] + [0.026]*10)
 
+        self.initial_guess = 0
 
         self.constraints: list[list[str], list[dict]] = [[],[]] # list[names, constraints]
+        self.F_optimal = []
+        self.res = 0
 
     def setupVars(self, extraVars: dict):
         for k,v in extraVars.items():
             try:
-                extraVars[k] = evaluate(v)
+                extraVars[k] = evaluate(v, {'pi':np.pi, "px": 0.0625})
             except:
                 extraVars[k] = 0
         self.variables = {'px': 0.0625} | extraVars
         self.n = int(self.variables['num_ticks'])
+        d = self.variables.get('init_guess',0) % 360
+        if d > 180: 
+            d = d - 180
+        self.initial_guess = d*np.pi/180
     
     def setupConstants(self, imux, imuz, mmu):
         self.imux = np.array([evaluate(a, self.variables) for a in imux], dtype=float)
@@ -55,7 +62,6 @@ class Optimizer:
             names.append(name)
             
             num = evaluate(num, self.variables)
-            # print("MODE", mode)
             if mode == 'F':
                 num = num % 360
                 if num > 180:
@@ -174,7 +180,8 @@ class Optimizer:
         return -self.Z(F, self.n)
 
     def optimize(self, axis_to_optimize: OptimizeCellAxis, max_or_min: str):
-        x0 = np.zeros(self.n, dtype=float)
+        x0 = np.array([self.initial_guess for _ in range(self.n)], dtype=float)
+        # x0 = np.zeros(self.n, dtype=float)
         
         if axis_to_optimize == OptimizeCellAxis.X:
             if max_or_min == 'min':
@@ -189,7 +196,9 @@ class Optimizer:
         else:
             return ("Something went wrong!", 'function was invalid. Report this bug.', '')    
 
-        res = minimize(func, x0, method='SLSQP', constraints=self.constraints[1], bounds=None, options={'maxiter': 500, 'ftol': 1e-12})
+        angle_bounds = ((-2*np.pi,2*np.pi) for _ in range(self.n))
+
+        res = minimize(func, x0, method="SLSQP", constraints=self.constraints[1], bounds=angle_bounds, options={'maxiter': 500, 'ftol': 1e-12})
         self.F_optimal = res.x
         self.res = res
         m = [c['fun'](self.F_optimal) for c in self.constraints[1]]
@@ -199,8 +208,6 @@ class Optimizer:
         fopt = self.F_optimal.copy()
         points = [[self.X(fopt, t) - self.X(fopt, 0),  self.Z(fopt, t) - self.Z(fopt, 0)] for t in range(0, self.n+1) ]
         f_optimal_degrees = fopt * 180.0 / np.pi
-        # fopt2 = np.round(1000.0 * (np.mod(f_optimal_degrees + 180.0, 360.0) - 180.0)) * 0.001
-        # diffs = np.diff(fopt2)
 
         return {
             'points': points,

@@ -12,7 +12,7 @@ from matplotlib.figure import Figure
 class PlotWidget(FigureCanvas):
     "Widget for displaying a plot"
     def __init__(self, parent=None):
-        fig = Figure(figsize=(5, 3.5), facecolor="#393939") # in inches, change this to change initial setup
+        fig = Figure(figsize=(3.6, 3.5), facecolor="#393939") # in inches, change this to change initial setup
         self.ax = fig.add_subplot(111)
 
         super().__init__(fig)
@@ -281,14 +281,6 @@ class OptimizationSection(Cell):
         self.help_button.clicked.connect(self.displayHelp)
         self.top_panel.addWidget(self.help_button, stretch=0)
 
-        # References (TO CHANGE)
-        self.reference_values = QPushButton("Reference Values")
-        self.reference_values.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.reference_values.setStyleSheet("background-color: #363636")
-        self.reference_values.setToolTip("Useful reference values and tips")
-        self.reference_values.clicked.connect(self.displayReferenceValues)
-        self.top_panel.addWidget(self.reference_values, stretch=0)
-
         # Choose axis X or Z Button
         self.axis_to_optimize = OptimizeCellAxis.X # dont worry, this is toggleable
         self.choose_axis_button = QPushButton(f"Axis: {self.axis_to_optimize}")
@@ -319,9 +311,10 @@ class OptimizationSection(Cell):
         # Set the model first to get row count
         self.var_box_model = AddandDeleteModel(2,1,AddandDeleteModel.COLUMN, self.var_box)
         self.var_box_model.setVerticalHeaderLabels(["Variable", "Value"])
-        self.var_box_model.basicSetup([['init', 'num_ticks', 'wad_spd', 'wdwa_spd', 'wdwa_angle'], [0.3, 12, 0.3274, 0.3060548, 17.4786858]])
+        self.var_box_model.basicSetup([['init', 'num_ticks', 'init_guess', 'wad_spd', 'wdwa_spd', 'wdwa_angle'], [0.3, 12, 0, 0.3274, 0.3060548, 17.4786858]])
         self.var_box_model.setConstantIndexes(0,0)
         self.var_box_model.setConstantIndexes(0,1)
+        self.var_box_model.setConstantIndexes(0,2)
         self.var_box.setModel(self.var_box_model)
         self.var_box.horizontalHeader().hide()
         self.var_box_model.dataChanged.connect(change_callback)
@@ -418,24 +411,6 @@ class OptimizationSection(Cell):
     
     def toConsole(self, text):
         self.console.setText(text)
-    
-    def displayReferenceValues(self): # Change this plz
-        self.console.setText("""Acceleration:
-- WAD Accel: 0.3274
-- WDWA Accel: 0.3060548
-- WDWA Angle: 17.4786858
-- Air: 0.02548 (=0.026*0.98)
-- Air w/ strafe: 0.026
-- Ground: 0.1274 (=0.13*0.98)
-- Ground w/ strafe: 0.13
-Values represent no potions and normal block slip (slip = 0.6). These values change depending on potion effects and block slipperiness. Only air is unaffected by potions and slipperiness.
-
-Drag Values:
-- Ground: 0.546 (=0.91*0.6)
-- Air: 0.91
-- Inertia (ground or air): 0
-
-""")
     
     def displayHelp(self): # change this plz
         self.console.setText("""This is the optimization cell, meant for finding optimal angle sequences.
