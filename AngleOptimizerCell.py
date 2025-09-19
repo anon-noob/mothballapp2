@@ -492,6 +492,12 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
         success = res.success
         message = res.message
         x = [round(math.degrees(p),3) for p in res.x]
+        for i, angle in enumerate(x):
+            # Range of angle is [-360, 360]
+            if angle > 180:
+                x[i] = round(angle - 360,3)
+            elif angle < -180:
+                x[i] = round(angle + 360,3)
         consecutive_diffs = [round(x[l]-x[l-1],3) for l in range(1, len(x))]
         x_velocities = [round(x_pts[j]-x_pts[j-1],7) for j in range(1, len(x_pts))]
         z_velocities = [round(z_pts[j]-z_pts[j-1],7) for j in range(1, len(z_pts))]

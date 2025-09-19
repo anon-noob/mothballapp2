@@ -67,6 +67,7 @@ class Optimizer:
                 if num > 180:
                     num = num - 360
                 num*= np.pi/180
+                two_pi = 2*np.pi
                 if comparison== ">" or comparison == ">=":
                     if op == "-":
                         if t2:
@@ -92,9 +93,9 @@ class Optimizer:
                 else:
                     if op == "-":
                         if t2:
-                            c.append({'type': 'ineq', 'fun': (lambda t1=t1, t2=t2, num=num: lambda F: -func(F, t1) + func(F, t2) + num)()})
+                            c.append({'type': 'ineq', 'fun': (lambda t1=t1, t2=t2, num=num: lambda F: -F[t1] + F[t2] + num)()})
                         else:
-                            c.append({'type': 'ineq', 'fun': (lambda t1=t1, num=num: lambda F: -func(F, t1) + num)()})
+                            c.append({'type': 'ineq', 'fun': (lambda t1=t1, num=num: lambda F: -F[t1] + num)()})
                     elif op == "+":
                         if t2:
                             c.append({'type': 'ineq', 'fun': (lambda t1=t1, t2=t2, num=num: lambda F: -F[t1] - F[t2] + num)()})
