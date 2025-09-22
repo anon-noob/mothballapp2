@@ -67,7 +67,7 @@ class PlayerSimulationXZ(BasePlayer):
     ], "calculators": [
         "bwmm", "xbwmm", "wall", "xwall", "inv", "xinv", "blocks", "xblocks", "repeat", "r", "possibilities", "poss", "xpossibilities", "xposs", "xzpossibilities", "xzposs", 'taps'
     ], "setters": [
-        "face", "facing", "f", "turn", "setposz", "z", "setvz", "vz", "setposx", "x", "setvx", "vx", "setslip", "slip", "setprecision", "precision", "pre", "inertia", "sprintairdelay", "sdel", "version", "v", "anglequeue", "aq", "tq", "turnqueue", "speed", "slow", "slowness", "sndel", "sneakdelay", "var", "function", "custom_function", "func", "alias", "toggle", "singleaxisinertia","inertialistener", "il", "xinertialistener", "xil", "zinertialistener", "zil", "xzinertialistener", "xzil"
+        "face", "facing", "f", "turn", "setposz", "z", "setvz", "vz", "setposx", "x", "setvx", "vx", "setslip", "slip", "setprecision", "precision", "pre", "inertia", "sprintairdelay", "sdel", "version", "v", "anglequeue", "aq", "tq", "turnqueue", "speed", "slow", "slowness", "sndel", "sneakdelay", "var", "function", "func", "alias", "toggle", "singleaxisinertia","inertialistener", "il", "xinertialistener", "xil", "zinertialistener", "zil", "xzinertialistener", "xzil"
     ]}
 
     
