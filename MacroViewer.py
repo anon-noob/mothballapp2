@@ -32,7 +32,7 @@ class MacroFileGrid(QAbstractTableModel):
             self.formatted_data = result
 
         elif self.src == MacroFileExtension.CYV_JSON:
-            self.raw_data = [["W","A",'S',"D","Space",'Sprint',"Sneak","Yaw", "Pitch"]] + self.raw_data
+            self.raw_data = [["W","A",'S',"D","Space", "Sprint", "Sneak","Yaw", "Pitch"]] + self.raw_data
             self.formatted_data = []
             y = {'true': '✔', 'false':"X"}
             for i in self.raw_data:

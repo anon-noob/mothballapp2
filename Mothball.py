@@ -37,6 +37,7 @@ import MacroViewer
 # Fix settings
 # Add other remaining colors
 # Var should not lint as strings
+# Rename files should be reflected
 
 # Linting in documentation with custom functions
 # Fix and expand basic macro creation
@@ -691,7 +692,7 @@ class MainWindow(QMainWindow):
             self.macro_viewer.resize(650, 650)
             self.macro_viewer.show()
 
-        if filename is not None and macrodata is not None and macroType:
+        if filename is not None and macrodata is not None and macroType is not None:
             self.macro_viewer.addTab(filename, macrodata)
     
     def updateGeneralSettings(self, newsettings: dict):
