@@ -26,10 +26,10 @@ class PlayerSimulationXZ(BasePlayer):
     pi = 3.14159265358979323846
 
     # These are 45-strafe movement, and cannot have an input appended (WASD)
-    _fortyfive_methods = ("walk45", "walkair45", "walkjump45", "sprint45", "sprintair45", "sprintjump45", "sneak45", "sneakair45", "sneakjump45", "sneaksprint45", "sneaksprintair45", "sneaksprintjump45")
+    _fortyfive_methods = ("walk45", "walkair45", "walkjump45", "sprint45", "sprintair45", "sprintjump45", "sneak45", "sneakair45", "sneakjump45", "sneaksprint45", "sneaksprintair45", "sneaksprintjump45", "walkpessi45", "sprintpessi45", "forcemomentum45")
 
     # These movement CAN have inputs (WASD)
-    _can_have_input = ("walk", "walkair", "walkjump", "sprint", "sprintair", "sprintjump", "sneak", "sneakair", "sneakjump", "sneaksprint", "sneaksprintair", "sneaksprintjump")
+    _can_have_input = ("walk", "walkair", "walkjump", "sprint", "sprintair", "sprintjump", "sneak", "sneakair", "sneakjump", "sneaksprint", "sneaksprintair", "sneaksprintjump", "walkpessi", "sprintpessi", "forcemomentum")
 
     # These allow modifiers, which modify movement (see the attribute MODIFIERS)
     _can_have_modifiers = _fortyfive_methods + _can_have_input + ("stop", "stopjump", "stopair", "sneakstop", "sneakstopair", "sneakstopjump")
@@ -57,9 +57,9 @@ class PlayerSimulationXZ(BasePlayer):
     ALIAS_TO_MODIFIER = {"water": WATER,"wt": WATER,"lv": LAVA,"lava": LAVA,"web": WEB,"block": BLOCK,"bl": BLOCK,"ladder": LADDER,"ld": LADDER,"vine": LADDER, "soulsand": SOULSAND, "ss": SOULSAND}
 
     FUNCTIONS_BY_TYPE = {"fast-movers": [
-        "sprint", "s", "sprint45", "s45", "sprintjump", "sprintjump45", "sj", "sj45", "sprintair", "sa", "sprintair45", "sa45", "sprintstrafejump", "sprintstrafejump45", "strafejump", "strafejump45", "stfj", "stfj45", "sneaksprint", "sneaksprintair", "sneaksprintjump", "sns", "snsa", "snsj", "sneaksprint45", "sneaksprintair45", "sneaksprintjump45", "sns45", "snsa45", "snsj45"
+        "sprint", "s", "sprint45", "s45", "sprintjump", "sprintjump45", "sj", "sj45", "sprintair", "sa", "sprintair45", "sa45", "sprintstrafejump", "sprintstrafejump45", "strafejump", "strafejump45", "stfj", "stfj45", "sneaksprint", "sneaksprintair", "sneaksprintjump", "sns", "snsa", "snsj", "sneaksprint45", "sneaksprintair45", "sneaksprintjump45", "sns45", "snsa45", "snsj45", "sprintpessi", "sp", "sprintpessi45", "sp45", "forcemomentum", "fmm", "forcemomentum45", "fmm45"
     ], "slow-movers": [
-        "walk", "w", "walkair", "wa", "walkjump", "wj", "walk45", "w45", "walkair45", "wa45", "walkjump45", "wj45", "sneak", "sneak45", "sn", "sn45", "sneakair", "sneakair45", "sna", "sna45", "sneakjump", "snj", "sneakjump45", "snj45"
+        "walk", "w", "walkair", "wa", "walkjump", "wj", "walk45", "w45", "walkair45", "wa45", "walkjump45", "wj45", "sneak", "sneak45", "sn", "sn45", "sneakair", "sneakair45", "sna", "sna45", "sneakjump", "snj", "sneakjump45", "snj45", "walkpessi", "walkpessi45", "wp", "wp45"
     ], "stoppers": [
         "stop", "stopground", "st", "stopair", "sta", "stopjump", "stj", "sneakstop", "sneakstopair", "sneakstopjump", "snst", "snsta", "snstj"
     ], "returners": [
@@ -441,6 +441,22 @@ class PlayerSimulationXZ(BasePlayer):
             self.move(1, rotation, 45, slip=slip, state=self.JUMP, speed=speed, slow=slow)
             self.walkair45(duration - 1, rotation)
 
+    def walkpessi(self, duration: int = 1, delay: int = 1, rotation: f32 = None, /, *, slip: f32 = None):
+        if duration > 0:
+            input = self.inputs
+            self.inputs = ""
+            self.stopjump(delay, slip=slip)
+            self.inputs = input
+            self.walkair(duration - delay, rotation)
+
+    def walkpessi45(self, duration: int = 1, delay: int = 1, rotation: f32 = None, /, *, slip: f32 = None):
+        if duration > 0:
+            input = self.inputs
+            self.inputs = ""
+            self.stopjump(delay, slip=slip)
+            self.inputs = input
+            self.walkair45(duration - delay, rotation)
+
     def sprintjump(self, duration: int = 1, rotation: f32 = None, /, *, slip: f32 = None, speed: int = None, slow: int = None):
         if duration > 0:
             self.move(1, rotation, slip=slip, is_sprinting=True, state=self.JUMP, speed=speed, slow=slow)
@@ -466,7 +482,30 @@ class PlayerSimulationXZ(BasePlayer):
 
             self.sprintair45(duration - 1, rotation)
 
-    
+    def sprintpessi(self, duration: int = 1, delay: int = 1, rotation: f32 = None, /, *, slip: f32 = None):
+        if duration > 0:
+            input = self.inputs
+            self.inputs = ""
+            self.stopjump(delay, slip=slip)
+            self.inputs = input
+            self.sprintair(duration - delay, rotation)
+
+    def sprintpessi45(self, duration: int = 1, delay: int = 1, rotation: f32 = None, /, *, slip: f32 = None):
+        if duration > 0:
+            input = self.inputs
+            self.inputs = ""
+            self.stopjump(delay, slip=slip)
+            self.inputs = input
+            self.sprintair45(duration - delay, rotation)
+
+    def forcemomentum(self, duration: int = 1, delay: int = 1, rotation: f32 = None, /, *, slip: f32 = None, speed: int = None, slow: int = None):
+        self.walkjump(delay, rotation, slip=slip, speed=speed, slow=slow)
+        self.sprintair(duration-delay, rotation)
+
+    def forcemomentum45(self, duration: int = 1, delay: int = 1, rotation: f32 = None, /, *, slip: f32 = None, speed: int = None, slow: int = None):
+        self.walkjump45(delay, rotation, slip=slip, speed=speed, slow=slow)
+        self.sprintair45(duration-delay, rotation)
+
     def sneak(self, duration: int = 1, rotation: f32 = None, /, *, slip: f32 = None, speed: int = None, slow: int = None):
         self.move(duration, rotation, slip=slip, is_sneaking=True, state=self.GROUND, speed=speed, slow=slow)
 
@@ -1115,6 +1154,9 @@ class PlayerSimulationXZ(BasePlayer):
             "sneakstop": sneakstop, "snst": sneakstop,
             "sneakstopair": sneakstopair, "snsta": sneakstopair,
             "sneakstopjump": sneakstopjump, "snstj": sneakstopjump,
+            "walkpessi": walkpessi, "wp": walkpessi,
+            "sprintpessi": sprintpessi, "sp": sprintpessi,
+            "forcemomentum": forcemomentum, "fmm": forcemomentum,
             "walk45": walk45, "w45": walk45,
             "sprint45": sprint45, "s45": sprint45,
             "walkair45": walkair45, "wa45": walkair45,
@@ -1128,6 +1170,9 @@ class PlayerSimulationXZ(BasePlayer):
             "sneaksprint45": sneaksprint45, "sns45": sneaksprint45,
             "sneaksprintair45": sneaksprintair45, "snsa45": sneaksprintair45,
             "sneaksprintjump45": sneaksprintjump45, "snsj45": sneaksprintjump45,
+            "walkpessi45": walkpessi45, "wp45": walkpessi45,
+            "sprintpessi45": sprintpessi45, "sp45": sprintpessi45,
+            "forcemomentum45": forcemomentum45, "fmm45": forcemomentum45,
             "outz": outz,
             "zmm": zmm,
             "zb": zb,
