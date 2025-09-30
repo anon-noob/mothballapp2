@@ -613,16 +613,26 @@ class PlayerSimulationXZ(BasePlayer):
         sin_value = sin(sin_index * self.pi * 2.0 / 65536)
         cos_value = sin(cos_index * self.pi * 2.0 / 65536)
         cos_index_adj = (int(cos_index) - 16384) % 65536
-        # sin_value = self.mcsin(angle_rad)
-        # cos_value = self.mccos(angle_rad)
         sin_angle = deg(asin(sin_value))
         cos_angle = deg(asin(cos_value))
         normal = sqrt(sin_value**2.0 + cos_value**2.0)
-        print(angle, 'Sin', 'Cos', 'Normal')
-        print('value', sin_value, cos_value, normal)
-        print('angle', sin_angle, cos_angle)
-        print('index', sin_index, cos_index_adj, cos_index)
-        # print(sin_value, cos_value, sqrt(sin_value ** 2.0 + cos_value ** 2.0))
+
+        a = self.truncate_number(angle)
+        sv = self.truncate_number(sin_value)
+        sa = self.truncate_number(sin_angle)
+        cv = self.truncate_number(cos_value)
+        ca = self.truncate_number(cos_angle)
+        norm = self.truncate_number(normal)
+        padding1 = max(6, len(a))
+        padding2 = max(5, len(a), len(sv), len(sa), len(cv), len(ca), len(norm))
+
+
+        self.add_to_output(ExpressionType.TEXT, string_or_num=f"{a:<{padding1}} {'Value':<{padding2}} {'Angle':<{padding2}} {'Index':<{padding2}}")
+        self.add_to_output(ExpressionType.TEXT, string_or_num=f"{'Sin':<{padding1}} {sv:<{padding2}} {sa:<{padding2}} {sin_index} ")
+        self.add_to_output(ExpressionType.TEXT, string_or_num=f"{'Cos':<{padding1}} {cv:<{padding2}} {ca:<{padding2}} {cos_index_adj} ({cos_index})")
+        self.add_to_output(ExpressionType.TEXT, string_or_num=f"{'Normal':<{padding1}} {norm:<{padding2}}")
+
+        return (angle, normal)
 
     # SETTERS
     def face(self, angle_in_degrees: f32, /):
@@ -653,13 +663,14 @@ class PlayerSimulationXZ(BasePlayer):
         "Sets the player's ground slipperiness"
         self.default_ground_slip = value
     
-    def inertia(self, value: f32, /, single_axis: bool = False):
+    def inertia(self, value: f32, /, single_axis: bool = None):
         "Sets the player's inertia threshold"
         self.inertia_threshold = value
-        if single_axis:
-            self.inertia_axis = 1
-        else:
-            self.inertia_axis = 2
+        if single_axis is not None:
+            if single_axis:
+                self.inertia_axis = 1
+            else:
+                self.inertia_axis = 2
 
     def sprintairdelay(self, toggle: bool, /):
         """
@@ -1090,7 +1101,14 @@ class PlayerSimulationXZ(BasePlayer):
         elif formatting == 'cyv': # CYV: WASD sprint sneak jump angle
             lines = []
             for i in self.history:
-                lines.append(['true' if i.w else 'false','true' if i.a else 'false','true' if i.s else 'false','true' if i.d else 'false','true' if i.sprint else 'false','true' if i.sneak else 'false','true' if i.space else 'false', f'{i.last_turn:.3f}', '0.0'])
+                lines.append(['true' if i.w else 'false',
+                              'true' if i.a else 'false',
+                              'true' if i.s else 'false',
+                              'true' if i.d else 'false',
+                              'true' if i.space else 'false',
+                              'true' if i.sprint else 'false',
+                              'true' if i.sneak else 'false',
+                            f'{i.last_turn:.3f}', '0.0'])
             self.macros[name+'.json'] = lines
         else:
             raise ValueError(f"No such formatting {formatting}, options are either 'mpk' or 'cyv'.")
@@ -1194,6 +1212,7 @@ if __name__ == "__main__":
     # s = "print(A pixel is {px} blocks\, and 8 pixels is {8*px} blocks)"
     # s = 'f(-13.875) wa.a(6) x(0) xil(wj.a wa.d(8) wa.sd(2) wa.s) outx x(0) w.s outz z(0) zil( wj.sd wa.d(2) sa.wd(9)) outz s.wd outz xmm vec | aq(-16.255, -38.185, -62.88, -76.93, -84.985, -90) xil(sj sa45(5) zmm outx sa45(7)) outx'
     # s = 'angleinfo(-45.01)'
-    s = 'pre(16) r(s[ss] outvz,3) r(st[ss] outvz, 3)'
+    # s = 'pre(16) r(s[ss] outvz,3) r(st[ss] outvz, 3)'
+    s = 'ai(2)'
     a.simulate(s)
     a.show_output()
