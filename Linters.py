@@ -128,7 +128,7 @@ class CodeLinter:
                         last_nonspace_token_index = index
                     continue
             
-            elif in_string and token not in ",#=}" and not in_curly_brackets:
+            elif in_string and token not in "(,#=}" and not in_curly_brackets:
                 if last_function == "var" and token not in string.punctuation.replace("_","") and curr_func.current_parameter().name == "variable_name":
                     tokens_and_style.append((token, Style.VARS))
                     local_vars.append(token)
