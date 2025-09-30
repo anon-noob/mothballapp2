@@ -322,14 +322,13 @@ class BasePlayer:
     @record_to_call_stack
     def ballhelp(self, func: MothballSequence):
         "Gets help about function `func`"
-        # NOTE: probably format the string better to include color, etc
         f = self.FUNCTIONS.get(func)
         if f is None:
             f = self.local_funcs.get(func)
             if f is None:
                 raise NameError(f"Function {func} not found")
             
-        aliases = ', '.join(self.ALIASES.get(f.__name__))
+        aliases = ', '.join(self.ALIASES.get(f.__name__, "None"))
         f_sig = inspect.signature(f).parameters
         self.add_to_output(ExpressionType.TEXT, string_or_num=f"Help with {f.__name__}:")
         self.add_to_output(ExpressionType.TEXT, string_or_num=f"  Aliases: {aliases}", strip_label=False)
@@ -341,7 +340,7 @@ class BasePlayer:
                 self.add_to_output(ExpressionType.TEXT, string_or_num=f"    {y.name}: {y.annotation.__name__}", strip_label=False)
         
         
-        docstring = HELP_DOCSTRINGS.get(f.__name__)
+        docstring = HELP_DOCSTRINGS.get(f.__name__, f"{f.__name__} does not have a docstring.")
         self.add_to_output(ExpressionType.TEXT, string_or_num=docstring)
 
     def get_suggestions(self, string: str):

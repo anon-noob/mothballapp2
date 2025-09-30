@@ -37,6 +37,7 @@
     "sneaksprintair45": "The 45 strafe version of sneaksprintair(). This function can be modified by movement modifiers, but not by inputs.",
     "sneaksprintjump": "Jump with sprint for a given duration while facing rotation. After the first tick, all subsequent ticks are airborn, equivalent to sneaksprintair(). Slip indicates the ground slipperiness. Speed and slow are their respective potion amplifiers. This function can be modified by inputs and movement modifiers. Note that sneaksprintjump is only valid in versions 1.14 and above, and that the player must be sprinting before sneaking in order to sneaksprintjump.",
     "sneaksprintjump45": "The 45 strafe version of sprintjump(). This function can be modified by movement modifiers, but not by inputs.\nNote on sneaksprintjump 45 strafes: The best way to gain maximum distance is to sprintjump at a specific angle, then turn 45 while midair. This is different to walk movement where it is always best to face 45. This is also different to normal sprint jump 45 strafes where the best jump angle is always straight. Mothball will automatically find the best jump angle that maximizes distance. This function is equivalent to sneaksprintjump45(t) = sneaksprintjump(1) sneaksprintair45(t-1)",
+    
     "outz": "Outputs the player's z position.\noutz: number\nIf centered_about is not 0, output as an expression\noutz: centered_about + (number - centered_about)",
     "zmm": "Outputs the player's z position in terms of momentum used. Mathematically, this means zmm = outz - 0.6 if outz is positive, else zmm = outz + 0.6\nzmm: number\nIf centered_about is not 0, output as an expression\nzmm: centered_about + (number - centered_about)",
     "zb": "Outputs the player's z position in terms of blocks traveled. Mathematically, this means zb = outz + 0.6 if outz is positive, else zb = outz - 0.6\nzb: number\nIf centered_about is not 0, output as an expression\nzb: centered_about + (number - centered_about)",
@@ -50,6 +51,8 @@
     "outturn": "Output the degrees turned for that tick.\turn: number\nIf centered_about is not 0, output as an expression\nturn: centered_about + (number - centered_about)",
     "effectsmultiplier": "Display the percent change to base movement speed. If speed or slow isn't provided, use the player's current default. This function DOES NOT set the current default speed and slow potion effects. Speed and slow only affect ground movement. The formula is\nM = max((1 + (0.2 * speed)) * (1 - (0.15 * slow)), 0)\nNote that if M is 0 (slow is 7 or above), the player cannot begin moving when on ground.",
     "face": "Set the player's default rotation in degrees",
+    "angleinfo": "Get information on an angle, including its normal, table lookup index, and the trigonometric values. If the normal is not 1 (give or take within e-7 tolerance), then this angle is a \"half angle\"",
+
     "turn": "Rotate the player's default rotation in degrees",
     "setposz": "Set the player's Z position",
     "setposx": "Set the player's X position",
