@@ -1,8 +1,6 @@
-from math import sin, cos, atan2 as arctan, sqrt, copysign, degrees as deg, asin, acos
+from math import sin, cos, atan2 as arctan, sqrt, copysign, degrees as deg, asin
 from numpy import float32 as f32, uint64 as u64, int32 as i32
 from typing import Literal
-import re
-import inspect
 from BaseMothballSimulation import BasePlayer, MothballSequence
 from Enums import ExpressionType
 from collections import deque
@@ -63,7 +61,7 @@ class PlayerSimulationXZ(BasePlayer):
     ], "stoppers": [
         "stop", "stopground", "st", "stopair", "sta", "stopjump", "stj", "sneakstop", "sneakstopair", "sneakstopjump", "snst", "snsta", "snstj"
     ], "returners": [
-        "outz", "zmm", "zb", "outvz", "outx", "xmm", "xb", "outvx", "vec", "help", "print", "effectsmultiplier", "effects", "printdisplay", "dimensions", "dim", "outangle", "outa", "outfacing", "outf", "outturn", "outt", 'macro'
+        "outz", "zmm", "zb", "outvz", "outx", "xmm", "xb", "outvx", "vec", "help", "print", "effectsmultiplier", "effects", "printdisplay", "dimensions", "dim", "outangle", "outa", "outfacing", "outf", "outturn", "outt", "macro", "angleinfo", "ai"
     ], "calculators": [
         "bwmm", "xbwmm", "wall", "xwall", "inv", "xinv", "blocks", "xblocks", "repeat", "r", "possibilities", "poss", "xpossibilities", "xposs", "xzpossibilities", "xzposs", 'taps'
     ], "setters": [
@@ -656,12 +654,24 @@ class PlayerSimulationXZ(BasePlayer):
         # cos_value = self.mccos(angle_rad)
         sin_angle = deg(asin(sin_value))
         cos_angle = deg(asin(cos_value))
-        normal = sqrt(sin_value**2.0 + cos_value**2.0)
-        print(angle, 'Sin', 'Cos', 'Normal')
-        print('value', sin_value, cos_value, normal)
-        print('angle', sin_angle, cos_angle)
-        print('index', sin_index, cos_index_adj, cos_index)
-        # print(sin_value, cos_value, sqrt(sin_value ** 2.0 + cos_value ** 2.0))
+        magnitude = sqrt(sin_value * sin_value + cos_value * cos_value)
+        output_table = [
+            [f"{self.truncate_number(angle)}\u00B0", "Sin", "Cos", "Magnitude"],
+            ["Value", self.truncate_number(sin_value), self.truncate_number(cos_value), self.truncate_number(magnitude)],
+            ["Angle", self.truncate_number(sin_angle), self.truncate_number(cos_angle), ""],
+            ["Index", self.truncate_number(sin_index), f"{self.truncate_number(cos_index_adj)} ({self.truncate_number(cos_index)})", ""]
+        ]
+        gap_width = 2
+        for col in output_table:
+            col_width = max(map(len, col)) + gap_width
+            for i in range(len(col)):
+                col[i] = col[i].ljust(col_width)
+
+        for i in range(4):
+            output = ""
+            for j in range(4):
+                output += output_table[j][i]
+            self.add_to_output(ExpressionType.TEXT, string_or_num=output)
 
     # SETTERS
     def face(self, angle_in_degrees: f32, /):
