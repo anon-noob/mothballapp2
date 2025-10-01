@@ -340,7 +340,7 @@ class BasePlayer:
                 self.add_to_output(ExpressionType.TEXT, string_or_num=f"    {y.name}: {y.annotation.__name__}", strip_label=False)
         
         
-        docstring = HELP_DOCSTRINGS.get(f.__name__, f"{f.__name__} does not have a docstring.")
+        docstring = HELP_DOCSTRINGS.get(f.__name__, f"{f.__name__} does not have a docstring. If you see this message, please annoy @anonnoob (see the about page)")
         self.add_to_output(ExpressionType.TEXT, string_or_num=docstring)
 
     def get_suggestions(self, string: str):
