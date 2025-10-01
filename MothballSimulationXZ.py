@@ -1,8 +1,6 @@
-from math import sin, cos, atan2 as arctan, sqrt, copysign, degrees as deg, asin, acos
+from math import sin, cos, atan2 as arctan, sqrt, copysign, degrees as deg, asin
 from numpy import float32 as f32, uint64 as u64, int32 as i32
 from typing import Literal
-import re
-import inspect
 from BaseMothballSimulation import BasePlayer, MothballSequence
 from Enums import ExpressionType
 from collections import deque
