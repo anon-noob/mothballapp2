@@ -8,7 +8,6 @@ import MothballSimulationXZ as mxz
 import MothballSimulationY as my
 from utils import *
 import string
-from typing import Literal
 from Enums import *
 
 class CodeLinter:
@@ -38,7 +37,7 @@ class CodeLinter:
         elif mode == CellType.Y:
             for i in my.PlayerSimulationY.FUNCTIONS_BY_TYPE.values():
                 self.words += i
-            self.modifiers = ["water","wt", "lava","lv", "ladder", "ld", "bl", "vine", "web"]
+            self.modifiers = ["water","wt", "lava","lv", "ladder", "ld", "vine", "web"]
             self.inputs = []
 
             for e, func_list in enumerate(my.PlayerSimulationY.FUNCTIONS_BY_TYPE.values(),1):
