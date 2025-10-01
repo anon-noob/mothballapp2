@@ -1,7 +1,4 @@
 from numpy import float32 as f32
-from typing import Literal
-import re
-import inspect
 from Enums import ExpressionType
 from BaseMothballSimulation import BasePlayer, MothballSequence
 
@@ -28,7 +25,7 @@ class PlayerSimulationY(BasePlayer):
         "slow-movers": ["up", "down"],
         "setters": ["sety", "y", "setvy", "vy", "inertia","setceiling", "ceil"],
         "calculators": ["repeat", "r", "poss", "print", "inertialistener", "il"],
-        "returners": ["outty", "outsty", "outy", "outvy", "help"]
+        "returners": ["outty", "outsty", "outy", "outvy", "help", "duration", "height", "blip"]
     }
 
     def __init__(self) -> None:
@@ -176,6 +173,114 @@ class PlayerSimulationY(BasePlayer):
             raise TypeError(f"Nested posibilities functions are not allowed.")
         self.simulate(sequence, return_defaults=False)
         self.record = {}
+    
+    def duration(self, floor: float = 0.0, ceiling: float = 0.0, /, inertia: float = None, jump_boost: int = 0):
+        if inertia is None:
+            inertia = self.inertia_threshold
+        
+        vy = 0.42 + 0.1 * jump_boost
+        y = 0
+        ticks = 0
+
+        while y > floor or vy > 0:
+            y = y + vy
+            if ceiling != 0.0 and y > ceiling - 1.8:
+                y = ceiling - 1.8
+                vy = 0
+            vy = (vy - 0.08) * 0.98
+            if abs(vy) < inertia:
+                vy = 0
+            ticks += 1
+
+        if vy >= 0:
+            self.add_to_output(ExpressionType.WARNING, string_or_num='Impossible jump height. Too high.')
+            return
+
+        ceiling = f' {ceiling}bc' if ceiling != 0.0 else ''
+        self.add_to_output(ExpressionType.GENERAL_LABEL, f"Duration of a {floor}b{ceiling} jump: {ticks} ticks")
+
+    def height(self, duration: int = 12, ceiling: float = 0.0, /, inertia: float = None, jump_boost: int = 0):
+        if inertia is None:
+            inertia = self.inertia_threshold
+        
+        vy = 0.42 + 0.1 * jump_boost
+        y = 0
+        ticks = 0
+
+        for i in range(duration):
+            y = y + vy
+            if ceiling != 0.0 and y > ceiling - 1.8:
+                y = ceiling - 1.8
+                vy = 0
+            vy = (vy - 0.08) * 0.98
+            if abs(vy) < inertia:
+                vy = 0
+            ticks += 1
+
+        ceiling = f' {ceiling}bc' if ceiling != 0.0 else ''
+        self.add_to_output(ExpressionType.GENERAL_LABEL_WITH_NUMBER, f"Height after {duration} ticks{ceiling} ", round(y, self.precision))
+
+    def blip(self, blips: int = 1, blip_height: float = 0.0625, /, init_height: float = None, init_vy: float = None, *, inertia: float = None, jump_boost: int = 0):
+
+        if init_height is None:
+            init_height = blip_height
+        if init_vy is None:
+            init_vy = 0.42 + 0.1 * jump_boost    
+        if inertia is None:
+            inertia = self.inertia_threshold
+        
+        blips_done = 0
+        vy = init_vy
+        y = init_height
+        jump_ys = [init_height]
+        max_heights = []
+        vy_prev = 0
+        i = 0
+        failed = False
+
+        while blips_done < blips or vy > 0:
+
+            y += vy
+            vy = (vy - 0.08) * 0.98
+
+            if y + vy < blip_height:
+
+                if y + vy > 0:
+                    failed = True
+                    jump_ys.append(y + vy)
+                    break
+                
+                jump_ys.append(y)
+                vy = 0.42
+                blips_done += 1
+            
+            if abs(vy) < inertia:
+                vy = 0
+
+            if vy_prev > 0 and vy <= 0:
+                max_heights.append(y)
+
+            vy_prev = vy
+            i += 1
+
+
+        self.add_to_output(ExpressionType.GENERAL_LABEL_WITH_NUMBER, "Blips", blips_done)
+        self.add_to_output(ExpressionType.GENERAL_LABEL_WITH_NUMBER, "Blip height", blip_height)
+        self.add_to_output(ExpressionType.Z_LABEL, "Initial y", init_height)
+        self.add_to_output(ExpressionType.Z_LABEL, "Initial vy", init_vy)
+        
+        self.add_to_output(ExpressionType.GENERAL_LABEL_WITH_NUMBER, "Max height", max(max_heights))
+
+        if failed:
+            max_heights.append("Fail")
+
+        padding1 = max(5, len(str(len(jump_ys))))
+        padding2 = max(11, self.precision+2)
+        self.add_to_output(ExpressionType.TEXT, string_or_num=f"{'Blip':<{padding1}} | {'Jumped From':<{padding2}} | Peak Heights")
+
+        for i in range(0, len(jump_ys)):
+            self.add_to_output(ExpressionType.TEXT, string_or_num=f"{i:<{padding1}} | {self.truncate_number(jump_ys[i]):<{padding2}} | {self.truncate_number(max_heights[i]) if not isinstance(max_heights[i], str) else max_heights[i]}")
+        
 
     FUNCTIONS = BasePlayer.FUNCTIONS | {
         "jump": jump, "j": jump,
@@ -191,7 +296,10 @@ class PlayerSimulationY(BasePlayer):
         "vy": setvy, "setvy": setvy,
         "possibilities": possibilities, "poss": possibilities,
         "up": up,
-        "down": down
+        "down": down,
+        "duration": duration,
+        "height": height,
+        "blip": blip
     }
 
     ALIASES = BasePlayer.ALIASES
@@ -208,7 +316,7 @@ class PlayerSimulationY(BasePlayer):
 if __name__ == "__main__":
     p = PlayerSimulationY()
     # s = "jump(15) outy slime outy a(7) outy"
-    s = "help(jump)"
+    s = "pre(7) blip(10,px,px)"
     # s = "jump"
     # s = "print(helo worlD) outy outvy"
     p.simulate(s)

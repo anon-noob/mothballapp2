@@ -37,7 +37,14 @@
     "sneaksprintair45": "The 45 strafe version of sneaksprintair(). This function can be modified by movement modifiers, but not by inputs.",
     "sneaksprintjump": "Jump with sprint for a given duration while facing rotation. After the first tick, all subsequent ticks are airborn, equivalent to sneaksprintair(). Slip indicates the ground slipperiness. Speed and slow are their respective potion amplifiers. This function can be modified by inputs and movement modifiers. Note that sneaksprintjump is only valid in versions 1.14 and above, and that the player must be sprinting before sneaking in order to sneaksprintjump.",
     "sneaksprintjump45": "The 45 strafe version of sprintjump(). This function can be modified by movement modifiers, but not by inputs.\nNote on sneaksprintjump 45 strafes: The best way to gain maximum distance is to sprintjump at a specific angle, then turn 45 while midair. This is different to walk movement where it is always best to face 45. This is also different to normal sprint jump 45 strafes where the best jump angle is always straight. Mothball will automatically find the best jump angle that maximizes distance. This function is equivalent to sneaksprintjump45(t) = sneaksprintjump(1) sneaksprintair45(t-1)",
+    "walkpessi":"walkpessi(x) is equivalent to stopjump walkair(x-1). This function can be modified by inputs and movement modifiers.",
+    "walkpessi45":"The 45 strafe version of walkpessi(). This function can be modified by movement modifiers, but not by inputs.",
+    "sprintpessi":"sprintpessi(x) is equivalent to stopjump sprintair(x-1). This function can be modified by inputs and movement modifiers.",
+    "sprintpessi45":"The 45 strafe version of sprintpessi(). This function can be modified by movement modifiers, but not by inputs.",
+    "forcemomentum":"fmm(x, t) is equivalent to walkjump(t) sprintair(x-t). This function can be modified by inputs and movement modifiers.",
+    "forcemomentum45":"This function can be modified by movement modifiers, but not by inputs.",
     
+
     "outz": "Outputs the player's z position.\noutz: number\nIf centered_about is not 0, output as an expression\noutz: centered_about + (number - centered_about)",
     "zmm": "Outputs the player's z position in terms of momentum used. Mathematically, this means zmm = outz - 0.6 if outz is positive, else zmm = outz + 0.6\nzmm: number\nIf centered_about is not 0, output as an expression\nzmm: centered_about + (number - centered_about)",
     "zb": "Outputs the player's z position in terms of blocks traveled. Mathematically, this means zb = outz + 0.6 if outz is positive, else zb = outz - 0.6\nzb: number\nIf centered_about is not 0, output as an expression\nzb: centered_about + (number - centered_about)",
@@ -93,5 +100,8 @@
     "setceiling": "Set the ceiling of the simulation. Set it to 0 to indicate no ceiling.",
     "setvy": "Set the player's y velocity",
     "up": "Move up (in a block). This function should be accomodated with a movement modifier such as water, ladder, lava.",
-    "down": "Move down (in a block). This function should be accomodated with a movement modifier such as water, ladder, lava."
+    "down": "Move down (in a block). This function should be accomodated with a movement modifier such as water, ladder, lava.",
+    "height":"Calculate the change in y position assuming jumping with a given ceiling (example, 3 block ceiling) with some jump boost. If inertia is not provided, it will use the current inertia threshold.",
+    "duration":"Calclate the number of ticks it takes to jump and land to the floor (example, floor = -8) given a ceiling (example, 3 block ceiling) with some jump boost. If inertia is not provided, it will use the current inertia threshold.",
+    "blip":"Calculates at most `blip` blips, blipping with the blip height (or the height difference between the higher and lower blocks). If inertia is not provided, it will use the current inertia threshold. If init_height is not given, it will default to start on the higher block. If init_vy is not given, it will use the standard jump velocity formulas, including jump boost. Note that these kinds of blips are only useful in minecraft versions 1.8."
 }
