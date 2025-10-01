@@ -61,11 +61,7 @@ class PlayerSimulationXZ(BasePlayer):
     ], "stoppers": [
         "stop", "stopground", "st", "stopair", "sta", "stopjump", "stj", "sneakstop", "sneakstopair", "sneakstopjump", "snst", "snsta", "snstj"
     ], "returners": [
-<<<<<<< HEAD
-        "outz", "zmm", "zb", "outvz", "outx", "xmm", "xb", "outvx", "vec", "help", "print", "effectsmultiplier", "effects", "printdisplay", "dimensions", "dim", "outangle", "outa", "outfacing", "outf", "outturn", "outt", 'macro', "angleinfo", 'ai'
-=======
         "outz", "zmm", "zb", "outvz", "outx", "xmm", "xb", "outvx", "vec", "help", "print", "effectsmultiplier", "effects", "printdisplay", "dimensions", "dim", "outangle", "outa", "outfacing", "outf", "outturn", "outt", "macro", "angleinfo", "ai"
->>>>>>> 217a01d69f8c5360c78ebee41014aeda733bc522
     ], "calculators": [
         "bwmm", "xbwmm", "wall", "xwall", "inv", "xinv", "blocks", "xblocks", "repeat", "r", "possibilities", "poss", "xpossibilities", "xposs", "xzpossibilities", "xzposs", 'taps'
     ], "setters": [
@@ -444,7 +440,11 @@ class PlayerSimulationXZ(BasePlayer):
             self.walkair45(duration - 1, rotation)
 
     def walkpessi(self, duration: int = 1, delay: int = 1, rotation: f32 = None, /, *, slip: f32 = None):
-        if duration > 0:
+        if delay == 0:
+            self.walkjump(duration, rotation, slip=slip) # speed / slow based on player default attributes
+        elif duration > 0:
+            if delay > duration:
+                delay = duration
             input = self.inputs
             self.inputs = ""
             self.stopjump(delay, slip=slip)
@@ -452,7 +452,11 @@ class PlayerSimulationXZ(BasePlayer):
             self.walkair(duration - delay, rotation)
 
     def walkpessi45(self, duration: int = 1, delay: int = 1, rotation: f32 = None, /, *, slip: f32 = None):
-        if duration > 0:
+        if delay == 0:
+            self.walkjump45(duration, rotation, slip=slip)
+        elif duration > 0:
+            if delay > duration:
+                delay == duration
             input = self.inputs
             self.inputs = ""
             self.stopjump(delay, slip=slip)
@@ -485,7 +489,11 @@ class PlayerSimulationXZ(BasePlayer):
             self.sprintair45(duration - 1, rotation)
 
     def sprintpessi(self, duration: int = 1, delay: int = 1, rotation: f32 = None, /, *, slip: f32 = None):
-        if duration > 0:
+        if delay == 0:
+            self.sprintjump(duration, rotation, slip=slip)
+        elif duration > 0:
+            if delay > duration:
+                delay = duration
             input = self.inputs
             self.inputs = ""
             self.stopjump(delay, slip=slip)
@@ -493,7 +501,11 @@ class PlayerSimulationXZ(BasePlayer):
             self.sprintair(duration - delay, rotation)
 
     def sprintpessi45(self, duration: int = 1, delay: int = 1, rotation: f32 = None, /, *, slip: f32 = None):
-        if duration > 0:
+        if delay == 0:
+            self.sprintjump(duration, rotation, slip=slip)
+        elif duration > 0:
+            if delay > duration:
+                delay = duration
             input = self.inputs
             self.inputs = ""
             self.stopjump(delay, slip=slip)
@@ -501,12 +513,29 @@ class PlayerSimulationXZ(BasePlayer):
             self.sprintair45(duration - delay, rotation)
 
     def forcemomentum(self, duration: int = 1, delay: int = 1, rotation: f32 = None, /, *, slip: f32 = None, speed: int = None, slow: int = None):
-        self.walkjump(delay, rotation, slip=slip, speed=speed, slow=slow)
-        self.sprintair(duration-delay, rotation)
+        if delay < 0:
+            pass # raise error
+        elif duration > 0:
+            if delay == 0: # sprintjump
+                self.sprintjump(duration, rotation, slip=slip, speed=speed, slow=slow)
+            else:
+                if delay > duration: # example: fmm(12,15) is just wj(12)
+                    delay = duration
+                self.walkjump(delay, rotation, slip=slip, speed=speed, slow=slow)
+                self.sprintair(duration-delay, rotation)
+                
 
     def forcemomentum45(self, duration: int = 1, delay: int = 1, rotation: f32 = None, /, *, slip: f32 = None, speed: int = None, slow: int = None):
-        self.walkjump45(delay, rotation, slip=slip, speed=speed, slow=slow)
-        self.sprintair45(duration-delay, rotation)
+        if delay < 0:
+            pass # raise error
+        elif duration > 0:
+            if delay == 0: # sprintjump
+                self.sprintjump45(duration, rotation, slip=slip, speed=speed, slow=slow)
+            else:
+                if delay > duration: # example: fmm(12,15) is just wj(12)
+                    delay = duration
+                self.walkjump45(delay, rotation, slip=slip, speed=speed, slow=slow)
+                self.sprintair45(duration-delay, rotation)
 
     def sneak(self, duration: int = 1, rotation: f32 = None, /, *, slip: f32 = None, speed: int = None, slow: int = None):
         self.move(duration, rotation, slip=slip, is_sneaking=True, state=self.GROUND, speed=speed, slow=slow)
@@ -577,6 +606,7 @@ class PlayerSimulationXZ(BasePlayer):
 
     # PRIVATE FUNCTION
     def get_optimal_strafe_jump_angle(self, speed: int = None, slow: int = None, slip: f32 = None, is_sneaking: bool = False):
+        # TODO/NOTE: i can probably optimize this for speed but like its low priority and likely not significant for 99.99999% cases 
         player = PlayerSimulationXZ.copy_player(self)
         player.x = 0.0
         player.z = 0.0
@@ -656,7 +686,6 @@ class PlayerSimulationXZ(BasePlayer):
         cos_index_adj = (int(cos_index) - 16384) % 65536
         sin_angle = deg(asin(sin_value))
         cos_angle = deg(asin(cos_value))
-<<<<<<< HEAD
         normal = sqrt(sin_value**2.0 + cos_value**2.0)
 
         a = self.truncate_number(angle)
@@ -675,26 +704,6 @@ class PlayerSimulationXZ(BasePlayer):
         self.add_to_output(ExpressionType.TEXT, string_or_num=f"{'Normal':<{padding1}} {norm:<{padding2}}")
 
         return (angle, normal)
-=======
-        magnitude = sqrt(sin_value * sin_value + cos_value * cos_value)
-        output_table = [
-            [f"{self.truncate_number(angle)}\u00B0", "Sin", "Cos", "Magnitude"],
-            ["Value", self.truncate_number(sin_value), self.truncate_number(cos_value), self.truncate_number(magnitude)],
-            ["Angle", self.truncate_number(sin_angle), self.truncate_number(cos_angle), ""],
-            ["Index", self.truncate_number(sin_index), f"{self.truncate_number(cos_index_adj)} ({self.truncate_number(cos_index)})", ""]
-        ]
-        gap_width = 2
-        for col in output_table:
-            col_width = max(map(len, col)) + gap_width
-            for i in range(len(col)):
-                col[i] = col[i].ljust(col_width)
-
-        for i in range(4):
-            output = ""
-            for j in range(4):
-                output += output_table[j][i]
-            self.add_to_output(ExpressionType.TEXT, string_or_num=output)
->>>>>>> 217a01d69f8c5360c78ebee41014aeda733bc522
 
     # SETTERS
     def face(self, angle_in_degrees: f32, /):
