@@ -23,9 +23,10 @@ class PlayerSimulationY(BasePlayer):
     FUNCTIONS_BY_TYPE = {
         "fast-movers": ["jump", "j", "air", "a", "slime"],
         "slow-movers": ["up", "down"],
-        "setters": ["sety", "y", "setvy", "vy", "inertia","setceiling", "ceil"],
-        "calculators": ["repeat", "r", "poss", "print", "inertialistener", "il"],
-        "returners": ["outty", "outsty", "outy", "outvy", "help", "duration", "height", "blip"]
+        "stoppers": [],
+        "returners": ["outty", "outsty", "outy", "outvy", "help", "duration", "height", "blip", "print"],
+        "calculators": ["repeat", "r", "poss", "inertialistener", "il"],
+        "setters": ["sety", "y", "setvy", "vy", "inertia","setceiling", "ceil"]
     }
 
     def __init__(self) -> None:
