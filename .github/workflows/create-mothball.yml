@@ -14,17 +14,17 @@ jobs:
           - os: ubuntu-22.04
             artifact_name: Mothball-Linux
             icon: images/cube.png
-            add_data: "--add-data=Mothball_Pages/*:Mothball_Pages --add-data=images/*:images --add-data=Minigame_Files/*:Minigame_Files --add-data=Docstrings/*:Docstrings"
+            add_data: "--add-data=Mothball_Pages/*:Mothball_Pages --add-data=images/*:images --add-data=Minigame_Files/*:Minigame_Files --add-data=Docstrings/*:Docstrings --noconsole"
             output: dist/Mothball
           - os: macos-latest
             artifact_name: Mothball-Macos
             icon: images/cube.png
-            add_data: "--add-data=Mothball_Pages/*:Mothball_Pages --add-data=images/*:images --add-data=Minigame_Files/*:Minigame_Files --add-data=Docstrings/*:Docstrings"
+            add_data: "--add-data=Mothball_Pages/*:Mothball_Pages --add-data=images/*:images --add-data=Minigame_Files/*:Minigame_Files --add-data=Docstrings/*:Docstrings --noconsole"
             output: dist/Mothball
           - os: windows-latest
             artifact_name: Mothball-Windows
             icon: images/cube.ico
-            add_data: "--add-data=Mothball_Pages/*:Mothball_Pages --add-data=images/*:images --add-data=Minigame_Files/*:Minigame_Files --add-data=Docstrings/*:Docstrings"
+            add_data: "--add-data=Mothball_Pages/*:Mothball_Pages --add-data=images/*:images --add-data=Minigame_Files/*:Minigame_Files --add-data=Docstrings/*:Docstrings --noconsole"
             output: dist/Mothball.exe
 
     steps:
