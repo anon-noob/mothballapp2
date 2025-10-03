@@ -3,9 +3,10 @@ Settings Window using `QTabWidget`.
 """
 import sys
 from PyQt5.QtWidgets import (
-    QApplication, QTabWidget, QWidget,QVBoxLayout, QGridLayout, QHBoxLayout, QPushButton, QTabBar, QLabel, QCheckBox, QLineEdit, QTextBrowser, QSizePolicy, QListWidget, QListWidgetItem, QColorDialog, QFileDialog
+    QApplication, QTabWidget, QWidget,QVBoxLayout, QGridLayout, QHBoxLayout, QPushButton, QTabBar, QLabel, QCheckBox, QLineEdit, QTextBrowser, QSizePolicy, QListWidget, QListWidgetItem, QColorDialog, QFileDialog, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
 )
 from PyQt5.QtGui import QColor
+from PyQt5.QtCore import Qt
 from BaseCell import RenderViewer
 from Linters import CodeLinter, MDLinter
 import MothballSimulationXZ as mxz
@@ -36,7 +37,7 @@ hello(mothballer)"""
         self.textOptions = textOptions
         self.p = parent
 
-        self.setWindowTitle('QTabWidget Example')
+        self.setWindowTitle('Settings')
         self.setGeometry(100, 100, 900, 600)
         
         # Create QTabWidget
@@ -52,7 +53,7 @@ hello(mothballer)"""
         # Set tab contents
         self.tab_widget.addTab(self.tab1, "Code Editing")
         self.tab_widget.addTab(self.tab2, "Code Output")
-        self.tab_widget.addTab(self.tab3, "General")
+        self.tab_widget.addTab(self.tab3, "Macro Paths")
 
         #######################################################
         # Tab 1 content #######################################
@@ -105,32 +106,55 @@ hello(mothballer)"""
         # Tab 3 content #######################################
         #######################################################
         self.tab3_layout = QGridLayout()
-        # checkbox = QCheckBox("Ask before deleting a cell")
-        # checkbox.setToolTip("When toggled on, always confirm twice before deleting a cell.")
-        # checkbox.setStyleSheet("""QToolTip {background-color:" + "#D4C00C" + ";color:" + "#ffffff" + "}""")
-        # self.tab3_layout.addWidget(checkbox, 1, 1,1,2)
-        # self.tab3_layout.addWidget(QLineEdit(),2,1,1,1)
 
+        self.table = QTableWidget()
+        self.table.setRowCount(len(self.generalOptions["Macro Folders"]))
+        self.table.setColumnCount(2)
+        self.table.setHorizontalHeaderLabels(['Alias', 'Path'])
+        self.table.setStyleSheet("QTableWidget { padding: 10px}"
+                                 "QTableWidgetItem { padding-left: 10px; padding-right: 10px}"
+                                 "QHeaderView::section {padding-left: 30px; padding-right: 30px; background-color: "+"#565656" + ";color: white;font-weight: bold;} QTableCornerButton::section {background-color: #2e2e2e;}")
 
-        changepath = QPushButton("Change Path")
-        changepath.setToolTip("Set the path to transfer macro files (produced from simulations) to the appropiate Minecraft folder.")
-        changepath.setStyleSheet("""QToolTip {background-color:" + "#D4C00C" + ";color:" + "#ffffff" + "}""")
-        changepath.clicked.connect(self.openfiledialog)
-        self.pathdisplay = QLabel("No path set")
-        if self.generalOptions["Path to Minecraft Macro Folder"]:
-            self.pathdisplay.setText(self.generalOptions["Path to Minecraft Macro Folder"])
-        self.tab3_layout.addWidget(changepath,1,1,1,1)
-        self.tab3_layout.addWidget(self.pathdisplay,1,2,1,1)
+        # Populate table with JSON data
+        for i, (key, value) in enumerate(self.generalOptions["Macro Folders"].items()):
+            self.table.setItem(i, 0, QTableWidgetItem(key))
+            self.table.setItem(i, 1, QTableWidgetItem(value))
+            # x = self.table.item(i, 0)
+            # x.setFlags(x.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            y = self.table.item(i, 1)
+            y.setFlags(y.flags() & ~Qt.ItemFlag.ItemIsEditable)
         
-        
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
 
-        # maxlines = QLabel("Max Lines")
-        # maxlines.setToolTip("Cells display using at most x lines. Minimum 10 lines.\nSet to any number less than 10 to indicate infinite lines allowed.")
-        # maxlines.setStyleSheet("""QToolTip {background-color:" + "#D4C00C" + ";color:" + "#ffffff" + "}""")
-        # self.tab3_layout.addWidget(maxlines,2,2,1,1)
-        # self.save_button = QPushButton("Save")
-        # self.save_button.clicked.connect(self.save)
-        # self.tab3_layout.addWidget(self.save_button,4,1,1,2)
+        self.tab3_layout.addWidget(self.table, 0, 0, 1, 4)
+
+        self.add_btn = QPushButton("Add")
+        self.delete_btn = QPushButton("Delete")
+        # self.edit_alias_btn = QPushButton("Edit Alias")
+        self.edit_pathname_btn = QPushButton("Edit Path")
+        self.save_btn = QPushButton("Save")
+
+        self.add_btn.clicked.connect(self.addRow)
+        self.delete_btn.clicked.connect(self.deleteRow)
+        # self.edit_alias_btn.clicked.connect(self.editAlias)
+        self.edit_pathname_btn.clicked.connect(self.editPath)
+        self.save_btn.clicked.connect(self.savePaths)
+
+        self.add_btn.setToolTip("Add a new path")
+        self.delete_btn.setToolTip("Highlight a row and delete path")
+        # self.edit_alias_btn.setToolTip("Highlight a cell and edit")
+        self.edit_pathname_btn.setToolTip("Highlight a cell and edit")
+        self.save_btn.setToolTip("Save these paths")
+
+        self.tab3_layout.addWidget(self.add_btn, 1, 0)
+        self.tab3_layout.addWidget(self.delete_btn, 1, 1)
+        # self.tab3_layout.addWidget(self.edit_alias_btn, 1, 2)
+        self.tab3_layout.addWidget(self.edit_pathname_btn, 1, 2)
+        self.tab3_layout.addWidget(self.save_btn, 1, 3)
+
         self.tab3.setLayout(self.tab3_layout)
 
         
@@ -158,14 +182,41 @@ hello(mothballer)"""
             }
         """)
 
+    def addRow(self):
+        self.table.insertRow(self.table.rowCount())
+        n = self.table.rowCount()
+        x = QTableWidgetItem("")
+        self.table.setItem(n-1, 0, x)
+        y = QTableWidgetItem("")
+        self.table.setItem(n-1, 1, y)
+        y.setFlags(y.flags() & ~Qt.ItemFlag.ItemIsEditable)
+    
+    def deleteRow(self):
+        self.table.removeRow(self.table.currentRow())
+        if not self.table.rowCount():
+            self.addRow()
+
+    def editPath(self):
+        x = self.table.item(self.table.currentRow(), 1)
+        f = self.openfiledialog()
+        if f:
+            x.setData(0, f)
+
+
     def openfiledialog(self):
         folder = QFileDialog.getExistingDirectory(self, "Select Folder")
-        if folder:
-            self.pathdisplay.setText(folder)
-            self.generalOptions["Path to Minecraft Macro Folder"] = folder
-            FileHandler.saveGeneralSettings(self.generalOptions)
-            self.p.updateGeneralSettings(self.generalOptions)
+        return folder
 
+    def savePaths(self):
+        keys = []
+        values = []
+        for i in range(self.table.rowCount()):
+            keys.append(self.table.item(i, 0).data(0))
+            values.append(self.table.item(i, 1).data(0))
+
+        d = {k:v for k,v in zip(keys, values)}
+        self.generalOptions["Macro Folders"] = d
+        FileHandler.saveGeneralSettings(self.generalOptions)
 
     def colorDialog(self, item: QListWidgetItem, mode: Literal[0,1]):
         """
@@ -217,6 +268,6 @@ if __name__ == '__main__':
     b=FileHandler.getGeneralSettings()
     c=FileHandler.getTextColorSettings()
     app = QApplication(sys.argv)
-    window = SettingsWindow(b,a,c)
+    window = SettingsWindow(None, b,a,c)
     window.show()
     sys.exit(app.exec_())
