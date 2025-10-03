@@ -151,6 +151,7 @@ class CodeEdit(QsciScintilla):
         self.commentAction.triggered.connect(self.comment)
 
         self.commentShortcut = QShortcut(QKeySequence("Ctrl+Shift+/"), self)
+        self.commentShortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.commentShortcut.activated.connect(self.comment)
 
     def resizeEvent(self, e):
