@@ -5,9 +5,9 @@ Also contains `RenderViewer`, used to render Mothball code outputs and markdown 
 """
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QPushButton,QHBoxLayout,QTextBrowser
+    QWidget, QVBoxLayout, QPushButton,QHBoxLayout,QTextBrowser,QAction, QShortcut
 )
-from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtGui import QColor, QFont, QKeySequence
 from PyQt5.QtCore import Qt
 from PyQt5.Qsci import QsciLexerCustom, QsciScintilla
 from utils import *
@@ -146,6 +146,12 @@ class CodeEdit(QsciScintilla):
         self.textChanged.connect(self.adjustHeight)
         self.setEolMode(QsciScintilla.EolMode.EolUnix)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.commentAction = QAction('Comment', self)
+        self.commentAction.setShortcut(QKeySequence("Ctrl+Shift+/"))
+        self.commentAction.triggered.connect(self.comment)
+
+        self.commentShortcut = QShortcut(QKeySequence("Ctrl+Shift+/"), self)
+        self.commentShortcut.activated.connect(self.comment)
 
     def resizeEvent(self, e):
         self.adjustHeight()
@@ -161,6 +167,19 @@ class CodeEdit(QsciScintilla):
             new_height += (wrap if wrap > 0 else 1) * line_height
 
         self.setFixedHeight(new_height + 2)
+
+    def contextMenuEvent(self, event):
+        menu = self.createStandardContextMenu()
+        menu.addSeparator()
+
+        menu.addAction(self.commentAction)
+
+        menu.exec_(event.globalPos())
+
+    def comment(self):
+        text = self.selectedText()
+        if text:
+            self.replaceSelectedText(f'#{text}#')
 
 
 

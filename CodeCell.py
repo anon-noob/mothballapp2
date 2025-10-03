@@ -10,11 +10,11 @@ import MothballSimulationY as my
 
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QObject
 import FileHandler
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QKeySequence
 from BaseCell import Cell, CodeEdit, RenderViewer
 from Linters import CodeLinter
 from Enums import *
-from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget, QComboBox
+from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget, QComboBox, QShortcut
 import os, json
 
 class Worker(QObject):
@@ -54,7 +54,7 @@ class SimulationSection(Cell):
         self.words = []
         self.raw_output = []
         self.linter = CodeLinter(generalOptions, colorOptions, textOptions, mode)
-        self.mc_macros_folder = generalOptions.get("Path to Minecraft Macro Folder", '')
+        self.mc_macros_folders: dict = generalOptions.get("Macro Folders", {"default":FileHandler.getMacros()})
         self.macros = {}
         self.worker = None
         self.t = None
@@ -87,23 +87,31 @@ class SimulationSection(Cell):
 
         self.output_label = QLabel("Output:")
         self.output_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.output_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)  # Keep label height fixed
+        self.output_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         hlayout.addWidget(self.output_label)
         
 
-        self.artifacts_produced_label = QLabel("Macros:")
-        self.artifacts_produced_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)  # Keep label height fixed
-        hlayout.addWidget(self.artifacts_produced_label)
-        self.artifacts_produced_label.hide()
+        self.macros_label = QLabel("Macros:")
+        self.macros_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        hlayout.addWidget(self.macros_label)
+        self.macros_label.hide()
         self.artifacts_list = QComboBox()
         hlayout.addWidget(self.artifacts_list)
         self.artifacts_list.hide()
         content_layout.addWidget(self.output_and_artifacts)
         
+        self.path_selection = QComboBox()
+        self.path_selection.addItems(self.mc_macros_folders.keys())
+        self.path_selection.hide()
+        hlayout.addWidget(self.path_selection)
+
+
         self.view_macro = QPushButton("View")
         self.view_macro.hide()
         hlayout.addWidget(self.view_macro)
         self.view_macro.clicked.connect(self.viewMacro)
+
+
 
         self.save_to_folder_button = QPushButton("Save")
         self.save_to_folder_button.hide()
@@ -134,6 +142,10 @@ class SimulationSection(Cell):
 
         self.adjust_output_height()
 
+        self.run_shortcut = QShortcut(QKeySequence("Ctrl+R"), self)
+        self.run_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.run_shortcut.activated.connect(self.run_simulation)
+
     def viewMacro(self):
         file = self.artifacts_list.currentText()
         _ , ext = os.path.splitext(file)
@@ -145,24 +157,25 @@ class SimulationSection(Cell):
         self.p.openMacroViewer(file,self.macros[file],exttype)
 
     def saveToFolder(self):
-        if not self.mc_macros_folder:
-            self.mc_macros_folder = FileHandler.getMacros()
-        if os.path.exists(self.mc_macros_folder):
+        selected_folder_alias = self.path_selection.currentText()
+        selected_folder = self.mc_macros_folders[selected_folder_alias]
+
+        if os.path.exists(selected_folder):
             file = self.artifacts_list.currentText()
             _ , ext = os.path.splitext(file)
-            with open(os.path.join(self.mc_macros_folder, file), "w") as f:
+            with open(os.path.join(selected_folder, file), "w") as f:
                 if ext == '.json':
                     json.dump(self.macros[file], f)
-                    self.message_label.setText(f"Saved to {self.mc_macros_folder}")
+                    self.message_label.setText(f"Saved to {selected_folder_alias} path")
                     self.message_label.setStyleSheet("background-color: #dff0d8; color: #3c763d; border: 1px solid #3c763d; padding: 4px;")
                     self.message_label.show()
                 elif ext == '.csv':
                     f.write(self.macros[file])
-                    self.message_label.setText(f"Saved to {self.mc_macros_folder}")
+                    self.message_label.setText(f"Saved to {selected_folder_alias} path")
                     self.message_label.setStyleSheet("background-color: #dff0d8; color: #3c763d; border: 1px solid #3c763d; padding: 4px;")
                     self.message_label.show()
         else:
-            self.message_label.setText(f"Folder {self.mc_macros_folder} doesn't exist")
+            self.message_label.setText(f"The {selected_folder_alias} path doesn't exist")
             self.message_label.setStyleSheet("background-color: " + "#dff0d8" "; color: "+"#763c3c"+"; border: 1px solid "+"#763c3c"+"; padding: 4px;")
             self.message_label.show()
 
@@ -196,6 +209,7 @@ class SimulationSection(Cell):
         self.t.finished.connect(self.t.deleteLater)
 
         self.run_button.clicked.disconnect()
+        self.run_shortcut.activated.disconnect()
         self.run_button.clicked.connect(self.cancel)
 
         self.t.start()
@@ -205,6 +219,7 @@ class SimulationSection(Cell):
             self.worker.cancel()
         self.run_button.clicked.disconnect()
         self.run_button.clicked.connect(self.run_simulation)
+        self.run_shortcut.activated.connect(self.run_simulation)
         
 
     def onSimulationCompletion(self, output, macros):
@@ -214,9 +229,10 @@ class SimulationSection(Cell):
         if self.mode == CellType.XZ:
             if macros:
                 self.artifacts_list.clear()
-                self.artifacts_produced_label.show()
+                self.macros_label.show()
                 self.artifacts_list.show()
                 self.view_macro.show()
+                self.path_selection.show()
                 self.save_to_folder_button.show()
                 for name, artifact in macros.items():
                     self.artifacts_list.addItem(name)
@@ -224,6 +240,7 @@ class SimulationSection(Cell):
 
         self.run_button.clicked.disconnect()
         self.run_button.clicked.connect(self.run_simulation)
+        self.run_shortcut.activated.connect(self.run_simulation)
     
     def resizeEvent(self, event):
         self.adjust_output_height()

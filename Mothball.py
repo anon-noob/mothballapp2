@@ -9,8 +9,9 @@ Contains:
 
 import sys,os
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QScrollArea, QMenu, QMainWindow, QFileDialog, QMessageBox
+    QApplication, QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QScrollArea, QMenu, QMainWindow, QFileDialog, QMessageBox, QShortcut
 )
+from PyQt5.QtGui import QKeySequence
 from typing import Literal, Union, Optional
 import HelpPage
 import Settings
@@ -190,7 +191,7 @@ class MainWindow(QMainWindow):
         self.actionStack: ActionStack = ActionStack(self)
         self.CELLS: list[Union[TextCell.TextSection, CodeCell.SimulationSection, AngleOptimizerCell.OptimizationSection]] = []
 
-        self.setWindowTitle("Mothball Notebook - Unnamed")
+        self.setWindowTitle(f"Mothball Notebook v{__version__} - Unnamed")
         self.name = ""
         self.path = ""
         self.unsaved_changes = False
@@ -201,6 +202,9 @@ class MainWindow(QMainWindow):
         self.codecell_colors = FileHandler.getCodeColorSettings()
         self.textcell_colors = FileHandler.getTextColorSettings()
         self.settings = FileHandler.getGeneralSettings()
+
+        while FileHandler.versionIsOutdated(self.settings['Version']):
+            self.settings, self.codecell_colors, self.textcell_colors = FileHandler.settings_version_map.get(self.settings['Version'], FileHandler.getDefaultSettings)()
 
         self.help_page = None
         self.about_page = None
@@ -257,7 +261,11 @@ class MainWindow(QMainWindow):
 
         self.createMenus()
         self.unsaved_changes = False
-        
+
+        self.undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
+        self.undo_shortcut.activated.connect(self.undo)
+        self.redo_shortcut = QShortcut(QKeySequence("Ctrl+Y"), self)
+        self.redo_shortcut.activated.connect(self.redo)
     
     def addCell(self, after_cell_or_at_index: Optional[Union[CodeCell.SimulationSection, TextCell.TextSection, AngleOptimizerCell.OptimizationSection, int]] = None, cellType: CellType = CellType.XZ, addActionStack:bool = True, *, initialMode: TextCellState = TextCellState.EDIT):
         """
@@ -548,65 +556,77 @@ class MainWindow(QMainWindow):
         errors = False
         logs = None
         warning = False
-        if filepath:
-            self.path = filepath
-            self.clearAllCells()
-            try:
+        if not filepath:
+            return
+        self.path = filepath
+        self.clearAllCells()
+        fileName = os.path.splitext(os.path.basename(filepath))[0]
+        try:
+            f = FileHandler.loadFile(filepath)
+        except Exception as logs:
+            QMessageBox.warning(self, "Failed to load", f"file {self.name} has encountered a fatal error. Please check and update the file!\nLogs: {logs}", QMessageBox.StandardButton.Ok)
+            return
+        i = 0
+        self.name = fileName
+        same_version = self.version == f.version
+
+        while f.version != self.version:
+            d = FileHandler.notebooks_version_map.get(f.version)
+            if d is None:
+                break
+            else:
+                d(filepath)
                 f = FileHandler.loadFile(filepath)
-            except Exception as logs:
-                QMessageBox.warning(self, "Failed to load", f"file {self.name} has encountered a fatal error. Please check and update the file!\nLogs: {logs}", QMessageBox.StandardButton.Ok)
-                return
-            i = 0
-            self.name = f.fileName
-            same_version = self.version == f.version
-            while True:
-                cell = f.cells.get(i)
-                if cell is None:
-                    break
+                same_version = self.version == f.version
 
-                try:
-                    if cell.cell_type == CellType.TEXT:
-                        b = self.addCell(cellType=cell.cell_type)
-                        b.input_field.setText(cell.raw_text)
-                        if cell.mode == "render" and same_version:
-                            b.renderText()
-                        else:
-                            warning = True
+        while True:
+            cell = f.cells.get(i)
+            if cell is None:
+                break
 
-                    elif cell.cell_type == CellType.XZ or cell.cell_type == CellType.Y:
-                        b = self.addCell(cellType=cell.cell_type)
-                        b.input_field.setText(cell.code.rstrip())
-                        if same_version:
-                            b.output_field.renderTextfromOutput(b.linter, cell.raw_output)
-                            b.raw_output = cell.raw_output
-                        else:
-                            warning = True
-                    
-                    elif cell.cell_type == CellType.OPTIMIZE:
-                        b = self.addCell(cellType=cell.cell_type)
-                        if cell.axis == 'Z': 
-                            b.choose_axis_button.click()
-                        if cell.mode == 'max':
-                            b.choose_max_or_min_button.click()
-                        b.var_box_model.basicSetup(cell.variables)
-                        b.drag_and_accel_model.basicSetup(cell.drags)
-                        b.constraints_model.basicSetup(cell.constraints)
-                        b.toConsole(cell.output)
-                        b.plot.setData(cell.points[0], cell.points[1])
-                except Exception as e:
-                    print(e)
-                    errors = True
+            try:
+                if cell.cell_type == CellType.TEXT:
+                    b = self.addCell(cellType=cell.cell_type)
+                    b.input_field.setText(cell.raw_text)
+                    if cell.mode == "render" and same_version:
+                        b.renderText()
+                    else:
+                        warning = True
 
-                i += 1
-            self.unsaved_changes = False
-            self.setWindowTitle("Mothball Notebook - " + f.fileName)
-            self.actionStack.reset()
-            QApplication.processEvents()
-            QTimer.singleShot(100, self.continueOpenFileProcess)
-            if errors:
-                QMessageBox.warning(self, "Failed to load", f"file {self.name} has failed to load completely. Please check and update the file!\nLogs: {logs}", QMessageBox.StandardButton.Ok)
-            elif warning:
-                QMessageBox.warning(self, "Failed to load", f"file {self.name} is outdated. You can update the file by running each cell and saving.", QMessageBox.StandardButton.Ok)
+                elif cell.cell_type == CellType.XZ or cell.cell_type == CellType.Y:
+                    b = self.addCell(cellType=cell.cell_type)
+                    b.input_field.setText(cell.code.rstrip())
+                    if same_version:
+                        b.output_field.renderTextfromOutput(b.linter, cell.raw_output)
+                        b.raw_output = cell.raw_output
+                    else:
+                        warning = True
+                
+                elif cell.cell_type == CellType.OPTIMIZE:
+                    b = self.addCell(cellType=cell.cell_type)
+                    if cell.axis == 'Z': 
+                        b.choose_axis_button.click()
+                    if cell.mode == 'max':
+                        b.choose_max_or_min_button.click()
+                    b.var_box_model.basicSetup(cell.variables)
+                    b.drag_and_accel_model.basicSetup(cell.drags)
+                    b.constraints_model.basicSetup(cell.constraints)
+                    b.toConsole(cell.output)
+                    b.plot.setData(cell.points[0], cell.points[1])
+            except Exception as e:
+                print(e)
+                errors = True
+
+            i += 1
+        self.unsaved_changes = False
+        self.setWindowTitle(f"Mothball Notebook v{self.version} - " + fileName)
+        self.actionStack.reset()
+        QApplication.processEvents()
+        QTimer.singleShot(100, self.continueOpenFileProcess)
+        if errors:
+            QMessageBox.warning(self, "Failed to load", f"file {self.name} has failed to load completely. Please check and update the file!\nLogs: {logs}", QMessageBox.StandardButton.Ok)
+        elif warning:
+            QMessageBox.warning(self, "Failed to load", f"file {self.name} is outdated. You can update the file by running each cell and saving.", QMessageBox.StandardButton.Ok)
 
     def continueOpenFileProcess(self):
         """
@@ -698,7 +718,7 @@ class MainWindow(QMainWindow):
     def updateGeneralSettings(self, newsettings: dict):
         for cell in self.CELLS:
             if isinstance(cell, CodeCell.SimulationSection):
-                cell.mc_macros_folder = newsettings["Path to Minecraft Macro Folder"]
+                cell.mc_macros_folders = newsettings["Path to Minecraft Macro Folder"]
 
 
 if __name__ == "__main__":
