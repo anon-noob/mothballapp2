@@ -3,11 +3,12 @@ from DataStorage import CodeCell, TextCell, AngleOptimizerCell, File
 from Enums import *
 from version import __version__
 
-VERSION = __version__ # Last release: 1.1.0
+VERSION = __version__
 user_path = os.path.expanduser("~")
 operating_system = platform.system()
 
 default_code_colors = {
+    "Version":VERSION,
     StringLiterals.CODE: {
         Style.FAST: "#00ffff",
         Style.SLOW: "#1e90ff",
@@ -49,6 +50,7 @@ default_code_colors = {
 }
 
 default_text_colors = {
+    "Version":VERSION,
     StringLiterals.CODE: {
         Style.HEADER1: "#00ff88",
         Style.HEADER2: "#00ff88",
@@ -96,7 +98,7 @@ def getNotebooks():
     return os.path.join(user_path, "Documents", "Mothball", "Notebooks")
 
 def getMacros():
-    "Returns the path to the Mothball generated macros."
+    "Returns the default path to Mothball generated macros."
     return os.path.join(user_path, "Documents", "Mothball", "Macros")
 
 default_settings = {
@@ -107,7 +109,7 @@ default_settings = {
     "Max markdown output lines": 0,
     "Default Font": "Consolas",
     "Default Font Size": 14,
-    "Path to Minecraft Macro Folder": getMacros(),
+    "Macro Folders": {'default': getMacros()},
     "Version": VERSION
 }
 
@@ -236,61 +238,61 @@ def loadFile(filepath):
 
     return File(f['fileName'], f['version'], entries)
 
-def reindexFiles():
-    "Reindex cells to start at 0 instead of 1, for versions 1.1.0 and above"
-    notebooks_path = getNotebooks()
-    files = [f for f in os.listdir(notebooks_path) if os.path.isfile(os.path.join(notebooks_path, f))]
+# def reindexFiles():
+#     "Reindex cells to start at 0 instead of 1, for versions 1.1.0 and above"
+#     notebooks_path = getNotebooks()
+#     files = [f for f in os.listdir(notebooks_path) if os.path.isfile(os.path.join(notebooks_path, f))]
 
-    for file in files:
-        try:
-            with open(os.path.join(notebooks_path,file), "r") as f:
-                data = json.load(f)
+#     for file in files:
+#         try:
+#             with open(os.path.join(notebooks_path,file), "r") as f:
+#                 data = json.load(f)
             
-            if not versionIsOutdated(data["version"]):
-                continue
-            if str(0) in data: # already reindexed
-                continue
+#             if not versionIsOutdated(data["version"]):
+#                 continue
+#             if str(0) in data: # already reindexed
+#                 continue
 
-            new_data = {"fileName": data["fileName"], "version": VERSION}
+#             new_data = {"fileName": data["fileName"], "version": VERSION}
 
-            i = 1
-            while str(i) in data:
-                new_data[str(i-1)] = data[str(i)]
-                i += 1
+#             i = 1
+#             while str(i) in data:
+#                 new_data[str(i-1)] = data[str(i)]
+#                 i += 1
 
-            with open(os.path.join(notebooks_path,file), "w") as f:
-                json.dump(new_data, f, indent=4)
+#             with open(os.path.join(notebooks_path,file), "w") as f:
+#                 json.dump(new_data, f, indent=4)
         
-        except Exception as e:
-            pass
+#         except Exception as e:
+#             pass
 
-def updateFiles():
-    notebooks_path = getNotebooks()
-    files = [f for f in os.listdir(notebooks_path) if os.path.isfile(os.path.join(notebooks_path, f))]
+# def updateFiles():
+#     notebooks_path = getNotebooks()
+#     files = [f for f in os.listdir(notebooks_path) if os.path.isfile(os.path.join(notebooks_path, f))]
 
-    for file in files:
-        try:
-            with open(os.path.join(notebooks_path,file), "r") as f:
-                data = json.load(f)
+#     for file in files:
+#         try:
+#             with open(os.path.join(notebooks_path,file), "r") as f:
+#                 data = json.load(f)
 
-            i = 0
-            while str(i) in data:
-                if 'type' in data[str(i)]:
-                    del data[str(i)]['type']
-                if isinstance(data[str(i)]['mode'], str) or isinstance(data[str(i)]['mode'], int):
-                    a = data[str(i)]['mode']
-                    data[str(i)]['cell_type'] = {"xz": 0, "y": 1, "text": 2}.get(a, a)
-                    if a != 2:
-                        del data[str(i)]['mode']
-                    else:
-                        data[str(i)]['mode'] = StringLiterals.RENDER
+#             i = 0
+#             while str(i) in data:
+#                 if 'type' in data[str(i)]:
+#                     del data[str(i)]['type']
+#                 if isinstance(data[str(i)]['mode'], str) or isinstance(data[str(i)]['mode'], int):
+#                     a = data[str(i)]['mode']
+#                     data[str(i)]['cell_type'] = {"xz": 0, "y": 1, "text": 2}.get(a, a)
+#                     if a != 2:
+#                         del data[str(i)]['mode']
+#                     else:
+#                         data[str(i)]['mode'] = StringLiterals.RENDER
 
-                i += 1
+#                 i += 1
             
-            with open(os.path.join(notebooks_path,file), "w") as f:
-                json.dump(data, f, indent=4)
-        except Exception as e:
-            pass
+#             with open(os.path.join(notebooks_path,file), "w") as f:
+#                 json.dump(data, f, indent=4)
+#         except Exception as e:
+#             pass
 
 def versionIsOutdated(version_str: str):
     """
@@ -309,24 +311,92 @@ def versionIsOutdated(version_str: str):
             return False
     return False
 
-def deleteAll():
-    if operating_system == "Windows":
-        path = os.path.join(user_path, "AppData", "Roaming", "Mothball", "Mothball Settings")
-    elif operating_system == "Darwin":
-        path = os.path.join(user_path, "Library", "Application Support", "Mothball", "Mothball Settings")
-    elif operating_system == "Linux":
-        path = os.path.join(user_path, ".config", "Mothball", "Mothball Settings")
-    
-    # print("Delete All:", os.listdir(path))
-    # r = input("Confirm? (y/n) ").strip().lower()
-    # if r == "y":
-    for filename in os.listdir(path):
-        file_path = os.path.join(path, filename)
-        if os.path.isfile(file_path):
-            os.remove(file_path)
-    # else:
-    #     print("Cancelled")
+# idk i shouldve done version mapping much sooner
+def getDefaultSettings():
+    return default_settings, default_code_colors, default_text_colors
 
-if __name__ == "__main__":
-    # print(versionIsOutdated("1.0.29"))
-    pass
+def v1_1_4_to_v1_1_5_settings():
+    g = getGeneralSettings()
+    c = getCodeColorSettings()
+    t = getTextColorSettings()
+
+    g['Version'] = "1.1.5"
+    c['Version'] = "1.1.5"
+    t['Version'] = "1.1.5"
+
+    oldpath = "Path to Minecraft Macro Folder"
+    if oldpath in g:
+        p = g.pop(oldpath)
+    g["Macro Folders"] = {'default': getMacros(), "path1": p}
+
+    saveGeneralSettings(g)
+    saveCodeColorSettings(c)
+    saveTextColorSettings(t)
+
+    return g,c,t
+
+def v1_1_3_to_v1_1_4_settings():
+    g = getGeneralSettings()
+    c = getCodeColorSettings()
+    t = getTextColorSettings()
+
+    g['Version'] = "1.1.4"
+    c['Version'] = "1.1.4"
+    t['Version'] = "1.1.4"
+
+    saveGeneralSettings(g)
+    saveCodeColorSettings(c)
+    saveTextColorSettings(t)
+
+    return g,c,t
+
+settings_version_map = {
+    "1.1.3": v1_1_3_to_v1_1_4_settings,
+    "1.1.4": v1_1_4_to_v1_1_5_settings}
+
+def v1_1_3_to_v1_1_4_notebook(path: str):
+    with open(path) as f:
+        d = json.load(f)
+
+    d['version'] = '1.1.4'
+
+    with open(path, "w") as f:
+        json.dump(d, f)
+    
+    return d
+
+def v1_1_4_to_v1_1_5_notebook(path: str):
+    with open(path) as f:
+        d = json.load(f)
+
+    d['version'] = '1.1.5'
+
+    with open(path, "w") as f:
+        json.dump(d, f)
+    
+    return d
+
+notebooks_version_map = {
+    "1.1.3": v1_1_3_to_v1_1_4_notebook,
+    "1.1.4": v1_1_4_to_v1_1_5_notebook}
+
+# if __name__ == '__main__':
+#     def deleteAll():
+#         if operating_system == "Windows":
+#             path = os.path.join(user_path, "AppData", "Roaming", "Mothball", "Mothball Settings")
+#         elif operating_system == "Darwin":
+#             path = os.path.join(user_path, "Library", "Application Support", "Mothball", "Mothball Settings")
+#         elif operating_system == "Linux":
+#             path = os.path.join(user_path, ".config", "Mothball", "Mothball Settings")
+        
+#         print("Delete All:", os.listdir(path))
+#         r = input("Confirm? (y/n) ").strip().lower()
+#         if r == "y":
+#             for filename in os.listdir(path):
+#                 file_path = os.path.join(path, filename)
+#                 if os.path.isfile(file_path):
+#                     os.remove(file_path)
+#         else:
+#             print("Cancelled")
+
+#     deleteAll()
