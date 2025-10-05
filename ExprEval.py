@@ -2,7 +2,7 @@ import re
 
 def _tokenize(expression):
     token_specification = [
-        ('NUMBER', r'\d+\.\d+|\d+\.|\.\d+|\d+'),  # Integer or decimal number
+        ('NUMBER', r'\d+(\.\d+)?e-\d+|\d+(\.\d+)?e\d+|\d+\.\d+|\d+\.|\.\d+|\d+'),  # Integer or decimal number
         ('PLUS', r'\+'),              # Addition (+)
         ('MINUS', r'-'),              # Subtraction (-)
         ('POW', r'\*\*'),             # Exponent (**)
@@ -130,10 +130,13 @@ def evaluate(expression, variables: dict=None):
     elif not isinstance(expression, str):
         raise ValueError(f"Invalid expression of type {type(expression)}: {expression}")
 
+
     if variables is None:
         variables = {}
 
+    # print(expression)
     tokens = _tokenize(expression)
+    print(tokens, variables)
     return _evaluate(tokens, variables)
 
 # print(evaluate("2**(3-1)/(2+6)"))
@@ -146,3 +149,4 @@ def evaluate(expression, variables: dict=None):
 # print(evaluate("2.2"))
 # print(evaluate("2."))
 # print(evaluate(".2"))
+# print(evaluate("1e-5 * 20e5"))
