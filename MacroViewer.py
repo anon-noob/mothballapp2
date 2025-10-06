@@ -22,12 +22,15 @@ class MacroFileGrid(QAbstractTableModel):
             A = {x:i for i, x in enumerate(lines[0].split(","))}
             y = {'true': '✔', 'false':"X"}
             result.append(['W','A','S','D','Space', 'Sprint', 'Sneak','Yaw','Pitch'])
-            indexes = [A['W'], A['A'], A['S'], A['D'], A['JUMP'], A['SPRINT'], A['SNEAK'], A['ANGLE_X'], A['ANGLE_Y']]
+            indexes = [A.get('W', -1), A.get('A', -1), A.get('S', -1), A.get('D', -1), A.get('JUMP', -1), A.get('SPRINT', -1), A.get('SNEAK', -1), A.get('ANGLE_X',-1), A.get('ANGLE_Y', -1)]
             for i in range(1, len(lines)):
                 m = []
                 k = lines[i].split(",")
                 for ii in indexes:
-                    m.append(y.get(k[ii], k[ii]))
+                    if ii == -1:
+                        m.append(y['false'])
+                    else:
+                        m.append(y.get(k[ii], k[ii]))
                 result.append(m)
             self.formatted_data = result
 
