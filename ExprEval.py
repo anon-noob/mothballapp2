@@ -56,7 +56,7 @@ def _tokenize(expression):
 def _apply_operator(operands: list, operator: str):
     if operator == 'UNARY_MINUS':
         if not operands:
-            raise SyntaxError("Invalid expression")
+            raise SyntaxError(f"Invalid expression")
         a = operands.pop()
         operands.append(-a)
         return operands
@@ -136,8 +136,11 @@ def evaluate(expression, variables: dict=None):
 
     # print(expression)
     tokens = _tokenize(expression)
-    print(tokens, variables)
-    return _evaluate(tokens, variables)
+    try:
+        result =  _evaluate(tokens, variables)
+        return result
+    except Exception as e:
+        raise SyntaxError(f"{e}: {expression}")
 
 # print(evaluate("2**(3-1)/(2+6)"))
 # print(evaluate("-1+2**(4-8*p4x)", {'p4x':1/2}))
@@ -149,4 +152,4 @@ def evaluate(expression, variables: dict=None):
 # print(evaluate("2.2"))
 # print(evaluate("2."))
 # print(evaluate(".2"))
-# print(evaluate("1e-5 * 20e5"))
+# print(evaluate("1-"))
