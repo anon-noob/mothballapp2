@@ -46,13 +46,7 @@ class TextSection(Cell):
         self.main_layout.addLayout(content_layout)
         self.setLayout(self.main_layout)
 
-        # self.up_button.clicked.connect(lambda: move_callback(self, -1))
-        # self.down_button.clicked.connect(lambda: move_callback(self, 1))
         self.run_button.clicked.connect(self.renderText)
-        # self.delete_button.clicked.connect(lambda: remove_callback(self))
-        # self.add_xz_button.clicked.connect(lambda: add_callback(self, CellType.XZ))
-        # self.add_y_button.clicked.connect(lambda: add_callback(self, CellType.Y))
-        # self.add_text_button.clicked.connect(lambda: add_callback(self, CellType.TEXT))
     
     def adjust_output_height(self):
         """
@@ -95,6 +89,15 @@ class TextSection(Cell):
         self.run_button.clicked.connect(self.renderText)
         self.highlight()
         self.mode = "edit"
+    
+    def getCellData(self):
+        data = {
+            "raw_text": self.input_field.text(),
+            "cell_type": self.cellType,
+            "mode": self.mode,
+            "has_changed": False
+        }
+        return data
 
     def resizeEvent(self, event):
         if not self.render_field.isHidden():

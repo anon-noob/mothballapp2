@@ -14,7 +14,7 @@ from PyQt5.QtGui import QColor, QKeySequence
 from BaseCell import Cell, CodeEdit, RenderViewer
 from Linters import CodeLinter
 from Enums import *
-from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget, QComboBox, QShortcut
+from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget, QComboBox, QShortcut, QLineEdit
 import os, json
 
 class Worker(QObject):
@@ -61,12 +61,33 @@ class SimulationSection(Cell):
         self.p = parent # The main Mothball instance 
 
         content_layout = QVBoxLayout()
+
+        tophlayout = QHBoxLayout()
+        tophlayout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        tophlayout.setContentsMargins(0,0,0,0)
+        content_layout.addLayout(tophlayout)
+
         if mode == CellType.XZ:
             self.input_label = QLabel("Input (XZ):")
         elif mode == CellType.Y:
             self.input_label = QLabel("Input (Y):")
-        self.input_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)  # Keep label height fixed
-        content_layout.addWidget(self.input_label)
+        self.input_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        tophlayout.addWidget(self.input_label)
+
+        self.edit_or_save_name_button = QPushButton("🖉")
+        self.edit_or_save_name_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.edit_or_save_name_button.setFixedWidth(40)
+        self.edit_or_save_name_button.clicked.connect(self.editCellName)
+        tophlayout.addWidget(self.edit_or_save_name_button)
+
+        self.cell_name = QLabel("Unnamed Cell")
+        tophlayout.addWidget(self.cell_name)
+
+        self.edit_name_field = QLineEdit("Unnamed Cell")
+        self.edit_name_field.hide()
+        self.edit_name_field.returnPressed.connect(self.saveCellName)
+        tophlayout.addWidget(self.edit_name_field)
+
 
         self.input_field = CodeEdit(generalOptions, colorOptions, textOptions, self)
         self.input_field.textChanged.connect(self.highlight)
@@ -145,6 +166,20 @@ class SimulationSection(Cell):
         self.run_shortcut = QShortcut(QKeySequence("Ctrl+R"), self)
         self.run_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.run_shortcut.activated.connect(self.run_simulation)
+
+    def editCellName(self):
+        self.cell_name.hide()
+        self.edit_name_field.show()
+        self.edit_or_save_name_button.clicked.disconnect()
+        self.edit_or_save_name_button.clicked.connect(self.saveCellName)
+        self.edit_name_field.setText(self.cell_name.text())
+
+    def saveCellName(self):
+        self.edit_name_field.hide()
+        self.cell_name.show()
+        self.edit_or_save_name_button.clicked.disconnect()
+        self.edit_or_save_name_button.clicked.connect(self.editCellName)
+        self.cell_name.setText(self.edit_name_field.text())
 
     def viewMacro(self):
         file = self.artifacts_list.currentText()
@@ -241,6 +276,17 @@ class SimulationSection(Cell):
         self.run_button.clicked.disconnect()
         self.run_button.clicked.connect(self.run_simulation)
         self.run_shortcut.activated.connect(self.run_simulation)
+    
+    def getCellData(self):
+        data = {
+            "name": self.cell_name.text(),
+            "cell_type": self.cellType,
+            "code": self.input_field.text(),
+            "exec_time": "None",
+            "has_changed": False,
+            "raw_output": self.raw_output
+        }
+        return data
     
     def resizeEvent(self, event):
         self.adjust_output_height()

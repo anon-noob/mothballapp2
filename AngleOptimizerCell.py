@@ -528,6 +528,19 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
             lines.append(f"  {i}, {j}")
         self.toConsole("\n".join(lines))
 
+    def getCellData(self):
+        data = {
+            "cell_type": self.cellType,
+            "axis": self.axis_to_optimize,
+            "mode": self.max_or_min,
+            "variables": self.var_box_model.getData(),
+            "drags": self.drag_and_accel_model.getData(),
+            "constraints": self.constraints_model.getData(),
+            "output": self.console.toPlainText(),
+            "points": self.points
+            }
+        return data
+
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Backspace:
             focused = self.focusWidget()
@@ -536,8 +549,7 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
                 if selected_indexes:
                     focused.model().deleteIndexes(selected_indexes)
 
-        return super().keyPressEvent(event)  # Call the base class implementation to keep default behavior
-
+        return super().keyPressEvent(event)
 
 # if __name__ == "__main__":
 #     from PyQt5.QtWidgets import QMainWindow, QApplication

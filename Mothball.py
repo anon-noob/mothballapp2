@@ -30,19 +30,14 @@ import MacroViewer
 # Scintilla resizing issue with newlines (prob show scrollbar?) <-- yep i set vertical scrollbar always on (Aug 5, 2025) but it doesn't fix the issue. 
 # Yes it does, just set the CodeEdit(QSciScintilla) to have a verical scroll policy always off (Aug 5, 2025)
 
-# add presets to the optimize cell
 # Fix syntax error logging
-# Comments and docstring
 # Reorganize the help page
-# Separate file for help doc strings
 # Fix settings
 # Add other remaining colors
 # Var should not lint as strings
-# Rename files should be reflected
+# Something is wrong with action stack when undoing towards the end
 
 # Linting in documentation with custom functions
-# Fix and expand basic macro creation
-# Angle Optimization
 
 # Disable automatic execution in text cells (why tf is that a thing) -> done
 
@@ -316,7 +311,7 @@ class MainWindow(QMainWindow):
             if cell.worker is not None and cell.worker.isrunning:
                 return
 
-        data = self.collectCellData(index)
+        data = self.getCellData(index)
         self.section_container.removeWidget(cell)
         cell.setParent(None)
         cell.deleteLater()
@@ -418,78 +413,14 @@ class MainWindow(QMainWindow):
         """
         self.settings_page = Settings.SettingsWindow(self, self.settings, self.codecell_colors, self.textcell_colors)
         self.settings_page.show()
-        # QMessageBox.information(self, "Not Implemented", "Settings Page does not work at the moment, apologies for the inconvenience!")
 
-    def collectCellData(self, index: int) -> dict:
-        data = {}
-        if isinstance(self.CELLS[index], CodeCell.SimulationSection):
-            data = {
-                "name": self.name,
-                "cell_type": self.CELLS[index].cellType,
-                "code": self.CELLS[index].input_field.text(),
-                "exec_time": "None",
-                "has_changed": False,
-                "raw_output": self.CELLS[index].raw_output
-            }
-        elif isinstance(self.CELLS[index], TextCell.TextSection):
-            data = {
-                "raw_text": self.CELLS[index].input_field.text(),
-                "cell_type": self.CELLS[index].cellType,
-                "mode": self.CELLS[index].mode,
-                "has_changed": False
-            }
-        elif isinstance(self.CELLS[index], AngleOptimizerCell.OptimizationSection):
-            data = {
-                "cell_type": self.CELLS[index].cellType,
-                "axis": self.CELLS[index].axis_to_optimize,
-                "mode": self.CELLS[index].max_or_min,
-                "variables": self.CELLS[index].var_box_model.getData(),
-                "drags": self.CELLS[index].drag_and_accel_model.getData(),
-                "constraints": self.CELLS[index].constraints_model.getData(),
-                "output": self.CELLS[index].console.toPlainText(),
-                "points": self.CELLS[index].points
-            }
-        return data
+    def getCellData(self, index: int) -> dict:
+        return self.CELLS[index].getCellData()
 
-    def collectAllCellData(self) -> dict:
-        """
-        Collects all data, recording each cell's input and output. Returns a dictionary in the form
-        ```
-        data: dict = {
-            "fileName": name_of_file,
-            "1": cell1_Data,
-            "2": cell2_Data,
-            "3": cell3_Data,
-            ...: ...
-        }
-        ```
-
-        Cell data differs depending on its `type`, which is either `code` or `text`. Type `code` cells have data
-        ```
-        code_cell_data: dict = {
-            "name": name_of_cell,
-            "cell_type": Literal[0,1], # 0 = xz, 1 = y
-            "code": code_input, # The actual Mothball code
-            "exec_time": "None",
-            "has_changed": False,
-            "raw_output": code_raw_output # The raw output from running the Mothball code 
-        }
-        ```
-
-        Type `text` cells have data
-        ```
-        text_cell_data: dict = {
-            "raw_text": cell_input_text, # The given markdown text
-            "cell_type": Literal[2]
-            "mode": Literal["edit","render"], # Determines if the cell is in edit or render mode
-            "has_changed": False
-        }
-        ```
-        """
+    def getAllCellData(self) -> dict:
         data = {"fileName": self.name, "version": self.version}
         for i in range(0, len(self.CELLS)):
-            data[i] = self.collectCellData(i)
-            
+            data[i] = self.getCellData(i)
         return data
 
     def saveFile(self):
@@ -499,7 +430,7 @@ class MainWindow(QMainWindow):
         if not self.name:
             self.saveAsFile()
         else:
-            data = self.collectAllCellData()
+            data = self.getAllCellData()
             self.unsaved_changes = False
             with open(self.path, "w") as f:
                 json.dump(data, f, indent=4)
@@ -521,7 +452,7 @@ class MainWindow(QMainWindow):
             basename = os.path.basename(filepath)
             self.name = os.path.splitext(basename)[0]
             
-            data = self.collectAllCellData()
+            data = self.getAllCellData()
 
             with open(self.path, "w") as f:
                 json.dump(data, f, indent=4)
@@ -718,7 +649,7 @@ class MainWindow(QMainWindow):
     def updateGeneralSettings(self, newsettings: dict):
         for cell in self.CELLS:
             if isinstance(cell, CodeCell.SimulationSection):
-                cell.mc_macros_folders = newsettings["Path to Minecraft Macro Folder"]
+                cell.mc_macros_folders = newsettings["Macro Folders"]
 
 
 if __name__ == "__main__":
