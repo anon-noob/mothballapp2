@@ -743,8 +743,8 @@ class BasePlayer:
             s += ss + "\n"
         return s
     
-    FUNCTIONS = {"function": custom_function, "func":custom_function, "print": printdisplay, "repeat": repeat, "r": repeat, "setprecision":setprecision, "pre":setprecision, "ballhelp": ballhelp, "help": ballhelp, "var": var}
-    ALIASES = {"function": ["function", "func"], "print": ["print"], "repeat": ["repeat", "r"], "setprecision": ["setprecision", "pre"], "ballhelp":["ballhelp", "help"], "var": ["var"]}
+    FUNCTIONS = {"function": custom_function, "func":custom_function, "print": printdisplay, "repeat": repeat, "r": repeat, "setprecision":setprecision, "precision":setprecision, "pre":setprecision, "ballhelp": ballhelp, "help": ballhelp, "var": var}
+    ALIASES = {"function": ["function", "func"], "print": ["print"], "repeat": ["repeat", "r"], "setprecision": ["setprecision", "pre", "precision"], "ballhelp":["ballhelp", "help"], "var": ["var"]}
     
 
 if __name__ == "__main__":
