@@ -26,7 +26,7 @@ class PlayerSimulationY(BasePlayer):
         "stoppers": [],
         "returners": ["outty", "outsty", "outy", "outvy", "help", "duration", "height", "blip", "print"],
         "calculators": ["repeat", "r", "poss", "inertialistener", "il"],
-        "setters": ["sety", "y", "setvy", "vy", "inertia","setceiling", "ceil"]
+        "setters": ["setposy", "sety", "y", "setvy", "vy", "inertia","setceiling", "ceil", "precision", "setprecision", 'pre', 'addposy', 'addy', 'addvy']
     }
 
     def __init__(self) -> None:
@@ -135,7 +135,7 @@ class PlayerSimulationY(BasePlayer):
     def outvy(self, centered_at: float = 0.0, label: str = "vy"):
         self.add_to_output(ExpressionType.Z_LABEL, label, self.vy, centered_at)
     
-    def sety(self, e: float):
+    def setposy(self, e: float):
         self.y = e
     
     def inertia(self, value: float):
@@ -174,6 +174,12 @@ class PlayerSimulationY(BasePlayer):
             raise TypeError(f"Nested posibilities functions are not allowed.")
         self.simulate(sequence, return_defaults=False)
         self.record = {}
+    
+    def addposy(self, value: float, /):
+        self.y += value
+
+    def addvy(self, value: float, /):
+        self.vy += value
     
     def duration(self, floor: float = 0.0, ceiling: float = 0.0, /, inertia: float = None, jump_boost: int = 0):
         if inertia is None:
@@ -287,7 +293,9 @@ class PlayerSimulationY(BasePlayer):
         "jump": jump, "j": jump,
         "outy": outy,
         "outvy": outvy,
-        "sety": sety, "y": sety,
+        "sety": setposy, "y": setposy,
+        "addposy": addposy, "addy": addposy,
+        "addvy": addvy,
         "inertia": inertia,
         "air": air, "a": air,
         "outty": outty, "outtopy": outty,

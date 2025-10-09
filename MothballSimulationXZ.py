@@ -65,7 +65,7 @@ class PlayerSimulationXZ(BasePlayer):
     ], "calculators": [
         "bwmm", "xbwmm", "wall", "xwall", "inv", "xinv", "blocks", "xblocks", "repeat", "r", "possibilities", "poss", "xpossibilities", "xposs", "xzpossibilities", "xzposs", 'taps'
     ], "setters": [
-        "face", "facing", "f", "turn", "setposz", "z", "setvz", "vz", "setposx", "x", "setvx", "vx", "setslip", "slip", "setprecision", "precision", "pre", "inertia", "sprintairdelay", "sdel", "version", "v", "anglequeue", "aq", "tq", "turnqueue", "speed", "slow", "slowness", "sndel", "sneakdelay", "var", "function", "func", "alias", "toggle", "singleaxisinertia","inertialistener", "il", "xinertialistener", "xil", "zinertialistener", "zil", "xzinertialistener", "xzil"
+        "face", "facing", "f", "turn", "setposz", "z", "setvz", "vz", "setposx", "x", "setvx", "vx", "setslip", "slip", "setprecision", "precision", "pre", "inertia", "sprintairdelay", "sdel", "version", "v", "anglequeue", "aq", "tq", "turnqueue", "speed", "slow", "slowness", "sndel", "sneakdelay", "var", "function", "func", "alias", "toggle", "singleaxisinertia","inertialistener", "il", "xinertialistener", "xil", "zinertialistener", "zil", "xzinertialistener", "xzil", "addposx", "addposz", "addz", "addx", "addvx", "addvz"
     ]}
 
     
@@ -677,7 +677,7 @@ class PlayerSimulationXZ(BasePlayer):
         multiplier = max((1 + (0.2 * speed)) * (1 - (0.15 * slow)), 0) * 100
         self.add_to_output(ExpressionType.GENERAL_LABEL, f"Speed {speed} Slow {slow} ({int(round(multiplier))}% base speed)")
 
-    def angleinfo(self, angle: f32 = f32(0.0)):
+    def angleinfo(self, angle: f32 = f32(0.0), /):
         angle_rad = angle * f32(self.pi) / f32(180)
         sin_index = u64(i32(angle_rad * f32(10430.378)) & 65535)
         cos_index = u64(i32(angle_rad * f32(10430.378) + f32(16384.0)) & 65535)
@@ -707,28 +707,34 @@ class PlayerSimulationXZ(BasePlayer):
 
     # SETTERS
     def face(self, angle_in_degrees: f32, /):
-        "Sets the player's default facing in degrees"
         self.rotation = angle_in_degrees
     
     def turn(self, angle_in_degrees: f32, /):
-        "Rotates the player's default facing in degrees"
         self.rotation += angle_in_degrees
 
     def setposz(self, value: float, /):
-        "Sets the player's Z position"
         self.z = value
     
     def setvz(self, value: float, /):
-        "Sets the player's Z velocity"
         self.vz = value
 
     def setposx(self, value: float, /):
-        "Sets the player's X position"
         self.x = value
     
     def setvx(self, value: float, /):
-        "Sets the player's X velocity"
         self.vx = value
+    
+    def addposz(self, value: float, /):
+        self.z += value
+    
+    def addposx(self, value: float, /):
+        self.x += value
+    
+    def addvx(self, value: float, /):
+        self.vx += value
+    
+    def addvz(self, value: float, /):
+        self.vz += value
     
     def setslip(self, value: f32, /):
         "Sets the player's ground slipperiness"
@@ -1242,6 +1248,10 @@ class PlayerSimulationXZ(BasePlayer):
             "setvz": setvz, "vz": setvz,
             "setposx": setposx, "x": setposx,
             "setvx": setvx, "vx": setvx,
+            "addvx": addvx,
+            "addvz": addvz,
+            "addx": addposx, "addposx": addposx,
+            "addz": addposz, "addposz": addposz,
             "setslip": setslip, "slip": setslip,
             "inertia": inertia,
             "sprintairdelay": sprintairdelay, "sdel": sprintairdelay,
