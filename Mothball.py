@@ -30,7 +30,6 @@ import MacroViewer
 # Scintilla resizing issue with newlines (prob show scrollbar?) <-- yep i set vertical scrollbar always on (Aug 5, 2025) but it doesn't fix the issue. 
 # Yes it does, just set the CodeEdit(QSciScintilla) to have a verical scroll policy always off (Aug 5, 2025)
 
-# Fix syntax error logging
 # Reorganize the help page
 # Fix settings
 # Add other remaining colors
@@ -133,6 +132,7 @@ class ActionStack:
                     cell.input_field.setText(action.data["code"])
                     cell.output_field.renderTextfromOutput(cell.linter, action.data["raw_output"])
                     cell.raw_output = action.data["raw_output"]
+                    cell.cell_name.setText(action.data['name'])
                     QApplication.processEvents()
                     QTimer.singleShot(100, lambda: self.continueProcess(cell))
                     adding.append(ActionStack.DeleteCellAction(action.index))
@@ -527,6 +527,7 @@ class MainWindow(QMainWindow):
                 elif cell.cell_type == CellType.XZ or cell.cell_type == CellType.Y:
                     b = self.addCell(cellType=cell.cell_type)
                     b.input_field.setText(cell.code.rstrip())
+                    b.cell_name.setText(cell.name)
                     if same_version:
                         b.output_field.renderTextfromOutput(b.linter, cell.raw_output)
                         b.raw_output = cell.raw_output
