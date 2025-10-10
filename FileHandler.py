@@ -335,6 +335,27 @@ def v1_1_4_to_v1_1_5_settings():
 
     return g,c,t
 
+# yea im gonna clean this up later
+def v1_1_5_to_v1_1_6_settings():
+    g = getGeneralSettings()
+    c = getCodeColorSettings()
+    t = getTextColorSettings()
+
+    g['Version'] = "1.1.6"
+    c['Version'] = "1.1.6"
+    t['Version'] = "1.1.6"
+
+    oldpath = "Path to Minecraft Macro Folder"
+    if oldpath in g:
+        p = g.pop(oldpath)
+    g["Macro Folders"] = {'default': getMacros(), "path1": p}
+
+    saveGeneralSettings(g)
+    saveCodeColorSettings(c)
+    saveTextColorSettings(t)
+
+    return g,c,t
+
 def v1_1_3_to_v1_1_4_settings():
     g = getGeneralSettings()
     c = getCodeColorSettings()
@@ -352,7 +373,8 @@ def v1_1_3_to_v1_1_4_settings():
 
 settings_version_map = {
     "1.1.3": v1_1_3_to_v1_1_4_settings,
-    "1.1.4": v1_1_4_to_v1_1_5_settings}
+    "1.1.4": v1_1_4_to_v1_1_5_settings,
+    "1.1.5": v1_1_5_to_v1_1_6_settings}
 
 def v1_1_3_to_v1_1_4_notebook(path: str):
     with open(path) as f:
@@ -376,27 +398,18 @@ def v1_1_4_to_v1_1_5_notebook(path: str):
     
     return d
 
+def v1_1_5_to_v1_1_6_notebook(path: str):
+    with open(path) as f:
+        d = json.load(f)
+
+    d['version'] = '1.1.6'
+
+    with open(path, "w") as f:
+        json.dump(d, f)
+    
+    return d
+
 notebooks_version_map = {
     "1.1.3": v1_1_3_to_v1_1_4_notebook,
-    "1.1.4": v1_1_4_to_v1_1_5_notebook}
-
-# if __name__ == '__main__':
-#     def deleteAll():
-#         if operating_system == "Windows":
-#             path = os.path.join(user_path, "AppData", "Roaming", "Mothball", "Mothball Settings")
-#         elif operating_system == "Darwin":
-#             path = os.path.join(user_path, "Library", "Application Support", "Mothball", "Mothball Settings")
-#         elif operating_system == "Linux":
-#             path = os.path.join(user_path, ".config", "Mothball", "Mothball Settings")
-        
-#         print("Delete All:", os.listdir(path))
-#         r = input("Confirm? (y/n) ").strip().lower()
-#         if r == "y":
-#             for filename in os.listdir(path):
-#                 file_path = os.path.join(path, filename)
-#                 if os.path.isfile(file_path):
-#                     os.remove(file_path)
-#         else:
-#             print("Cancelled")
-
-#     deleteAll()
+    "1.1.4": v1_1_4_to_v1_1_5_notebook,
+    "1.1.5": v1_1_4_to_v1_1_5_notebook}
