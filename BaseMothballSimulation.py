@@ -80,6 +80,8 @@ class BasePlayer:
 
         self.stop_flag = False
 
+        self.last_returned_value = 0 # ye this is a sus implementation but whatever
+
     def stop_execution(self):
         self.stop_flag = True
 
@@ -88,7 +90,6 @@ class BasePlayer:
         "Decorator which appends and pops from call stack for functions which accept a `MothballSequence`"
         @functools.wraps(func)
         def inner(*args, **kwargs):
-            # args[0] == self
             args[0].call_stack.append(func.__name__)
             func(*args, **kwargs)
             args[0].call_stack.pop()
@@ -116,7 +117,6 @@ class BasePlayer:
                 follows_backslash = False
                 chars[i] = char
         return "".join(chars)
-        # return string.replace("\,", ",").replace("\(", "(").replace("\)", ")").replace("\#", "#").replace("\{", "{").replace("\}", "}").replace("\=", "=") # i hate myself
 
     def safe_eval(self, expr: str, datatype: type, locals_dict: dict):
         "Evaluate and convert `expr` to `datatype`. If `datatype = str`, it returns the `expr` as normal."
@@ -129,10 +129,6 @@ class BasePlayer:
                 else:
                     return bool(expr)
 
-            # if "__" in expr:
-            #         raise RuntimeError(f"Rejected unsafe expression {expr}")
-            
-            # result = eval(expr, {"__builtins__": {}}, locals_dict)
             result = evaluate(expr, locals_dict)
             converted_value = datatype(result) if result is not None else None
             return converted_value
@@ -149,9 +145,11 @@ class BasePlayer:
                     nn = string_or_num - num2
                     self.output.append((expression_type, 
                                     (BasePlayer.clean_backslashes(self.formatted(label)), ": ", self.truncate_number(num2), " - " if nn <= 0 else " + ", self.truncate_number(abs(nn)))))
+                    return nn
                 else:
                     self.output.append((expression_type, 
                                     (BasePlayer.clean_backslashes(self.formatted(label)), ": ", self.truncate_number(string_or_num))))
+                    return string_or_num
 
             case ExpressionType.TEXT:
                 if strip_label:
@@ -280,12 +278,12 @@ class BasePlayer:
     
     @record_to_call_stack
     def printdisplay(self, string: str = "", /):
-        if self.reverse:
+        if self.reverse: # who is using this anyway
             string = "".join([x for x in reversed(string)])
         self.add_to_output(ExpressionType.TEXT, string_or_num=string)
     
     @record_to_call_stack
-    def var(self, variable_name: str, value: str):
+    def var(self, variable_name: str, value: MothballSequence, /):
         """
         Assigns `value` to `variable_name`
         
@@ -302,16 +300,18 @@ class BasePlayer:
             raise SyntaxError(f"'{variable_name}' is not a valid variable name")
         if variable_name.strip() in self.FUNCTIONS:
             raise OverwriteError(f"Cannot set variable name '{variable_name.strip()}' as it is a function name")
+
+        final_value = value
+        try: 
+            final_value = evaluate(value, self.local_vars)
+        except:
+            try:
+                self.simulate(value, False, self.local_vars)
+                final_value = self.last_returned_value
+            except:
+                pass
         
-        try: value = int(value)
-        except ValueError: 
-            try: value = float(value)
-            except ValueError:
-                try: value = evaluate(value, self.local_vars)
-                except:
-                    pass
-        
-        self.local_vars[variable_name] = value
+        self.local_vars[variable_name] = final_value
     
     def setprecision(self, decimal_places: int, /):
         "Sets the decimal precision for displaying outputs, must be an integer between `0` and `16` inclusive, raises `ValueError` otherwise."
@@ -751,7 +751,7 @@ if __name__ == "__main__":
     a = BasePlayer()
     # import time
     # m = time.perf_counter()
-    a.simulate("""r(pre(16), 10)""")
+    a.simulate("""var(p, p3x) print(p: {p})""")
     # n = time.perf_counter()
     # print(n-m)
     b=a.show_output()

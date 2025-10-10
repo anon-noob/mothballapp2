@@ -630,38 +630,38 @@ class PlayerSimulationXZ(BasePlayer):
 
     # RETURNERS:
     def outz(self, centered_about: float = 0, /, label: str = "outz"):
-        self.add_to_output(ExpressionType.Z_LABEL, label, self.z, centered_about)
+        self.last_returned_value = self.add_to_output(ExpressionType.Z_LABEL, label, self.z, centered_about)
     
     def zmm(self, centered_about: float = 0, /, label: str = "zmm"):
-        self.add_to_output(ExpressionType.Z_LABEL, label, PlayerSimulationXZ.dist_to_mm(self.z), centered_about)
+        self.last_returned_value =  self.add_to_output(ExpressionType.Z_LABEL, label, PlayerSimulationXZ.dist_to_mm(self.z), centered_about)
     
     def zb(self, centered_about: float = 0, /, label: str = "zb"):
-        self.add_to_output(ExpressionType.Z_LABEL, label, PlayerSimulationXZ.dist_to_block(self.z), centered_about)
+        self.last_returned_value =  self.add_to_output(ExpressionType.Z_LABEL, label, PlayerSimulationXZ.dist_to_block(self.z), centered_about)
     
     def outvz(self, centered_about: float = 0, /, label: str = "vz"):
-        self.add_to_output(ExpressionType.Z_LABEL, label, self.vz, centered_about)
+        self.last_returned_value =  self.add_to_output(ExpressionType.Z_LABEL, label, self.vz, centered_about)
 
     def outx(self, centered_about: float = 0, /, label: str = "outx"):
-        self.add_to_output(ExpressionType.X_LABEL, label, self.x, centered_about)
+        self.last_returned_value =  self.add_to_output(ExpressionType.X_LABEL, label, self.x, centered_about)
 
     def xmm(self, centered_about: float = 0, /, label: str = "xmm"):
-        self.add_to_output(ExpressionType.X_LABEL, label, PlayerSimulationXZ.dist_to_mm(self.x), centered_about)
+        self.last_returned_value =  self.add_to_output(ExpressionType.X_LABEL, label, PlayerSimulationXZ.dist_to_mm(self.x), centered_about)
 
     def xb(self, centered_about: float = 0, /, label: str = "xb"):
-        self.add_to_output(ExpressionType.X_LABEL, label, PlayerSimulationXZ.dist_to_block(self.x), centered_about)
+        self.last_returned_value =  self.add_to_output(ExpressionType.X_LABEL, label, PlayerSimulationXZ.dist_to_block(self.x), centered_about)
 
     def outvx(self, centered_about: float = 0, /, label: str = "vx"):
-        self.add_to_output(ExpressionType.X_LABEL, label, self.vx, centered_about)
+        self.last_returned_value =  self.add_to_output(ExpressionType.X_LABEL, label, self.vx, centered_about)
 
     def vec(self):
         self.add_to_output(ExpressionType.GENERAL_LABEL_WITH_NUMBER, "Speed", sqrt(self.vx**2 + self.vz**2))
         self.add_to_output(ExpressionType.GENERAL_LABEL_WITH_NUMBER, "Angle", deg(arctan(-self.vx, self.vz)))
     
     def outangle(self, centered_about: float = 0, /, label: str = "facing"):
-        self.add_to_output(ExpressionType.GENERAL_LABEL_WITH_NUMBER, label, self.rotation, centered_about)
+        self.last_returned_value =  self.add_to_output(ExpressionType.GENERAL_LABEL_WITH_NUMBER, label, self.rotation, centered_about)
     
     def outturn(self, centered_about: float = 0, /, label: str = "turn"):
-        self.add_to_output(ExpressionType.GENERAL_LABEL_WITH_NUMBER, label, self.last_turn, centered_about)
+        self.last_returned_value =  self.add_to_output(ExpressionType.GENERAL_LABEL_WITH_NUMBER, label, self.last_turn, centered_about)
 
     def effectsmultiplier(self, speed: int = None, slow: int = None):
         if speed is None:
@@ -702,9 +702,6 @@ class PlayerSimulationXZ(BasePlayer):
         self.add_to_output(ExpressionType.TEXT, string_or_num=f"{'Sin':<{padding1}} {sv:<{padding2}} {sa:<{padding2}} {sin_index} ")
         self.add_to_output(ExpressionType.TEXT, string_or_num=f"{'Cos':<{padding1}} {cv:<{padding2}} {ca:<{padding2}} {cos_index_adj} ({cos_index})")
         self.add_to_output(ExpressionType.TEXT, string_or_num=f"{'Normal':<{padding1}} {norm:<{padding2}}")
-
-        return (angle, normal)
-
     # SETTERS
     def face(self, angle_in_degrees: f32, /):
         self.rotation = angle_in_degrees
@@ -737,11 +734,9 @@ class PlayerSimulationXZ(BasePlayer):
         self.vz += value
     
     def setslip(self, value: f32, /):
-        "Sets the player's ground slipperiness"
         self.default_ground_slip = value
     
     def inertia(self, value: f32, /, single_axis: bool = None):
-        "Sets the player's inertia threshold"
         self.inertia_threshold = value
         if single_axis is not None:
             if single_axis:
@@ -893,9 +888,7 @@ class PlayerSimulationXZ(BasePlayer):
             self.record = {"type": "x", "tick":1, "min_distance": min_distance, "x offset": offset, "x increment": increment, "miss": miss}
         else:
             raise TypeError(f"Nested posibilities functions are not allowed.")
-        # self.call_stack.append("xpossibilities")
         self.simulate(sequence, return_defaults=False)
-        # self.call_stack.pop()
         self.record = {}
     
     @BasePlayer.record_to_call_stack
@@ -1300,6 +1293,6 @@ if __name__ == "__main__":
     # s = 'f(-13.875) wa.a(6) x(0) xil(wj.a wa.d(8) wa.sd(2) wa.s) outx x(0) w.s outz z(0) zil( wj.sd wa.d(2) sa.wd(9)) outz s.wd outz xmm vec | aq(-16.255, -38.185, -62.88, -76.93, -84.985, -90) xil(sj sa45(5) zmm outx sa45(7)) outx'
     # s = 'angleinfo(-45.01)'
     # s = 'pre(16) r(s[ss] outvz,3) r(st[ss] outvz, 3)'
-    s = 'ai(2)'
+    s = 'w.s[wt](5) var(spd, outz outvz(-0.0615)) | z(-spd) sj sa45[wt] sa45(9) sa45[wt](2) sj45(12) outz(6, offset)'
     a.simulate(s)
     a.show_output()

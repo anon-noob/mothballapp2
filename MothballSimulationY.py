@@ -130,22 +130,22 @@ class PlayerSimulationY(BasePlayer):
         self.move(duration, state=self.AIR)
 
     def outy(self, centered_at: float = 0.0, label: str = "outy"):
-        self.add_to_output(ExpressionType.Z_LABEL, label, self.y, centered_at)
+        self.last_returned_value = self.add_to_output(ExpressionType.Z_LABEL, label, self.y, centered_at)
 
     def outvy(self, centered_at: float = 0.0, label: str = "vy"):
-        self.add_to_output(ExpressionType.Z_LABEL, label, self.vy, centered_at)
+        self.last_returned_value = self.add_to_output(ExpressionType.Z_LABEL, label, self.vy, centered_at)
     
-    def setposy(self, e: float):
-        self.y = e
+    def setposy(self, value: float):
+        self.y = value
     
     def inertia(self, value: float):
         self.inertia_threshold = value
 
     def outty(self, centered_at: float = 0, label: str = "top y"):
-        self.add_to_output(ExpressionType.Z_LABEL, label, self.y + 1.8, centered_at)
+        self.last_returned_value = self.add_to_output(ExpressionType.Z_LABEL, label, self.y + 1.8, centered_at)
     
     def outsty(self, centered_at: float = 0, label: str = "top y (sneak)"):
-        self.add_to_output(ExpressionType.Z_LABEL, label, self.y + 1.5, centered_at)
+        self.last_returned_value = self.add_to_output(ExpressionType.Z_LABEL, label, self.y + 1.5, centered_at)
     
     def slime(self, height: float = 0.0):
         self.move(1, state=self.SLIME)
