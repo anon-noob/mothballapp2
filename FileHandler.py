@@ -327,7 +327,7 @@ def v1_1_4_to_v1_1_5_settings():
     oldpath = "Path to Minecraft Macro Folder"
     if oldpath in g:
         p = g.pop(oldpath)
-    g["Macro Folders"] = {'default': getMacros(), "path1": p}
+        g["Macro Folders"] = {'default': getMacros(), "path1": p}
 
     saveGeneralSettings(g)
     saveCodeColorSettings(c)
@@ -344,11 +344,6 @@ def v1_1_5_to_v1_1_6_settings():
     g['Version'] = "1.1.6"
     c['Version'] = "1.1.6"
     t['Version'] = "1.1.6"
-
-    oldpath = "Path to Minecraft Macro Folder"
-    if oldpath in g:
-        p = g.pop(oldpath)
-    g["Macro Folders"] = {'default': getMacros(), "path1": p}
 
     saveGeneralSettings(g)
     saveCodeColorSettings(c)
@@ -412,4 +407,4 @@ def v1_1_5_to_v1_1_6_notebook(path: str):
 notebooks_version_map = {
     "1.1.3": v1_1_3_to_v1_1_4_notebook,
     "1.1.4": v1_1_4_to_v1_1_5_notebook,
-    "1.1.5": v1_1_4_to_v1_1_5_notebook}
+    "1.1.5": v1_1_5_to_v1_1_6_notebook}
