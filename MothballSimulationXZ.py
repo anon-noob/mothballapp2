@@ -1184,7 +1184,7 @@ class PlayerSimulationXZ(BasePlayer):
             raise ValueError(f"No such formatting {formatting}, options are either 'mpk' or 'cyv'.")
 
 
-    FUNCTIONS = BasePlayer.FUNCTIONS | {"w":walk,"walk":walk,
+    FUNCTIONS = {"w":walk,"walk":walk,
             "sprint":sprint, "s": sprint,
             "walkair": walkair, "wa": walkair,
             "sprintair": sprintair, "sa": sprintair,
@@ -1277,6 +1277,8 @@ class PlayerSimulationXZ(BasePlayer):
             ALIASES[func.__name__].append(alias)
         else:
             ALIASES[func.__name__] = [alias]
+    
+    FUNCTIONS = BasePlayer.FUNCTIONS | FUNCTIONS
 
 
     def show_default_output(self):

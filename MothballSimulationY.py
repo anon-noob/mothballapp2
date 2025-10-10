@@ -289,7 +289,7 @@ class PlayerSimulationY(BasePlayer):
             self.add_to_output(ExpressionType.TEXT, string_or_num=f"{i:<{padding1}} | {self.truncate_number(jump_ys[i]):<{padding2}} | {self.truncate_number(max_heights[i]) if not isinstance(max_heights[i], str) else max_heights[i]}")
         
 
-    FUNCTIONS = BasePlayer.FUNCTIONS | {
+    FUNCTIONS = {
         "jump": jump, "j": jump,
         "outy": outy,
         "outvy": outvy,
@@ -317,6 +317,8 @@ class PlayerSimulationY(BasePlayer):
             ALIASES[func.__name__].append(alias)
         else:
             ALIASES[func.__name__] = [alias]
+
+    FUNCTIONS = BasePlayer.FUNCTIONS | FUNCTIONS
 
     def show_default_output(self):
         self.add_to_output(ExpressionType.Z_LABEL, "Y", self.y)
