@@ -2,7 +2,7 @@
     "custom_function": "Create a custom mothball function.",
     "repeat": "Execute the sequence count number of times. Count must be a nonnegative integer.",
     "printdisplay": "Print some text. To print values or evaluate expressions, enclose them in curly brackets {}.",
-    "var": "Set a variable_name to equal value, which attempts to convert it to an int, then a float, then a string.",
+    "var": "Set a variable_name to equal value, which attempts to convert it to an int, then a float, then a string. If no value is given, it will set it equal to the last outputted value.",
     "setprecision": "Sets the number of decimal places shown in outputs, ranging from 0 to 16 (inclusive) decimal places.",
 
     "walk": "Walk on the ground for a given duration while facing rotation. Slip indicates the ground slipperiness. Speed and slow are their respective potion amplifiers. This function can be modified by inputs and movement modifiers.",

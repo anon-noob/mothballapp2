@@ -283,7 +283,7 @@ class BasePlayer:
         self.add_to_output(ExpressionType.TEXT, string_or_num=string)
     
     @record_to_call_stack
-    def var(self, variable_name: str, value: MothballSequence, /):
+    def var(self, variable_name: str, value: MothballSequence = None, /):
         """
         Assigns `value` to `variable_name`
         
@@ -300,6 +300,10 @@ class BasePlayer:
             raise SyntaxError(f"'{variable_name}' is not a valid variable name")
         if variable_name.strip() in self.FUNCTIONS:
             raise OverwriteError(f"Cannot set variable name '{variable_name.strip()}' as it is a function name")
+
+        if value is None:
+            self.local_vars[variable_name] = self.last_returned_value
+            return
 
         final_value = value
         try: 
