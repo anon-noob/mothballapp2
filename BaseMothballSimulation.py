@@ -228,7 +228,7 @@ class BasePlayer:
     ###########################################################################
 
     @record_to_call_stack
-    def custom_function(self, name: str, *args: str, code: MothballSequence, docstring:str=""):
+    def function(self, name: str, *args: str, code: MothballSequence, docstring:str=""):
         "Create a custom function"
         curr_type = inspect.Parameter.POSITIONAL_OR_KEYWORD
         parameters = []
@@ -743,7 +743,7 @@ class BasePlayer:
             s += ss + "\n"
         return s
     
-    FUNCTIONS = {"function": custom_function, "func":custom_function, "print": printdisplay, "repeat": repeat, "r": repeat, "setprecision":setprecision, "precision":setprecision, "pre":setprecision, "ballhelp": ballhelp, "help": ballhelp, "var": var}
+    FUNCTIONS = {"function": function, "func":function, "print": printdisplay, "repeat": repeat, "r": repeat, "setprecision":setprecision, "precision":setprecision, "pre":setprecision, "ballhelp": ballhelp, "help": ballhelp, "var": var}
     ALIASES = {"function": ["function", "func"], "print": ["print"], "repeat": ["repeat", "r"], "setprecision": ["setprecision", "pre", "precision"], "ballhelp":["ballhelp", "help"], "var": ["var"]}
     
 
