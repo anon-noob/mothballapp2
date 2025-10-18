@@ -190,6 +190,7 @@ class BasePlayer:
 
             elif char == "}":
                 if depth == 0:
+                    print(string)
                     raise SyntaxError("Unmatched Brackets")
 
                 depth -= 1
@@ -279,6 +280,8 @@ class BasePlayer:
     @record_to_call_stack
     def printdisplay(self, string: str = "", /):
         if self.reverse: # who is using this anyway
+            # print("S", string)
+            string = self.formatted(string)
             string = "".join([x for x in reversed(string)])
         self.add_to_output(ExpressionType.TEXT, string_or_num=string)
     
@@ -310,7 +313,7 @@ class BasePlayer:
             final_value = evaluate(value, self.local_vars)
         except:
             try:
-                self.simulate(value, False, self.local_vars)
+                self.simulate(value, False, self.local_vars, suppress_exception=False)
                 final_value = self.last_returned_value
             except:
                 pass
@@ -431,7 +434,7 @@ class BasePlayer:
         for char in string + splitters[0]:
             if strict_whitespace:
                 if expecting_whitespace and not char.isspace():
-                    print(char)
+                    # print(char)
                     if char in ")]":
                         raise SyntaxError(f"Unmatched brackets at character {current}: {string[max(0, current-5):min(high, current + 5)]}")
                     else:
@@ -713,12 +716,12 @@ class BasePlayer:
                     d[k.name] = k.default
             x = self.local_vars | {}
             self.local_vars = self.local_vars | d
-            self.simulate(func.sequence, self.local_vars)
+            self.simulate(func.sequence, self.local_vars, suppress_exception=False)
             self.local_vars = x
         else:
             func(self, *args, **kwargs)
     
-    def simulate(self, sequence: str, return_defaults = True, locals: dict = None):
+    def simulate(self, sequence: str, return_defaults = True, locals: dict = None, suppress_exception: bool = True):
         "Execute Mothball Code. If no output was made and `return_defaults == True`, return the default output (see `show_default_output()`). `locals` is a dict of values for variables."
         try:
             parsed_tokens = self.parse(sequence)
@@ -735,8 +738,10 @@ class BasePlayer:
             if return_defaults and not self.output:
                 self.show_default_output()
         except Exception as e:
-            self.add_to_output(ExpressionType.TEXT, string_or_num=f"Error ({type(e).__name__}): {str(e)}")
-
+            if suppress_exception:
+                self.add_to_output(ExpressionType.TEXT, string_or_num=f"Error ({type(e).__name__}): {str(e)}")
+            else:
+                raise
     def show_default_output(self): ...
 
     def show_output(self):
@@ -755,7 +760,7 @@ if __name__ == "__main__":
     a = BasePlayer()
     # import time
     # m = time.perf_counter()
-    a.simulate("""var(p, p3x) print(p: {p})""")
+    a.simulate("""var(pa,racecar) print(p: {pa}) -print(p: {pa})""")
     # n = time.perf_counter()
     # print(n-m)
     b=a.show_output()
