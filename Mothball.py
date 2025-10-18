@@ -291,8 +291,8 @@ class MainWindow(QMainWindow):
         newcell = self.addCell(cell, cell.cellType)
         newcell.setupCell(d)
         if cell.cellType != CellType.OPTIMIZE:
-            QTimer.singleShot(0,newcell.input_field.adjustHeight)
-            QTimer.singleShot(0,newcell.adjust_output_height)
+            QTimer.singleShot(50,newcell.input_field.adjustHeight)
+            QTimer.singleShot(50,newcell.adjust_output_height)
 
     def addCell(self, after_cell_or_at_index: Optional[Union[CodeCell.SimulationSection, TextCell.TextSection, AngleOptimizerCell.OptimizationSection, int]] = None, cellType: CellType = CellType.XZ, addActionStack:bool = True, *, initialMode: TextCellState = TextCellState.EDIT):
         """
