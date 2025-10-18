@@ -117,26 +117,29 @@ class ActionStack:
                 t = action.data["cell_type"]
                 if t == CellType.TEXT:
                     cell = self.parent.addCell(action.index, cellType=action.data['cell_type'], addActionStack=False)
-                    cell.input_field.setText(action.data["raw_text"])
-                    cell.render_field.renderTextfromMarkdown(cell.linter, action.data["raw_text"])
-                    QApplication.processEvents()
+                    # cell.input_field.setText(action.data["raw_text"])
+                    # cell.render_field.renderTextfromMarkdown(cell.linter, action.data["raw_text"])
+                    # QApplication.processEvents()
+                    cell.setupCell(action.data)
                     QTimer.singleShot(100, lambda: self.continueProcess(cell))
                     adding.append(ActionStack.DeleteCellAction(action.index))
                 elif t == CellType.XZ or t == CellType.Y:
                     cell = self.parent.addCell(action.index, cellType=action.data["cell_type"], addActionStack=False)
-                    cell.input_field.setText(action.data["code"])
-                    cell.output_field.renderTextfromOutput(cell.linter, action.data["raw_output"])
-                    cell.raw_output = action.data["raw_output"]
-                    cell.cell_name.setText(action.data['name'])
-                    QApplication.processEvents()
+                    # cell.input_field.setText(action.data["code"])
+                    # cell.output_field.renderTextfromOutput(cell.linter, action.data["raw_output"])
+                    # cell.raw_output = action.data["raw_output"]
+                    # cell.cell_name.setText(action.data['name'])
+                    # QApplication.processEvents()
+                    cell.setupCell(action.data)
                     QTimer.singleShot(100, lambda: self.continueProcess(cell))
                     adding.append(ActionStack.DeleteCellAction(action.index))
                 elif t == CellType.OPTIMIZE:
                     cell = self.parent.addCell(action.index, cellType=action.data["cell_type"], addActionStack=False)
-                    cell.var_box_model.basicSetup(action.data['variables'])
-                    cell.drag_and_accel_model.basicSetup(action.data['drags'])
-                    cell.constraints_model.basicSetup(action.data['constraints'])
-                    cell.toConsole(action.data['output'])
+                    # cell.var_box_model.basicSetup(action.data['variables'])
+                    # cell.drag_and_accel_model.basicSetup(action.data['drags'])
+                    # cell.constraints_model.basicSetup(action.data['constraints'])
+                    # cell.toConsole(action.data['output'])
+                    cell.setupCell(action.data)
 
             case self.MOVE_ACTION: # pop the move action, add the same move action
                 self.parent.moveCell(action.source, action.direction, addActionStack=False)
