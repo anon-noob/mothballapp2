@@ -140,7 +140,7 @@ def evaluate(expression, variables: dict=None):
         result =  _evaluate(tokens, variables)
         return result
     except Exception as e:
-        raise SyntaxError(f"{e}: {expression}")
+        raise SyntaxError(f"{e} in expression '{expression}'")
 
 # print(evaluate("2**(3-1)/(2+6)"))
 # print(evaluate("-1+2**(4-8*p4x)", {'p4x':1/2}))
