@@ -48,8 +48,8 @@ class Worker(QObject):
 
 class SimulationSection(Cell):
     "Mothball Code Cell, `CodeEdit` as the input field, `RenderViewer` as the output viewer. The actual highlighting is done here, and the highlighting logic is computed in its linter `self.linter`."
-    def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, mode: CellType):
-        super().__init__(parent, generalOptions, colorOptions, textOptions, remove_callback, add_callback, move_callback, change_callback, mode)
+    def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, copy_callback, mode: CellType):
+        super().__init__(parent, generalOptions, colorOptions, textOptions, remove_callback, add_callback, move_callback, change_callback, copy_callback, mode)
         self.mode = mode
         self.words = []
         self.raw_output = []
@@ -287,6 +287,14 @@ class SimulationSection(Cell):
             "raw_output": self.raw_output
         }
         return data
+    
+    def setupCell(self, data):
+        if not all([x in ("cell_type", "name","code","exec_time","has_changed","raw_output") for x in data]):
+            return
+        self.input_field.setText(data['code'].rstrip())
+        self.cell_name.setText(data['name'])
+        self.output_field.renderTextfromOutput(self.linter, data['raw_output'])
+        self.raw_output = data['raw_output']
     
     def resizeEvent(self, event):
         self.adjust_output_height()

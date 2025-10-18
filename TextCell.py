@@ -15,8 +15,8 @@ class TextSection(Cell):
     Markdown Cell with a `CodeEdit` input and a `RenderViewer` output. This cell alternates between showing `CodeEdit` in edit mode, and `RenderViewer` in render mode.
     """
 
-    def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, initialMode: TextCellState):
-        super().__init__(parent, generalOptions, colorOptions, textOptions, remove_callback, add_callback, move_callback, change_callback, CellType.TEXT)
+    def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, copy_callback, initialMode: TextCellState):
+        super().__init__(parent, generalOptions, colorOptions, textOptions, remove_callback, add_callback, move_callback, change_callback, copy_callback, CellType.TEXT)
         self.mode = initialMode
         self.linter = MDLinter(generalOptions, colorOptions, textOptions)
         self.raw_text = ""
@@ -98,6 +98,13 @@ class TextSection(Cell):
             "has_changed": False
         }
         return data
+
+    def setupCell(self, data):
+        if not all([x in ('raw_text', 'cell_type', 'mode', 'has_changed') for x in data]):
+            return
+        self.input_field.setText(data['raw_text'])
+        if data['mode'] == 'render':
+            self.renderText()
 
     def resizeEvent(self, event):
         if not self.render_field.isHidden():

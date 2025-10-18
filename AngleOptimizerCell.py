@@ -12,7 +12,8 @@ from matplotlib.figure import Figure
 class PlotWidget(FigureCanvas):
     "Widget for displaying a plot"
     def __init__(self, parent=None):
-        fig = Figure(figsize=(3.6, 3.5), facecolor="#393939") # in inches, change this to change initial setup
+        fig = Figure(figsize=(3.6, 1.6), facecolor="#393939") # in inches, change this to change initial setup
+        # fig = Figure(facecolor="#393939") # in inches, change this to change initial setup
         self.ax = fig.add_subplot(111)
 
         super().__init__(fig)
@@ -246,8 +247,8 @@ class OptimizationSection(Cell):
     "Mothball Angle Optimizer, for optimizing specific sequences of angles."
     MAX = 'max'
     MIN = 'min'
-    def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback):
-        super().__init__(parent, generalOptions, colorOptions, textOptions, remove_callback, add_callback, move_callback, change_callback, CellType.OPTIMIZE)
+    def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, copy_callback):
+        super().__init__(parent, generalOptions, colorOptions, textOptions, remove_callback, add_callback, move_callback, change_callback, copy_callback, CellType.OPTIMIZE)
         self.mode = CellType.OPTIMIZE
         self.p = parent # The main Mothball instance 
         self.worker = None
@@ -262,6 +263,7 @@ class OptimizationSection(Cell):
         self.bottom_panel = QHBoxLayout()
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        vsplitter = QSplitter(Qt.Orientation.Vertical)
         splitter.setStyleSheet("QSplitter::handle {background-color: "+"#595959"+"; border-radius: 3px}")
         left_widget = QWidget()
         left_widget.setLayout(self.left_content_layout)
@@ -271,6 +273,8 @@ class OptimizationSection(Cell):
         splitter.addWidget(right_widget)
         splitter.setStretchFactor(0, 2)
         splitter.setStretchFactor(1, 1)
+        vsplitter.setStretchFactor(0, 2)
+        vsplitter.setStretchFactor(1, 1)
         self.main_layout.addWidget(splitter)
         
         # Help Button (TO CHANGE)
@@ -384,14 +388,19 @@ class OptimizationSection(Cell):
 
         self.left_content_layout.addWidget(self.constraints_table)
 
+
         # View results
         self.console = QTextEdit()
         self.console.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.right_content_layout.addWidget(self.console)
+        vsplitter.addWidget(self.console)
+        # self.right_content_layout.addWidget(self.console)
 
         # View graph
         self.plot = PlotWidget()
-        self.right_content_layout.addWidget(self.plot)
+        vsplitter.addWidget(self.plot)
+        # self.right_content_layout.addWidget(self.plot)
+
+        self.right_content_layout.addWidget(vsplitter)
 
         self.run_button.clicked.connect(self.runSolver)
 
@@ -541,6 +550,19 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
             }
         return data
 
+    def setupCell(self, data):
+        if not all([x in ("cell_type", "axis","mode","variables","drags","constraints", "output", "points") for x in data]):
+            return
+        if self.axis_to_optimize != data['axis']:
+            self.choose_axis_button.click()
+        if self.max_or_min != data['mode']:
+            self.choose_max_or_min_button.click()
+        self.var_box_model.basicSetup(data['variables'])
+        self.drag_and_accel_model.basicSetup(data['drags'])
+        self.constraints_model.basicSetup(data['constraints'])
+        self.toConsole(data['output'])
+        self.plot.setData(data['points'][0], data['points'][1])
+
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Backspace:
             focused = self.focusWidget()
@@ -551,12 +573,12 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
 
         return super().keyPressEvent(event)
 
-# if __name__ == "__main__":
-#     from PyQt5.QtWidgets import QMainWindow, QApplication
-#     import sys
-#     app = QApplication(sys.argv)
-#     window = QMainWindow()
-#     window.setCentralWidget(OptimizationSection(window, {}, {}, {}, 0, 0, 0, lambda x: x))
-#     window.resize(1200, 800)
-#     window.show()
-#     sys.exit(app.exec())
+if __name__ == "__main__":
+    from PyQt5.QtWidgets import QMainWindow, QApplication
+    import sys
+    app = QApplication(sys.argv)
+    window = QMainWindow()
+    window.setCentralWidget(OptimizationSection(window, {}, {}, {}, 0, 0, 0, lambda x: x))
+    window.resize(1200, 800)
+    window.show()
+    sys.exit(app.exec())
