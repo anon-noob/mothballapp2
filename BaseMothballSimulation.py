@@ -190,7 +190,6 @@ class BasePlayer:
 
             elif char == "}":
                 if depth == 0:
-                    print(string)
                     raise SyntaxError("Unmatched Brackets")
 
                 depth -= 1
@@ -530,7 +529,11 @@ class BasePlayer:
         if func is None:
             func = self.local_funcs.get(func_name) # CHANGES
             if func is None:
-                error_msg = f"{func_name} is not a valid function. "
+                if self.call_stack:
+                    error_msg = f"In {', '.join(self.call_stack)} -> "
+                else:
+                    error_msg = ''
+                error_msg += f"{func_name} is not a valid function. "
                 suggestions = self.get_suggestions(func_name)
                 
                 if suggestions:
