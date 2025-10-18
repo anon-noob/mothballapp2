@@ -4,9 +4,7 @@ Also contains `QsciScintilla` editor, subclassed by `CodedEditor`, and a `QsciLe
 Also contains `RenderViewer`, used to render Mothball code outputs and markdown text.
 """
 
-from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QPushButton,QHBoxLayout,QTextBrowser,QAction, QShortcut
-)
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QPushButton,QHBoxLayout,QTextBrowser,QAction, QShortcut
 from PyQt5.QtGui import QColor, QFont, QKeySequence
 from PyQt5.QtCore import Qt
 from PyQt5.Qsci import QsciLexerCustom, QsciScintilla
@@ -26,7 +24,7 @@ class Cell(QWidget):
     """
     Base `Cell` class, contains the left side panel framework and an empty main layout
     """
-    def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, cellType: CellType):
+    def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, copy_callback, cellType: CellType):
         super().__init__(parent)
         self.cellType = cellType
         self.colorOptions = colorOptions
@@ -40,9 +38,9 @@ class Cell(QWidget):
         # Side button panel (vertical)
         self.side_panel = QWidget(self)
         self.side_panel.setStyleSheet("QPushButton{background-color: " + "#1d1d1d}")
-        self.side_panel_layout = QVBoxLayout(self.side_panel)
+        self.side_panel_layout = QGridLayout(self.side_panel)
         self.side_panel_layout.setContentsMargins(0, 0, 0, 0)
-        self.side_panel_layout.setSpacing(5)
+        self.side_panel_layout.setSpacing(2)
         self.up_button = QPushButton("↑")
         self.down_button = QPushButton("↓")
         self.run_button = QPushButton("▶")
@@ -51,13 +49,14 @@ class Cell(QWidget):
         self.add_text_button = QPushButton("T")
         self.add_optimize_button = QPushButton("Op")
         self.delete_button = QPushButton("🗑")
+        self.copy_button = QPushButton("Copy")
         self.setStyleSheet("""QToolTip { 
                            background-color: #2e2e2e; 
                            color: white; 
                            border: black solid 1px
                            }""")
-        self.up_button.setToolTip("Move Up")
-        self.down_button.setToolTip("Move Down")
+        self.up_button.setToolTip("Swap this cell with the cell above")
+        self.down_button.setToolTip("Swap this cell with the cell below")
         if cellType == CellType.TEXT:
             self.run_button.setToolTip("Render/Edit")
         else:
@@ -67,17 +66,22 @@ class Cell(QWidget):
         self.add_text_button.setToolTip("Add Text Section Below")
         self.delete_button.setToolTip("Delete Section")
         self.add_optimize_button.setToolTip("Add Optimization Section Below")
+        self.copy_button.setToolTip("Copy this current cell")
 
-        self.side_panel_layout.addWidget(self.run_button)
-        self.side_panel_layout.addWidget(self.add_xz_button)
-        self.side_panel_layout.addWidget(self.add_y_button)
-        self.side_panel_layout.addWidget(self.add_text_button)
-        self.side_panel_layout.addWidget(self.add_optimize_button)
-        self.side_panel_layout.addWidget(self.delete_button)
-        self.side_panel_layout.addWidget(self.up_button)
-        self.side_panel_layout.addWidget(self.down_button)
-        self.side_panel_layout.addStretch(1)
-        self.side_panel.setFixedWidth(40)
+        l = [self.up_button, self.down_button, self.run_button, self.add_xz_button, self.add_y_button, self.add_text_button, self.add_optimize_button, self.delete_button, self.copy_button]
+        for b in l:
+            b.setFixedSize(40,40)
+
+        self.side_panel_layout.addWidget(self.run_button, 0, 1)
+        self.side_panel_layout.addWidget(self.add_xz_button, 1, 0)
+        self.side_panel_layout.addWidget(self.add_y_button, 2, 0)
+        self.side_panel_layout.addWidget(self.add_text_button, 3, 0)
+        self.side_panel_layout.addWidget(self.add_optimize_button, 4, 0)
+        self.side_panel_layout.addWidget(self.up_button, 1, 1)
+        self.side_panel_layout.addWidget(self.down_button, 2, 1)
+        self.side_panel_layout.addWidget(self.delete_button, 3, 1)
+        self.side_panel_layout.addWidget(self.copy_button, 4, 1)
+        self.side_panel_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.main_layout.addWidget(self.side_panel)
 
         self.up_button.clicked.connect(lambda: move_callback(self, -1))
@@ -88,6 +92,7 @@ class Cell(QWidget):
         self.add_y_button.clicked.connect(lambda: add_callback(self, CellType.Y))
         self.add_text_button.clicked.connect(lambda: add_callback(self, CellType.TEXT))
         self.add_optimize_button.clicked.connect(lambda: add_callback(self, CellType.OPTIMIZE))
+        self.copy_button.clicked.connect(lambda: copy_callback(self))
 
 class CellLexer(QsciLexerCustom):
     "Lexer for notebook cells, both code and text cells. The actual lexing is manually done at `CodeCell` and `TextCell`."
@@ -179,7 +184,11 @@ class CodeEdit(QsciScintilla):
 
     def comment(self):
         text = self.selectedText()
-        if text:
+        if not text:
+            return
+        if text.startswith("#") and text.endswith("#"):
+            self.replaceSelectedText(f'{text[1:len(text)-1]}')
+        else:
             self.replaceSelectedText(f'#{text}#')
 
 

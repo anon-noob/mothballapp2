@@ -7,6 +7,7 @@ Contains:
 - Customizable colors and other settings (NOT FINISHED/FULLY IMPLEMENTED)
 """
 
+import CrashHandler
 import sys,os
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QPushButton, QHBoxLayout, QScrollArea, QMenu, QMainWindow, QFileDialog, QMessageBox, QShortcut
@@ -27,18 +28,12 @@ from Enums import CellType, TextCellState
 from version import __version__
 import MacroViewer
 
-# Scintilla resizing issue with newlines (prob show scrollbar?) <-- yep i set vertical scrollbar always on (Aug 5, 2025) but it doesn't fix the issue. 
-# Yes it does, just set the CodeEdit(QSciScintilla) to have a verical scroll policy always off (Aug 5, 2025)
-
 # Reorganize the help page
 # Fix settings
 # Add other remaining colors
-# Var should not lint as strings
 # Something is wrong with action stack when undoing towards the end
 
 # Linting in documentation with custom functions
-
-# Disable automatic execution in text cells (why tf is that a thing) -> done
 
 # Debian Linux fix: run in console `sudo apt-get install libxcb-xinerama0`
 
@@ -247,7 +242,7 @@ class MainWindow(QMainWindow):
         
         self.setCentralWidget(central_widget)  # Set central widget
 
-        self.addCell()  # Add the first section by default
+        
 
         self.empty_add_xz_button.clicked.connect(lambda: self.addCell(cellType=CellType.XZ))
         self.empty_add_y_button.clicked.connect(lambda: self.addCell(cellType=CellType.Y))
@@ -261,7 +256,41 @@ class MainWindow(QMainWindow):
         self.undo_shortcut.activated.connect(self.undo)
         self.redo_shortcut = QShortcut(QKeySequence("Ctrl+Y"), self)
         self.redo_shortcut.activated.connect(self.redo)
+
+        self.addCell()  # Add the first section by default
     
+        QTimer.singleShot(0, self.restoreWorkFromCrash)
+
+    def restoreWorkFromCrash(self):
+        with open(os.path.join(FileHandler.getPathToLastState(), "LastState.json"), "r") as f:
+            d = json.load(f)
+            if not d.get('crashed'):
+                return
+        
+        if d.get('tempfile'):
+            a = QMessageBox.question(self, "Restore Work", f"Mothball previously crashed. Restore previous notebook?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if a == QMessageBox.StandardButton.Yes:
+                self.openFile(os.path.join(FileHandler.getPathToLastState(), "tempfile.json"))
+
+    def copyCell(self, cell_or_index_to_copy: Union[CodeCell.SimulationSection, TextCell.TextSection, AngleOptimizerCell.OptimizationSection, int]):
+        """
+        Copy the cell given, or the cell at the index given.
+        """
+        if isinstance(cell_or_index_to_copy, int):
+            index = cell_or_index_to_copy
+            cell = self.CELLS[cell_or_index_to_copy + 1]
+        else:
+            index = self.section_container.indexOf(cell_or_index_to_copy)
+            cell = cell_or_index_to_copy
+
+        d = cell.getCellData()
+        
+        newcell = self.addCell(cell, cell.cellType)
+        newcell.setupCell(d)
+        if cell.cellType != CellType.OPTIMIZE:
+            QTimer.singleShot(0,newcell.input_field.adjustHeight)
+            QTimer.singleShot(0,newcell.adjust_output_height)
+
     def addCell(self, after_cell_or_at_index: Optional[Union[CodeCell.SimulationSection, TextCell.TextSection, AngleOptimizerCell.OptimizationSection, int]] = None, cellType: CellType = CellType.XZ, addActionStack:bool = True, *, initialMode: TextCellState = TextCellState.EDIT):
         """
         Add a new xz (horizontal), y (vertical), or text (markdown) cell below. Returns the new cell.
@@ -270,11 +299,11 @@ class MainWindow(QMainWindow):
         QApplication.processEvents()
 
         if cellType == CellType.XZ or cellType == CellType.Y:
-            section = CodeCell.SimulationSection(self, self.settings, self.codecell_colors, self.textcell_colors, self.removeCell, self.addCell, self.moveCell, self.onChangeDetected, mode=cellType)
+            section = CodeCell.SimulationSection(self, self.settings, self.codecell_colors, self.textcell_colors, self.removeCell, self.addCell, self.moveCell, self.onChangeDetected, self.copyCell, mode=cellType)
         elif cellType == CellType.TEXT:
-            section = TextCell.TextSection(self, self.settings, self.codecell_colors, self.textcell_colors, self.removeCell, self.addCell, self.moveCell, self.onChangeDetected, initialMode=initialMode)
+            section = TextCell.TextSection(self, self.settings, self.codecell_colors, self.textcell_colors, self.removeCell, self.addCell, self.moveCell, self.onChangeDetected, self.copyCell, initialMode=initialMode)
         elif cellType == CellType.OPTIMIZE:
-            section = AngleOptimizerCell.OptimizationSection(self, self.settings, self.codecell_colors, self.textcell_colors, self.removeCell, self.addCell, self.moveCell, self.onChangeDetected)
+            section = AngleOptimizerCell.OptimizationSection(self, self.settings, self.codecell_colors, self.textcell_colors, self.removeCell, self.addCell, self.moveCell, self.onChangeDetected, self.copyCell)
 
         if after_cell_or_at_index is None: # Add to the bottom end
             self.section_container.addWidget(section)
@@ -474,31 +503,34 @@ class MainWindow(QMainWindow):
         self.actionStack.reset()
         self.setWindowTitle("Mothball Notebook - Unnamed")
     
-    def openFile(self):
+    def openFile(self, filepath: str = None):
         """
         Handles opening and loading files. See `FileHandler` for the data being loaded, which is a dictionary.
         """
-        if self.unsaved_changes:
-            reply = QMessageBox.question(self, "Open Notebook", "Open a notebook without saving?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            if reply == QMessageBox.No:
-                return
+        from_dialog = False
+        if not filepath:
+            from_dialog = True
+            
+        if from_dialog:
+            if self.unsaved_changes:
+                reply = QMessageBox.question(self, "Open Notebook", "Open a notebook without saving?", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                if reply == QMessageBox.No:
+                    return
 
-        filepath = QFileDialog(self).getOpenFileName(self, "Open File", FileHandler.getNotebooks())[0]
-        errors = False
-        logs = None
-        warning = False
+            filepath = QFileDialog(self).getOpenFileName(self, "Open File", FileHandler.getNotebooks())[0]
+
         if not filepath:
             return
-        self.path = filepath
-        self.clearAllCells()
+
         fileName = os.path.splitext(os.path.basename(filepath))[0]
+        logs = None
+        self.clearAllCells()
         try:
             f = FileHandler.loadFile(filepath)
         except Exception as logs:
             QMessageBox.warning(self, "Failed to load", f"file {self.name} has encountered a fatal error. Please check and update the file!\nLogs: {logs}", QMessageBox.StandardButton.Ok)
             return
         i = 0
-        self.name = fileName
         same_version = self.version == f.version
 
         while f.version != self.version:
@@ -516,49 +548,50 @@ class MainWindow(QMainWindow):
                 break
 
             try:
-                if cell.cell_type == CellType.TEXT:
-                    b = self.addCell(cellType=cell.cell_type)
-                    b.input_field.setText(cell.raw_text)
-                    if cell.mode == "render" and same_version:
-                        b.renderText()
-                    else:
-                        warning = True
+                c = self.addCell(cellType=cell.cell_type)
+                c.setupCell(cell.__dict__)
+                # if cell.cell_type == CellType.TEXT:
+                #     b = self.addCell(cellType=cell.cell_type)
+                #     b.input_field.setText(cell.raw_text)
+                #     if cell.mode == "render" and same_version:
+                #         b.renderText()
 
-                elif cell.cell_type == CellType.XZ or cell.cell_type == CellType.Y:
-                    b = self.addCell(cellType=cell.cell_type)
-                    b.input_field.setText(cell.code.rstrip())
-                    b.cell_name.setText(cell.name)
-                    if same_version:
-                        b.output_field.renderTextfromOutput(b.linter, cell.raw_output)
-                        b.raw_output = cell.raw_output
-                    else:
-                        warning = True
+
+                # elif cell.cell_type == CellType.XZ or cell.cell_type == CellType.Y:
+                #     b = self.addCell(cellType=cell.cell_type)
+                #     b.input_field.setText(cell.code.rstrip())
+                #     b.cell_name.setText(cell.name)
+                #     if same_version:
+                #         b.output_field.renderTextfromOutput(b.linter, cell.raw_output)
+                #         b.raw_output = cell.raw_output
+
                 
-                elif cell.cell_type == CellType.OPTIMIZE:
-                    b = self.addCell(cellType=cell.cell_type)
-                    if cell.axis == 'Z': 
-                        b.choose_axis_button.click()
-                    if cell.mode == 'max':
-                        b.choose_max_or_min_button.click()
-                    b.var_box_model.basicSetup(cell.variables)
-                    b.drag_and_accel_model.basicSetup(cell.drags)
-                    b.constraints_model.basicSetup(cell.constraints)
-                    b.toConsole(cell.output)
-                    b.plot.setData(cell.points[0], cell.points[1])
+                # elif cell.cell_type == CellType.OPTIMIZE:
+                #     b = self.addCell(cellType=cell.cell_type)
+                #     if cell.axis == 'Z': 
+                #         b.choose_axis_button.click()
+                #     if cell.mode == 'max':
+                #         b.choose_max_or_min_button.click()
+                #     b.var_box_model.basicSetup(cell.variables)
+                #     b.drag_and_accel_model.basicSetup(cell.drags)
+                #     b.constraints_model.basicSetup(cell.constraints)
+                #     b.toConsole(cell.output)
+                #     b.plot.setData(cell.points[0], cell.points[1])
             except Exception as e:
                 print(e)
-                errors = True
 
             i += 1
-        self.unsaved_changes = False
-        self.setWindowTitle(f"Mothball Notebook v{self.version} - " + fileName)
+
+        if from_dialog:
+            self.path = filepath
+            self.name = fileName
+            self.setWindowTitle(f"Mothball Notebook v{self.version} - " + fileName)
+            self.unsaved_changes = False
+
+
         self.actionStack.reset()
         QApplication.processEvents()
         QTimer.singleShot(100, self.continueOpenFileProcess)
-        if errors:
-            QMessageBox.warning(self, "Failed to load", f"file {self.name} has failed to load completely. Please check and update the file!\nLogs: {logs}", QMessageBox.StandardButton.Ok)
-        elif warning:
-            QMessageBox.warning(self, "Failed to load", f"file {self.name} is outdated. You can update the file by running each cell and saving.", QMessageBox.StandardButton.Ok)
 
     def continueOpenFileProcess(self):
         """
@@ -615,11 +648,16 @@ class MainWindow(QMainWindow):
             for page in (self.about_page, self.wordle_page, self.help_page, self.settings_page):
                 if page is not None and page.isVisible():
                     page.close()
+            
+            with open(os.path.join(FileHandler.getPathToLastState(), "LastState.json"), 'w') as file:
+                json.dump({"crashed":False, "tempfile":False, "log": ""}, file)
             return super().closeEvent(event)
         else:
             for page in (self.about_page, self.wordle_page, self.help_page, self.settings_page):
                 if page is not None and page.isVisible():
                     page.close()
+            with open(os.path.join(FileHandler.getPathToLastState(), "LastState.json"), 'w') as file:
+                json.dump({"crashed":False, "tempfile":False, "log": ""}, file)
             return super().closeEvent(event)
     
     def openPkWordle(self):
@@ -656,7 +694,12 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
+    
+    crash_handler = CrashHandler.CrashHandler(window)
+    sys.excepthook = crash_handler.f
+
     window.resize(1200, 800)
+    window.setMinimumSize(600,400)
     window.show()
     sys.exit(app.exec())
 
