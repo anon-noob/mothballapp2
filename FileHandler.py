@@ -1,11 +1,15 @@
-import os, platform, json
+import os, platform, sys, json
 from DataStorage import CodeCell, TextCell, AngleOptimizerCell, File
 from Enums import *
 from version import __version__
-
 VERSION = __version__
 user_path = os.path.expanduser("~")
 operating_system = platform.system()
+
+if getattr(sys, "frozen", False):
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.abspath(".")
 
 default_code_colors = {
     "Version":VERSION,
@@ -75,6 +79,12 @@ default_text_colors = {
     StringLiterals.RENDER_BACKGROUND: "#2e2e2e"
 }
 
+last_state = {
+    "crashed":False,
+    "tempfile":False,
+    "log":""
+    }
+
 def getSettings(fileName):
     "Get settings from `fileName`. For general settings, use `getGeneralSettings`"
     path = os.path.join(getPathToSettings(), fileName)
@@ -124,7 +134,6 @@ def createDirectories():
     Nothing happens if the directories already exist.
     """
     
-    # ADD minigames later
     path = None
     # Make Setting Directory
     if operating_system == "Windows":
@@ -156,6 +165,28 @@ def createDirectories():
     # Make Saved Notebook Directory
     os.makedirs(os.path.join(user_path, "Documents", "Mothball", "Notebooks"),exist_ok=True)
     os.makedirs(os.path.join(user_path, "Documents", "Mothball", "Macros"),exist_ok=True)
+
+    # Crash Logs
+    os.makedirs(os.path.join(user_path, "Documents", "Mothball", "Logs"),exist_ok=True)
+    if not os.path.exists(os.path.join(user_path, "Documents", "Mothball", "Logs", "crash_logs.txt")):
+        with open(os.path.join(user_path, "Documents", "Mothball", "Logs", "crash_logs.txt"), "w") as file:
+            file.write("Crash Logs File\n")
+
+    # Last State
+    p = os.path.join(base_path, "Last_State")
+    os.makedirs(p, exist_ok=True)
+    if not os.path.exists(os.path.join(p, "LastState.json")):
+        with open(os.path.join(p, "LastState.json"), "w") as file:
+            json.dump(last_state, file)
+    if not os.path.exists(os.path.join(p, "tempfile.json")):
+        with open(os.path.join(p, "tempfile.json"), "w") as file:
+            json.dump({}, file)
+
+def getPathtoLogs():
+    return os.path.join(user_path, "Documents", "Mothball", "Logs", "crash_logs.txt")
+
+def getPathToLastState():
+    return os.path.join(base_path, "Last_State")
 
 def getPathToSettings():
     """
@@ -238,62 +269,6 @@ def loadFile(filepath):
 
     return File(f['fileName'], f['version'], entries)
 
-# def reindexFiles():
-#     "Reindex cells to start at 0 instead of 1, for versions 1.1.0 and above"
-#     notebooks_path = getNotebooks()
-#     files = [f for f in os.listdir(notebooks_path) if os.path.isfile(os.path.join(notebooks_path, f))]
-
-#     for file in files:
-#         try:
-#             with open(os.path.join(notebooks_path,file), "r") as f:
-#                 data = json.load(f)
-            
-#             if not versionIsOutdated(data["version"]):
-#                 continue
-#             if str(0) in data: # already reindexed
-#                 continue
-
-#             new_data = {"fileName": data["fileName"], "version": VERSION}
-
-#             i = 1
-#             while str(i) in data:
-#                 new_data[str(i-1)] = data[str(i)]
-#                 i += 1
-
-#             with open(os.path.join(notebooks_path,file), "w") as f:
-#                 json.dump(new_data, f, indent=4)
-        
-#         except Exception as e:
-#             pass
-
-# def updateFiles():
-#     notebooks_path = getNotebooks()
-#     files = [f for f in os.listdir(notebooks_path) if os.path.isfile(os.path.join(notebooks_path, f))]
-
-#     for file in files:
-#         try:
-#             with open(os.path.join(notebooks_path,file), "r") as f:
-#                 data = json.load(f)
-
-#             i = 0
-#             while str(i) in data:
-#                 if 'type' in data[str(i)]:
-#                     del data[str(i)]['type']
-#                 if isinstance(data[str(i)]['mode'], str) or isinstance(data[str(i)]['mode'], int):
-#                     a = data[str(i)]['mode']
-#                     data[str(i)]['cell_type'] = {"xz": 0, "y": 1, "text": 2}.get(a, a)
-#                     if a != 2:
-#                         del data[str(i)]['mode']
-#                     else:
-#                         data[str(i)]['mode'] = StringLiterals.RENDER
-
-#                 i += 1
-            
-#             with open(os.path.join(notebooks_path,file), "w") as f:
-#                 json.dump(data, f, indent=4)
-#         except Exception as e:
-#             pass
-
 def versionIsOutdated(version_str: str):
     """
     Compares the `version_str` with the current version given by `VERSION`, returning True if `VERSION` is later than `version_str`
@@ -315,96 +290,60 @@ def versionIsOutdated(version_str: str):
 def getDefaultSettings():
     return default_settings, default_code_colors, default_text_colors
 
-def v1_1_4_to_v1_1_5_settings():
+def settings_version_upgrade(original_version: str, to_version: str, func = None):
     g = getGeneralSettings()
     c = getCodeColorSettings()
     t = getTextColorSettings()
 
-    g['Version'] = "1.1.5"
-    c['Version'] = "1.1.5"
-    t['Version'] = "1.1.5"
+    assert g['Version'] == original_version
+    assert c['Version'] == original_version
+    assert t['Version'] == original_version
 
+    g['Version'] = to_version
+    c['Version'] = to_version
+    t['Version'] = to_version
+
+    if func is not None:
+        g,c,t = func(g,c,t)
+    
+    saveGeneralSettings(g)
+    saveCodeColorSettings(c)
+    saveTextColorSettings(t)
+
+    return g,c,t    
+
+def v1_1_4_to_v1_1_5_settings(g,c,t):
     oldpath = "Path to Minecraft Macro Folder"
     if oldpath in g:
         p = g.pop(oldpath)
         g["Macro Folders"] = {'default': getMacros(), "path1": p}
 
-    saveGeneralSettings(g)
-    saveCodeColorSettings(c)
-    saveTextColorSettings(t)
-
-    return g,c,t
-
-# yea im gonna clean this up later
-def v1_1_5_to_v1_1_6_settings():
-    g = getGeneralSettings()
-    c = getCodeColorSettings()
-    t = getTextColorSettings()
-
-    g['Version'] = "1.1.6"
-    c['Version'] = "1.1.6"
-    t['Version'] = "1.1.6"
-
-    saveGeneralSettings(g)
-    saveCodeColorSettings(c)
-    saveTextColorSettings(t)
-
-    return g,c,t
-
-def v1_1_3_to_v1_1_4_settings():
-    g = getGeneralSettings()
-    c = getCodeColorSettings()
-    t = getTextColorSettings()
-
-    g['Version'] = "1.1.4"
-    c['Version'] = "1.1.4"
-    t['Version'] = "1.1.4"
-
-    saveGeneralSettings(g)
-    saveCodeColorSettings(c)
-    saveTextColorSettings(t)
-
     return g,c,t
 
 settings_version_map = {
-    "1.1.3": v1_1_3_to_v1_1_4_settings,
-    "1.1.4": v1_1_4_to_v1_1_5_settings,
-    "1.1.5": v1_1_5_to_v1_1_6_settings}
+    "1.1.3": lambda: settings_version_upgrade("1.1.3", "1.1.4"),
+    "1.1.4": lambda: settings_version_upgrade("1.1.4", "1.1.5", v1_1_4_to_v1_1_5_settings),
+    "1.1.5": lambda: settings_version_upgrade("1.1.5", "1.1.6"),
+    "1.1.6": lambda: settings_version_upgrade("1.1.6", "1.1.7")}
 
-def v1_1_3_to_v1_1_4_notebook(path: str):
+def notebook_version_upgrade(path: str, original_version: str, to_version: str, func = None):
     with open(path) as f:
         d = json.load(f)
 
-    d['version'] = '1.1.4'
+    assert d['version'] == original_version
+    d['version'] = to_version
+
+    if func is not None:
+        d = func(d)
 
     with open(path, "w") as f:
         json.dump(d, f)
     
     return d
 
-def v1_1_4_to_v1_1_5_notebook(path: str):
-    with open(path) as f:
-        d = json.load(f)
-
-    d['version'] = '1.1.5'
-
-    with open(path, "w") as f:
-        json.dump(d, f)
-    
-    return d
-
-def v1_1_5_to_v1_1_6_notebook(path: str):
-    with open(path) as f:
-        d = json.load(f)
-
-    d['version'] = '1.1.6'
-
-    with open(path, "w") as f:
-        json.dump(d, f)
-    
-    return d
 
 notebooks_version_map = {
-    "1.1.3": v1_1_3_to_v1_1_4_notebook,
-    "1.1.4": v1_1_4_to_v1_1_5_notebook,
-    "1.1.5": v1_1_5_to_v1_1_6_notebook}
+    "1.1.3": lambda path: notebook_version_upgrade(path, "1.1.3", "1.1.4"),
+    "1.1.4": lambda path: notebook_version_upgrade(path, "1.1.4", "1.1.5"),
+    "1.1.5": lambda path: notebook_version_upgrade(path, "1.1.5", "1.1.6"),
+    "1.1.6": lambda path: notebook_version_upgrade(path, "1.1.6", "1.1.7")}
