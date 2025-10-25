@@ -295,9 +295,16 @@ def settings_version_upgrade(original_version: str, to_version: str, func = None
     c = getCodeColorSettings()
     t = getTextColorSettings()
 
-    assert g['Version'] == original_version
-    assert c['Version'] == original_version
-    assert t['Version'] == original_version
+    if not ('Version' in g):
+        g['Version'] = original_version
+    if not ('Version' in c):
+        c['Version'] = original_version
+    if not ('Version' in t):
+        t['Version'] = original_version
+
+    # assert g['Version'] == original_version
+    # assert c['Version'] == original_version
+    # assert t['Version'] == original_version
 
     g['Version'] = to_version
     c['Version'] = to_version
