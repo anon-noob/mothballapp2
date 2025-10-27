@@ -117,28 +117,16 @@ class ActionStack:
                 t = action.data["cell_type"]
                 if t == CellType.TEXT:
                     cell = self.parent.addCell(action.index, cellType=action.data['cell_type'], addActionStack=False)
-                    # cell.input_field.setText(action.data["raw_text"])
-                    # cell.render_field.renderTextfromMarkdown(cell.linter, action.data["raw_text"])
-                    # QApplication.processEvents()
                     cell.setupCell(action.data)
                     QTimer.singleShot(100, lambda: self.continueProcess(cell))
                     adding.append(ActionStack.DeleteCellAction(action.index))
                 elif t == CellType.XZ or t == CellType.Y:
                     cell = self.parent.addCell(action.index, cellType=action.data["cell_type"], addActionStack=False)
-                    # cell.input_field.setText(action.data["code"])
-                    # cell.output_field.renderTextfromOutput(cell.linter, action.data["raw_output"])
-                    # cell.raw_output = action.data["raw_output"]
-                    # cell.cell_name.setText(action.data['name'])
-                    # QApplication.processEvents()
                     cell.setupCell(action.data)
                     QTimer.singleShot(100, lambda: self.continueProcess(cell))
                     adding.append(ActionStack.DeleteCellAction(action.index))
                 elif t == CellType.OPTIMIZE:
                     cell = self.parent.addCell(action.index, cellType=action.data["cell_type"], addActionStack=False)
-                    # cell.var_box_model.basicSetup(action.data['variables'])
-                    # cell.drag_and_accel_model.basicSetup(action.data['drags'])
-                    # cell.constraints_model.basicSetup(action.data['constraints'])
-                    # cell.toConsole(action.data['output'])
                     cell.setupCell(action.data)
 
             case self.MOVE_ACTION: # pop the move action, add the same move action
@@ -265,7 +253,7 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(0, self.restoreWorkFromCrash)
 
     def restoreWorkFromCrash(self):
-        with open(os.path.join(FileHandler.getPathToLastState(), "LastState.json"), "r") as f:
+        with open(FileHandler.getPathToLastState(), "r") as f:
             d = json.load(f)
             if not d.get('crashed'):
                 return
@@ -273,7 +261,7 @@ class MainWindow(QMainWindow):
         if d.get('tempfile'):
             a = QMessageBox.question(self, "Restore Work", f"Mothball previously crashed. Restore previous notebook?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
             if a == QMessageBox.StandardButton.Yes:
-                self.openFile(os.path.join(FileHandler.getPathToLastState(), "tempfile.json"))
+                self.openFile(FileHandler.getPathToTempFile())
 
     def copyCell(self, cell_or_index_to_copy: Union[CodeCell.SimulationSection, TextCell.TextSection, AngleOptimizerCell.OptimizationSection, int]):
         """
@@ -652,14 +640,14 @@ class MainWindow(QMainWindow):
                 if page is not None and page.isVisible():
                     page.close()
             
-            with open(os.path.join(FileHandler.getPathToLastState(), "LastState.json"), 'w') as file:
+            with open(FileHandler.getPathToLastState(), 'w') as file:
                 json.dump({"crashed":False, "tempfile":False, "log": ""}, file)
             return super().closeEvent(event)
         else:
             for page in (self.about_page, self.wordle_page, self.help_page, self.settings_page):
                 if page is not None and page.isVisible():
                     page.close()
-            with open(os.path.join(FileHandler.getPathToLastState(), "LastState.json"), 'w') as file:
+            with open(FileHandler.getPathToLastState(), 'w') as file:
                 json.dump({"crashed":False, "tempfile":False, "log": ""}, file)
             return super().closeEvent(event)
     

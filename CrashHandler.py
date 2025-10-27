@@ -20,17 +20,13 @@ class CrashHandler:
             print(last_traceback_string, file=f)
 
             if self.mothabll_instance.name:
-                p = FileHandler.getPathToLastState()
-                print(f"Getting path: {p}", file=f)
-                with open(os.path.join(p, "LastState.json"), 'w') as file:
+                with open(FileHandler.getPathToLastState(), 'w') as file:
                     json.dump({"crashed":True, "tempfile":False, "log": last_traceback_string}, file)
                 self.mothabll_instance.saveFile()
             else:
-                p = FileHandler.getPathToLastState()
-                print(f"Getting path: {p}", file=f)
-                with open(os.path.join(p, "tempfile.json"), 'w') as file:
+                with open(FileHandler.getPathToTempFile(), 'w') as file:
                     json.dump(self.mothabll_instance.getAllCellData(), file)
-                with open(os.path.join(p, "LastState.json"), 'w') as file:
+                with open(FileHandler.getPathToLastState(), 'w') as file:
                     json.dump({"crashed":True, "tempfile":True, "log": last_traceback_string}, file)
             print("Report this issue to @anonnoob over at https://github.com/anon-noob/mothballapp2 and be sure to copy and paste the entire log.", file=f)
             print("-----===== < END of Crash Log > =====-----\n", file=f)

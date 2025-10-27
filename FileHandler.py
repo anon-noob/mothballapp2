@@ -6,10 +6,19 @@ VERSION = __version__
 user_path = os.path.expanduser("~")
 operating_system = platform.system()
 
-if getattr(sys, "frozen", False):
-    base_path = sys._MEIPASS
-else:
-    base_path = os.path.abspath(".")
+# REFACTOR THE ENTIRE THING!
+
+DATA_PATH = ""
+if operating_system == "Windows":
+    DATA_PATH = os.path.join(user_path, "AppData", "Roaming")
+
+elif operating_system == "Darwin":
+    DATA_PATH = os.path.join(user_path, "Library", "Application Support")
+
+elif operating_system == "Linux":
+    DATA_PATH = os.path.join(user_path, ".config")
+
+DOCUMENTS_PATH = os.path.join(user_path, "Documents")
 
 default_code_colors = {
     "Version":VERSION,
@@ -92,24 +101,40 @@ def getSettings(fileName):
         return convertKeysToInt(json.load(file))
     
 def getCodeColorSettings():
-    "Get the color mapping for Mothball code highlighting"
+    """
+    Get the color mapping for Mothball code highlighting \\
+    .../Data_Path/Mothball/Mothball Settings/Code Colors.json
+    """
     return getSettings("Code Colors.json")
 
 def getTextColorSettings():
-    "Get the color mapping for markdown code highlighting and rendering. Mothball code blocks are handled by the code colors found by `getCodeColorSettings`."
+    """"
+    Get the color mapping for markdown code highlighting and rendering. Mothball code blocks are handled by the code colors found by `getCodeColorSettings`. \\
+    .../Data_Path/Mothball/Mothball Settings/Text Colors.json
+    """
     return getSettings("Text Colors.json")
     
 def getGeneralSettings():
-    "Get general settings"
+    """
+    Get general settings
+
+    .../Data_Path/Mothball/Mothball Settings/Settings.json
+    """
     return getSettings("Settings.json")
 
 def getNotebooks():
-    "Returns the path to the Mothball notebooks."
-    return os.path.join(user_path, "Documents", "Mothball", "Notebooks")
+    """
+    Returns the path to the Mothball notebooks. \\
+    ~/user_path/Documents/Mothball/Notebooks
+    """
+    return os.path.join(DOCUMENTS_PATH, "Mothball", "Notebooks")
 
 def getMacros():
-    "Returns the default path to Mothball generated macros."
-    return os.path.join(user_path, "Documents", "Mothball", "Macros")
+    """
+    Returns the default path to Mothball generated macros. \\
+    ~/user_path/Documents/Mothball/Macros
+    """
+    return os.path.join(DOCUMENTS_PATH, "Mothball", "Macros")
 
 default_settings = {
     "Ask before deleting a cell": False,
@@ -134,19 +159,9 @@ def createDirectories():
     Nothing happens if the directories already exist.
     """
     
-    path = None
     # Make Setting Directory
-    if operating_system == "Windows":
-        path = os.path.join(user_path, "AppData", "Roaming", "Mothball", "Mothball Settings")
-        os.makedirs(path, exist_ok=True)
-
-    elif operating_system == "Darwin":
-        path = os.path.join(user_path, "Library", "Application Support", "Mothball", "Mothball Settings")
-        os.makedirs(path, exist_ok=True)
-    
-    elif operating_system == "Linux":
-        path = os.path.join(user_path, ".config", "Mothball", "Mothball Settings")
-        os.makedirs(path, exist_ok=True)
+    path = os.path.join(DATA_PATH, "Mothball", "Mothball Settings")
+    os.makedirs(path, exist_ok=True)
 
     # If jsons doesn't exist, add it
     if not os.path.exists(os.path.join(path, "Code Colors.json")):
@@ -161,53 +176,38 @@ def createDirectories():
         with open(os.path.join(path, "Settings.json"), "w") as file:
             json.dump(default_settings, file)
     
-    
     # Make Saved Notebook Directory
-    os.makedirs(os.path.join(user_path, "Documents", "Mothball", "Notebooks"),exist_ok=True)
-    os.makedirs(os.path.join(user_path, "Documents", "Mothball", "Macros"),exist_ok=True)
+    os.makedirs(os.path.join(DOCUMENTS_PATH, "Mothball", "Notebooks"),exist_ok=True)
+    os.makedirs(os.path.join(DOCUMENTS_PATH, "Mothball", "Macros"),exist_ok=True)
 
-    # Crash Logs
-    os.makedirs(os.path.join(user_path, "Documents", "Mothball", "Logs"),exist_ok=True)
-    if not os.path.exists(os.path.join(user_path, "Documents", "Mothball", "Logs", "crash_logs.txt")):
-        with open(os.path.join(user_path, "Documents", "Mothball", "Logs", "crash_logs.txt"), "w") as file:
+    # Moments when it Crash
+    logs_path = os.path.join(DOCUMENTS_PATH, "Mothball", "Logs") 
+    os.makedirs(logs_path,exist_ok=True)
+    if not os.path.exists(os.path.join(logs_path, "crash_logs.txt")):
+        with open(os.path.join(logs_path, "crash_logs.txt"), "w") as file:
             file.write("Crash Logs File\n")
-
-    # Last State
-    p = os.path.join(base_path, "Last_State")
-    os.makedirs(p, exist_ok=True)
-    if not os.path.exists(os.path.join(p, "LastState.json")):
-        with open(os.path.join(p, "LastState.json"), "w") as file:
+    if not os.path.exists(os.path.join(logs_path, "LastState.json")):
+        with open(os.path.join(logs_path, "LastState.json"), "w") as file:
             json.dump(last_state, file)
-    if not os.path.exists(os.path.join(p, "tempfile.json")):
-        with open(os.path.join(p, "tempfile.json"), "w") as file:
+    if not os.path.exists(os.path.join(logs_path, "tempfile.json")):
+        with open(os.path.join(logs_path, "tempfile.json"), "w") as file:
             json.dump({}, file)
 
 def getPathtoLogs():
-    return os.path.join(user_path, "Documents", "Mothball", "Logs", "crash_logs.txt")
+    "~/user_path/Documents/Mothball/Logs/crash_logs.txt"
+    return os.path.join(DOCUMENTS_PATH, "Mothball", "Logs", "crash_logs.txt")
 
 def getPathToLastState():
-    return os.path.join(base_path, "Last_State")
+    "~/user_path/Documents/Mothball/Logs/LastState.json"
+    return os.path.join(DOCUMENTS_PATH, "Mothball", "Logs", "LastState.json")
+
+def getPathToTempFile():
+    "~/user_path/Documents/Mothball/Logs/tempfile.json"
+    return os.path.join(DOCUMENTS_PATH, "Mothball", "Logs", "tempfile.json")
 
 def getPathToSettings():
-    """
-    Returns the path to Mothball settings directory
-
-    Windows: AppData/Roaming \\
-    Mac: Library/Application Support \\
-    Linux: .config
-
-    Raises `FileNotFoundError` if it doesn't exist.
-    """
-    path = None
-    if operating_system == "Windows":
-        path = os.path.join(user_path, "AppData", "Roaming", "Mothball", "Mothball Settings")
-    elif operating_system == "Darwin":
-        path = os.path.join(user_path, "Library", "Application Support", "Mothball", "Mothball Settings")
-    elif operating_system == "Linux":
-        path = os.path.join(user_path, ".config", "Mothball", "Mothball Settings")
-    if path is None:
-        raise FileNotFoundError(f"No directory exists to settings")
-    return path
+    ".../Data_Path/Mothball/Mothball Settings"
+    return os.path.join(DATA_PATH, "Mothball", "Mothball Settings")
 
 def convertKeysToInt(dictionary: dict):
     new_dict = {}
