@@ -21,6 +21,7 @@ class CrashHandler:
 
             if self.mothabll_instance.name:
                 p = FileHandler.getPathToLastState()
+                print(f"Getting path: {p}", file=f)
                 with open(os.path.join(p, "LastState.json"), 'w') as file:
                     json.dump({"crashed":True, "tempfile":False, "log": last_traceback_string}, file)
                 self.mothabll_instance.saveFile()
