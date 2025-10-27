@@ -14,7 +14,8 @@ Mothball is a minecraft parkour calculator. That is literally it. Tell it what m
 
 and many more things you can do.
 
-> [! NOTE] Currently calculations are float accurate in minecraft versions 1.8-1.13, and on average e-8 accurate in versions 1.14+. For most if not almost all applications, this differernce is negligible. If you are using this to create strategies intended for a human to do, then one does not necessarily need anything more precise than e-6/e-7 precision. Float accuracy for 1.14+ is currently in the making. 
+> [! NOTE]
+> Currently calculations are float accurate in minecraft versions 1.8-1.13, and on average e-8 accurate in versions 1.14+. For most if not almost all applications, this differernce is negligible. If you are using this to create strategies intended for a human to do, then one does not necessarily need anything more precise than e-6/e-7 precision. Float accuracy for 1.14+ is currently in the making. 
 
 Download the appropiate executable for your operating system. If you encountered an error and you previously used much older versions of Mothball, annoy @anonnoob. Usually this can be fixed by deleting your Mothball appdata. Find it on...
 -  Windows: `.../usr/Appdata/Roaming/Mothball`
