@@ -27,6 +27,7 @@ class CrashHandler:
                 self.mothabll_instance.saveFile()
             else:
                 p = FileHandler.getPathToLastState()
+                print(f"Getting path: {p}", file=f)
                 with open(os.path.join(p, "tempfile.json"), 'w') as file:
                     json.dump(self.mothabll_instance.getAllCellData(), file)
                 with open(os.path.join(p, "LastState.json"), 'w') as file:
