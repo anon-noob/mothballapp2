@@ -264,13 +264,18 @@ class BasePlayer:
         "Run `sequence` for `count` times. Raises `ValueError` if `count < 0`"
         if count < 0:
             raise ValueError(f"repeat() must have a nonnegative argument 'count'")
-        
+        if count == 0:
+            return
         parsed_tokens = self.parse(sequence)
         runnables = []
         for token in parsed_tokens:
             runnable = self.tokenize(token, locals=self.local_vars)
+            self.run(runnable)
             runnables.append(runnable)
-        for _ in range(count):
+        
+        # This is b/c if something like repeat(var(a,1) sj(a), 2) is run, the tokenizer will fail to process
+        # a = 1 since var(a,1) wasn't actually run yet.
+        for _ in range(count-1):
             if self.stop_flag:
                 raise InterruptedError("Stopped execution")
             for runnable in runnables:
@@ -605,6 +610,7 @@ class BasePlayer:
 
         Raises any appropiate error encountered while converting strings to the necessary datatypes.
         """
+        # print(self.local_vars)
         if locals is None:
             locals = self.local_vars
 
@@ -763,7 +769,7 @@ if __name__ == "__main__":
     a = BasePlayer()
     # import time
     # m = time.perf_counter()
-    a.simulate("""var(pa,racecar) print(p: {pa}) -print(p: {pa})""")
+    a.simulate("""r(var(p, 10) pre(p),1)""")
     # n = time.perf_counter()
     # print(n-m)
     b=a.show_output()
