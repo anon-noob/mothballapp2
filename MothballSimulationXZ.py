@@ -43,6 +43,10 @@ class PlayerSimulationXZ(BasePlayer):
     GROUND = 1
     AIR = 2
 
+    # Computation mode (old = 1.8-1.13, new = 1.14+)
+    OLD_COMPUTATION = 0
+    NEW_COMPUTATION = 1
+
     # Modifiers Enums (yes they're in binary)
     WATER =     0b1
     LAVA =      0b10
@@ -93,7 +97,8 @@ class PlayerSimulationXZ(BasePlayer):
         self.sneak_delay = False
         self.inertia_axis = 1
         self.inputs = ""
-
+        
+        self.version_computation = self.OLD_COMPUTATION
         self.state = self.GROUND
         self.record = {}
         self.record_inertia = {}
@@ -114,6 +119,12 @@ class PlayerSimulationXZ(BasePlayer):
         return self.rotation
 
     def move(self, duration: int, rotation: f32 = None, rotation_offset: float = 0.0, slip: f32 = None, is_sprinting: bool = False, is_sneaking: bool = False, speed: int = None, slow: int = None, state: Literal["ground", "air", "jump"] = "ground"):
+        if self.version_computation == self.OLD_COMPUTATION:
+            self.move_old(duration, rotation, rotation_offset, slip, is_sprinting, is_sneaking, speed, slow, state)
+        elif self.version_computation == self.NEW_COMPUTATION:
+            self.move_new(duration, rotation, rotation_offset, slip, is_sprinting, is_sneaking, speed, slow, state)
+
+    def move_old(self, duration: int, rotation: f32 = None, rotation_offset: float = 0.0, slip: f32 = None, is_sprinting: bool = False, is_sneaking: bool = False, speed: int = None, slow: int = None, state: Literal["ground", "air", "jump"] = "ground"):
         """
         Moves the player for `duration` ticks with a slip value of `slip`.
 
@@ -190,7 +201,7 @@ class PlayerSimulationXZ(BasePlayer):
                     self.vz = 0.0
 
             # Get Movement Multiplier M
-            M = self.movement_multiplier(slip, is_sprinting, speed, slow, self.state)
+            M = self.movement_multiplier_old(slip, is_sprinting, speed, slow, self.state)
 
             # Sprint jump boost
             if self.state == self.JUMP and is_sprinting:
@@ -212,12 +223,14 @@ class PlayerSimulationXZ(BasePlayer):
             strafe *= f32(0.98)
 
             distance = f32(strafe * strafe + forward * forward)
-
+            # print(forward, strafe)
+            # print(distance)
             # Avoid division by 0
             if distance >= f32(0.0001):
 
                 # Normalize distance IF above 1
                 distance = f32(sqrt(float(distance)))
+                # print(distance)
                 if distance < f32(1.0):
                     distance = f32(1.0)
 
@@ -233,6 +246,156 @@ class PlayerSimulationXZ(BasePlayer):
                 self.vx += float(strafe * cos_yaw - forward * sin_yaw)
                 self.vz += float(forward * cos_yaw + strafe * sin_yaw)
 
+            if self.modifiers & self.WEB:
+                self.vx = self.vx / 4
+                self.vz = self.vz / 4
+            if self.modifiers & self.LADDER:
+                self.vx = min(max(self.vx, -0.15),0.15)
+                self.vz = min(max(self.vz, -0.15),0.15)
+            
+            
+            # Prep for next tick
+            self.previous_slip = slip
+            self.previously_sprinting = is_sprinting
+            self.previously_sneaking = is_sneaking
+            self.previously_in_web = bool(self.modifiers & self.WEB)
+            self.last_turn = rotation - self.last_rotation
+            self.last_rotation = rotation
+
+            # Record possibilities and history
+            self.possibilities_helper()
+
+            self.inertialistener_helper()
+
+            self.history.append(Tick('w' in self.inputs, 'a' in self.inputs, 's' in self.inputs, 'd' in self.inputs, is_sneaking, is_sprinting, self.state == self.JUMP, bool(self.modifiers & self.BLOCK), self.last_turn))
+    
+    def move_new(self, duration: int, rotation: f32 = None, rotation_offset: float = 0.0, slip: f32 = None, is_sprinting: bool = False, is_sneaking: bool = False, speed: int = None, slow: int = None, state: Literal["ground", "air", "jump"] = "ground"):
+        """
+        Moves the player for `duration` ticks with a slip value of `slip`.
+
+        The player will move facing `rotation` if given, otherwise, it will use the rotation queue and/or the default rotation.
+
+        `rotation_offset` is used if you wish to preserve the facing despite the actual angle being different, particularly useful for displaying info while 45ing (`rotation_offset = 45`) or strafe jumping (`rotation_offset = 17.4786857811690446`).
+
+        Although there is no hard restriction, in later versions, `is_sprinting` and `is_sneaking` can be set to `True` at the same time.
+        """
+
+        # Setting slipperiness here and treating it like air is analytically and numerically equivalent
+        if self.modifiers  & self.WATER:
+            slip=f32(0.8/0.91)
+        elif self.modifiers & self.LAVA:
+            slip=f32(0.5/0.91)
+        
+        sj_boost = float(self.sprintjump_boost)
+        if self.previous_slip is None:
+            self.previous_slip = self.default_ground_slip
+
+        if rotation_offset == 45:
+            self.inputs = "wa"
+        
+        if speed is None:
+            speed = self.speed_effect
+        if slow is None:
+            slow = self.slow_effect
+
+        self.state = state
+        # If sneaking is modified by ladders, always set the state to AIR
+        if ((self.sneak_delay and self.previously_sneaking) or (not self.sneak_delay and is_sneaking)) and self.modifiers & self.LAVA:
+            self.state = self.AIR
+
+        override_rotation = False
+        if (rotation is not None):
+            override_rotation = True
+            rotation = f32(rotation + rotation_offset)
+
+        if not slip: # If slip is not given, assume its ground slip since air slip (0.1) is always passed into the argument
+            slip = self.default_ground_slip
+        
+        for _ in range(duration):
+            if not override_rotation:
+                rotation = f32(self.get_angle() + rotation_offset)
+                
+            # MOVING THE PLAYER
+            self.x += self.vx
+            self.z += self.vz
+
+            if self.modifiers & self.SOULSAND: # Like 13 df accurate minimum (old computation)
+                self.vx *= 0.4
+                self.vz *= 0.4
+
+            forward, strafe = self.movement_values()
+
+            if self.reverse:
+                forward *= f32(-1)
+                strafe *= f32(-1)
+                sj_boost *= -1
+
+            # Finalize Momentum
+            self.vx *= f32(0.91) * self.previous_slip
+            self.vz *= f32(0.91) * self.previous_slip
+
+            # Apply inertia or web
+            if self.inertia_axis == 1:
+                if abs(self.vx) < self.inertia_threshold or self.previously_in_web:
+                    self.vx = 0.0
+                if abs(self.vz) < self.inertia_threshold or self.previously_in_web:
+                    self.vz = 0.0
+            elif self.inertia_axis == 2:
+                if sqrt(self.vz*self.vz + self.vx*self.vx) < self.inertia_threshold or self.previously_in_web:
+                    self.vx = 0.0
+                    self.vz = 0.0
+
+            # Get Movement Multiplier M
+            M = self.movement_multiplier_new(slip, is_sprinting, speed, slow, self.state)
+
+
+            # Sprint jump boost
+            if self.state == self.JUMP and is_sprinting:
+                facing = f32(rotation * f32(0.017453292)) # TO CHANGE
+                self.vx -= self.mcsin(facing) * sj_boost
+                self.vz += self.mccos(facing) * sj_boost
+
+            # BLOCKING
+            if self.modifiers & self.BLOCK:
+                forward = f32(float(forward) * 0.2)
+                strafe  = f32(float(strafe) * 0.2)
+
+            # SNEAKING
+            if (self.sneak_delay and self.previously_sneaking) or (not self.sneak_delay and is_sneaking):
+                forward = f32(float(forward) * 0.3)
+                strafe = f32(float(strafe) * 0.3)
+
+            forward *= f32(0.98)
+            strafe *= f32(0.98)
+
+            # idk yet if this is the right place to put it relative to the other movement. It most definitel 
+            forward = float(forward)
+            strafe = float(strafe)
+
+            distance = float(strafe * strafe + forward * forward)
+            if distance >= 1e-7:
+
+                # Normalize distance IF above 1
+                distance = f32(sqrt(distance))
+                # print(distance)
+                if distance < 1.0:
+                    distance = 1.0
+                else:
+                    distance = float(distance+0.0000001125593117) # genuinely no idea what im doing here
+
+                # Modifies strafe and forward to account for movement
+                distance = M / distance
+                forward = forward * distance
+                strafe = strafe * distance
+
+                # Adds rotated vectors to velocity
+                sin_yaw = f32(self.mcsin(rotation * f32(0.017453292)))
+                cos_yaw = f32(self.mccos(rotation * f32(0.017453292)))
+
+                self.vx += strafe * float(cos_yaw) - forward * float(sin_yaw)
+                self.vz += forward * float(cos_yaw) + strafe * float(sin_yaw)
+
+            # Not verified to be 1.14+ accurate yet
             if self.modifiers & self.WEB:
                 self.vx = self.vx / 4
                 self.vz = self.vz / 4
@@ -346,7 +509,7 @@ class PlayerSimulationXZ(BasePlayer):
         self.record['tick'] += 1
 
 
-    def movement_multiplier(self, slip, is_sprinting, speed, slow, state):
+    def movement_multiplier_old(self, slip, is_sprinting, speed, slow, state):
         """
         Calculates and returns the movement multiplier `M`.
 
@@ -377,6 +540,39 @@ class PlayerSimulationXZ(BasePlayer):
 
             drag = f32(0.91) * slip
             M *= f32(0.16277136) / (drag * drag * drag)
+        
+        return M
+    
+    def movement_multiplier_new(self, slip, is_sprinting, speed, slow, state):
+        """
+        Calculates and returns the movement multiplier `M`.
+
+        See https://www.mcpk.wiki/wiki/Horizontal_Movement_Formulas for the formula used to calculate `M`
+
+        Notets on fluids: The equation for water is the same as air with S = 0.8/0.91 and M being either 1 or 0 multiplied by 0.98 or 1, similarly for lava, set S = 0.5/0.91
+        """
+        if self.modifiers & self.WATER or self.modifiers & self.LAVA: # It doesnt matter if you are in web
+            M = f32(0.02)
+        
+        elif state == self.AIR:
+            M = f32(0.02) # In water, walk and sprint are the same, potion effects do not affect water or air, shiftng is different
+
+            if (self.air_sprint_delay and self.previously_sprinting) or (not self.air_sprint_delay and is_sprinting):
+                M = f32(M + M * 0.3)
+
+        else: # either on jump or on ground
+            M = f32(0.1)
+
+            # Deal with potion effects 
+            if speed > 0:
+                M = f32(M * (1.0 + f32(0.2) * float(speed)))
+            if slow > 0:
+                M = f32(M * max(1.0 + f32(-0.15) * float(slow), 0))
+
+            if is_sprinting:
+                M = f32(M * (1.0 + f32(0.30000010133)))
+
+            M = M * (f32(0.21600002) / (slip * slip * slip))
         
         return M
 
@@ -801,6 +997,9 @@ class PlayerSimulationXZ(BasePlayer):
             self.inertia(0.003)
         if version_number > 13:
             self.sneakdelay("true")
+            self.version_computation = self.NEW_COMPUTATION
+        else:
+            self.version_computation = self.OLD_COMPUTATION
         if version_number > 19 or (version_number == 19 and patch_number > 3):
             self.sprintairdelay(False)
         if version_number == 21 and patch_number >= 5:
@@ -1295,6 +1494,8 @@ if __name__ == "__main__":
     # s = 'f(-13.875) wa.a(6) x(0) xil(wj.a wa.d(8) wa.sd(2) wa.s) outx x(0) w.s outz z(0) zil( wj.sd wa.d(2) sa.wd(9)) outz s.wd outz xmm vec | aq(-16.255, -38.185, -62.88, -76.93, -84.985, -90) xil(sj sa45(5) zmm outx sa45(7)) outx'
     # s = 'angleinfo(-45.01)'
     # s = 'pre(16) r(s[ss] outvz,3) r(st[ss] outvz, 3)'
-    s = 'w.s[wt](5) var(spd, outz outvz(-0.0615)) | z(-spd) sj sa45[wt] sa45(9) sa45[wt](2) sj45(12) outz(6, offset)'
-    a.simulate(s)
+    # s = 'w.s[wt](5) var(spd, outz outvz(-0.0615)) | z(-spd) sj sa45[wt] sa45(9) sa45[wt](2) sj45(12) outz(6, offset)'
+    a.simulate('pre(16) v(1.21) sj outvz')
+
+
     a.show_output()
