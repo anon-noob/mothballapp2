@@ -1,5 +1,6 @@
 import re
 
+
 def _tokenize(expression):
     token_specification = [
         ('NUMBER', r'\d+(\.\d+)?e-\d+|\d+(\.\d+)?e\d+|\d+\.\d+|\d+\.|\.\d+|\d+'),  # Integer or decimal number
@@ -78,6 +79,7 @@ def _apply_operator(operands: list, operator: str):
     return operands
 
 def _evaluate(tokens, variables):
+    # print(tokens)
     precedence = {'+': 1, '-': 1, '*': 2, '/': 2, '**': 3, 'UNARY_MINUS': 4}
     operands = []
     operators = []
@@ -91,10 +93,10 @@ def _evaluate(tokens, variables):
                 operands.append(variables[value])
             else:
                 raise ValueError(f"Unknown variable: {value}")
+            
         elif kind == 'MINUS':
-            # print("TOKENS",prevkind, prevvalue)
-            if not operands or (operators and operators[-1] == '(') or (prevkind in ['PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'POW', 'LPAREN']):
-                # Unary minus
+            if (prevkind is None) or (prevkind in ['PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'POW', 'LPAREN']):
+                # unary minus occurs at start or after another operator or after a left parenthesis;
                 while operators and operators[-1] in precedence and precedence[operators[-1]] >= precedence['UNARY_MINUS']:
                     operands = _apply_operator(operands, operators.pop())
                 operators.append('UNARY_MINUS')
@@ -112,6 +114,8 @@ def _evaluate(tokens, variables):
         elif kind == 'RPAREN':
             while operators[-1] != '(':
                 operands = _apply_operator(operands, operators.pop())
+            # print(operands)
+            # print(operators)
             operators.pop()
         prevkind = kind
         prevvalue = value
@@ -142,14 +146,15 @@ def evaluate(expression, variables: dict=None):
     except Exception as e:
         raise SyntaxError(f"{e} in expression '{expression}'")
 
-# print(evaluate("2**(3-1)/(2+6)"))
-# print(evaluate("-1+2**(4-8*p4x)", {'p4x':1/2}))
-# print(eval("2**(3-1)/(2+6)"))
-# print(eval("2**(4-8*px)", {'px':1/2}))
-# print(evaluate('-3*-2+((2)'))
-# print(eval('(-3*-2)2'))
-# print(evaluate("2"))
-# print(evaluate("2.2"))
-# print(evaluate("2."))
-# print(evaluate(".2"))
-# print(evaluate("1-"))
+# print(evaluate("2**(3-1)/(2+6)") == 0.5)
+# print(evaluate("-3*(1+2)") == -9)
+# print(evaluate("-1+2**(4-8*p4x)", {'p4x':1/2}) == 0)
+# print(evaluate("2*(3-1)")==4)
+# print(evaluate('-3*-2+((2)')) # syntax error: unbalanced parenthesis
+# print(evaluate("2") == 2)
+# print(evaluate("2.2") == 2.2)
+# print(evaluate("2.") == 2)
+# print(evaluate(".2") == 0.2)
+# print(evaluate("(1-5)*0.1") == -0.4)
+# print(evaluate("0.1*(1-5)") == -0.4)
+# print(evaluate("(0.1)*(2-3)") == -0.1)
