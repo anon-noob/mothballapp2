@@ -106,7 +106,7 @@ class BasePlayer:
     
     @staticmethod
     def clean_backslashes(string: str):
-        "Replaces backslashes if possible. Anything with `\` followed by a char will be replaced."
+        "Replaces backslashes if possible. Anything with `\\0` followed by a char will be replaced."
         chars = [""] * len(string)
         follows_backslash = False
         prev_char = ""
@@ -115,7 +115,10 @@ class BasePlayer:
                 follows_backslash = True
             else:
                 follows_backslash = False
-                chars[i] = char
+                if char == "n":
+                    chars[i] = "\n"
+                else:
+                    chars[i] = char
         return "".join(chars)
 
     def safe_eval(self, expr: str, datatype: type, locals_dict: dict):
@@ -284,7 +287,6 @@ class BasePlayer:
     @record_to_call_stack
     def printdisplay(self, string: str = "", /):
         if self.reverse: # who is using this anyway
-            # print("S", string)
             string = self.formatted(string)
             string = "".join([x for x in reversed(string)])
         self.add_to_output(ExpressionType.TEXT, string_or_num=string)
