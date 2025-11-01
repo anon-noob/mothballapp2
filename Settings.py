@@ -3,7 +3,7 @@ Settings Window using `QTabWidget`.
 """
 import sys
 from PyQt5.QtWidgets import (
-    QApplication, QTabWidget, QWidget,QVBoxLayout, QGridLayout, QHBoxLayout, QPushButton, QTabBar, QLabel, QCheckBox, QLineEdit, QTextBrowser, QSizePolicy, QListWidget, QListWidgetItem, QColorDialog, QFileDialog, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
+    QApplication, QTabWidget, QWidget,QVBoxLayout, QGridLayout, QHBoxLayout, QPushButton, QTabBar, QLabel, QCheckBox, QLineEdit, QTextBrowser, QSizePolicy, QListWidget, QListWidgetItem, QColorDialog, QFileDialog, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QComboBox
 )
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import Qt
@@ -18,7 +18,6 @@ class SettingsWindow(QWidget):
     """
     The main settings window.
     """
-
     SAMPLE_CODE = """version(1.21) 
 sprint(8, slow=3) sprintair.wd walk.s walk[water](3) stop stopair
 outx(0.03125, label=hey I'm an x axis output) vec
@@ -58,27 +57,45 @@ hello(mothballer)"""
         #######################################################
         # Tab 1 content #######################################
         #######################################################
+        self.tab1_vertical_layout = QVBoxLayout()
         self.tab1_layout = QHBoxLayout()
         self.cell = RenderViewer(generalOptions, colorOptions, textOptions,self)
         self.mdlinter = MDLinter(generalOptions, colorOptions, textOptions)
-        self.linter = CodeLinter(generalOptions, colorOptions, textOptions,"xz")
+        self.linter = CodeLinter(generalOptions, colorOptions, textOptions,CellType.XZ)
         self.colorCodeDisplay()
 
         self.tab1_layout.addWidget(self.cell)
-        self.tab1.setLayout(self.tab1_layout)
+        self.tab1.setLayout(self.tab1_vertical_layout)
         self.colorsWidget = colorOptions[StringLiterals.CODE]
         
 
         self.listwidget = QListWidget()
-        for style, color in zip(Style.STYLE_TO_NAME, self.colorsWidget.values()):
-            # print(token)
+        for style in self.colorsWidget:
             x = QListWidgetItem(Style.STYLE_TO_NAME[style])
-            self.listwidget.addItem(x)
-            x.setBackground(QColor(color))
+            color = self.colorsWidget.get(style)
+            if color is None:
+                self.listwidget.addItem(f"CANT FIND STYLE {style}")
+            else:
+                self.listwidget.addItem(x)
+                x.setBackground(QColor(self.colorsWidget[style]))
             x.setForeground(QColor("#000000"))
         
         self.tab1_layout.addWidget(self.listwidget)
         self.listwidget.itemDoubleClicked.connect(lambda i: self.colorDialog(i, 0))
+
+        self.tab1_vertical_layout.addLayout(self.tab1_layout)
+        self.tab1_bottom_buttons_layout = QHBoxLayout()
+        self.b = QPushButton("Apply")
+        self.tab1_bottom_buttons_layout.addWidget(self.b)
+        self.c = QPushButton("New Theme")
+        self.tab1_bottom_buttons_layout.addWidget(self.c)
+        self.e = QPushButton("Rename Theme")
+        self.tab1_bottom_buttons_layout.addWidget(self.e)
+        self.f = QPushButton("Delete Theme")
+        self.tab1_bottom_buttons_layout.addWidget(self.f)
+        self.d = QComboBox()
+        self.tab1_bottom_buttons_layout.addWidget(self.d)
+        self.tab1_vertical_layout.addLayout(self.tab1_bottom_buttons_layout)
 
         #######################################################
         # Tab 2 content #######################################
@@ -119,8 +136,6 @@ hello(mothballer)"""
         for i, (key, value) in enumerate(self.generalOptions["Macro Folders"].items()):
             self.table.setItem(i, 0, QTableWidgetItem(key))
             self.table.setItem(i, 1, QTableWidgetItem(value))
-            # x = self.table.item(i, 0)
-            # x.setFlags(x.flags() & ~Qt.ItemFlag.ItemIsEditable)
             y = self.table.item(i, 1)
             y.setFlags(y.flags() & ~Qt.ItemFlag.ItemIsEditable)
         
@@ -133,13 +148,11 @@ hello(mothballer)"""
 
         self.add_btn = QPushButton("Add")
         self.delete_btn = QPushButton("Delete")
-        # self.edit_alias_btn = QPushButton("Edit Alias")
         self.edit_pathname_btn = QPushButton("Edit Path")
         self.save_btn = QPushButton("Save")
 
         self.add_btn.clicked.connect(self.addRow)
         self.delete_btn.clicked.connect(self.deleteRow)
-        # self.edit_alias_btn.clicked.connect(self.editAlias)
         self.edit_pathname_btn.clicked.connect(self.editPath)
         self.save_btn.clicked.connect(self.savePaths)
 
@@ -262,8 +275,6 @@ hello(mothballer)"""
         self.cell2.renderTextfromOutput(self.linter, p.output)
 
 if __name__ == '__main__':
-    
-    from PyQt5.QtWidgets import QFileDialog
     a=FileHandler.getCodeColorSettings()
     b=FileHandler.getGeneralSettings()
     c=FileHandler.getTextColorSettings()
