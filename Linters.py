@@ -10,6 +10,8 @@ from utils import *
 import string
 from Enums import *
 
+# PLEASE FIX OUTPUT RENDERING CRASH
+
 class CodeLinter:
     """
     Manages linting mothball syntax and mothball simulation outputs.
@@ -93,6 +95,9 @@ class CodeLinter:
         last_nonspace_token_index = -1
         index = -1
         local_vars = [] + list(mxz.PlayerSimulationXZ().local_vars)
+        custom_funcs = []
+        custom_funcs_vars = []
+
         in_curly_brackets = False
         
         for token in listOfTokens:
@@ -131,6 +136,14 @@ class CodeLinter:
                 if last_function == "var" and token not in string.punctuation.replace("_","") and curr_func.current_parameter().name == "variable_name":
                     tokens_and_style.append((token, Style.VARS))
                     local_vars.append(token)
+                    index += 1
+                elif last_function == "function" or last_function == "func" and token not in string.punctuation.replace("_",""):
+                    if curr_func.current_parameter().name == "name":
+                        tokens_and_style.append((token, Style.CUSTOM_FUNC))
+                        custom_funcs.append(token)
+                    elif curr_func.current_parameter().name == "args":
+                        tokens_and_style.append((token, Style.CUSTOM_FUNC_PARAMETER))
+                        custom_funcs_vars[-1].append(token)
                     index += 1
                 elif token == ")":
                     index += 1
@@ -200,6 +213,14 @@ class CodeLinter:
                 index += 1
                 last_function = token
             
+            elif token in custom_funcs:
+                tokens_and_style.append((token, Style.CUSTOM_FUNC))
+                index += 1
+
+            elif custom_funcs_vars and token in custom_funcs_vars[-1]:
+                tokens_and_style.append((token, Style.CUSTOM_FUNC_PARAMETER))
+                index += 1
+
             elif token in local_vars:
                 tokens_and_style.append((token, Style.VARS))
                 index += 1
@@ -217,8 +238,9 @@ class CodeLinter:
                         func_stack.push(self.getFunction(last_function))
                         curr_func = func_stack.peek()
                         if curr_func.current_parameter() and curr_func.current_parameter_datatype() == str: 
-                            # if curr_func.func not in ['repeat', 'bwmm', 'xbwmm', 'wall', "xwall", 'blocks',"xblocks", "taps", "possibilities", "xpossibilities", "xzpossibilities"]: # This should be replaced with the new MothballSequence addition
                             in_string = True
+                        if last_function == "func" or last_function == "function":
+                            custom_funcs_vars.append([])
                 elif token == "{":
                     in_curly_brackets = not in_curly_brackets
 
@@ -269,6 +291,8 @@ class CodeLinter:
                         if not func_stack.is_empty():
                             func_stack.pop()
                             curr_func = None
+                            if last_function == "func" or last_function == "function":
+                                custom_funcs_vars.pop()
                             last_function = ""
                             if not func_stack.is_empty():
                                 curr_func = func_stack.peek()
