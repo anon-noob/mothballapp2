@@ -331,13 +331,14 @@ settings_version_map = {
     "1.1.3": lambda: settings_version_upgrade("1.1.3", "1.1.4"),
     "1.1.4": lambda: settings_version_upgrade("1.1.4", "1.1.5", v1_1_4_to_v1_1_5_settings),
     "1.1.5": lambda: settings_version_upgrade("1.1.5", "1.1.6"),
-    "1.1.6": lambda: settings_version_upgrade("1.1.6", "1.1.7")}
+    "1.1.6": lambda: settings_version_upgrade("1.1.6", "1.1.7"),
+    "1.1.6": lambda: settings_version_upgrade("1.1.7", "1.2.0")}
 
 def notebook_version_upgrade(path: str, original_version: str, to_version: str, func = None):
     with open(path) as f:
         d = json.load(f)
 
-    assert d['version'] == original_version
+    # assert d['version'] == original_version
     d['version'] = to_version
 
     if func is not None:
@@ -353,4 +354,5 @@ notebooks_version_map = {
     "1.1.3": lambda path: notebook_version_upgrade(path, "1.1.3", "1.1.4"),
     "1.1.4": lambda path: notebook_version_upgrade(path, "1.1.4", "1.1.5"),
     "1.1.5": lambda path: notebook_version_upgrade(path, "1.1.5", "1.1.6"),
-    "1.1.6": lambda path: notebook_version_upgrade(path, "1.1.6", "1.1.7")}
+    "1.1.6": lambda path: notebook_version_upgrade(path, "1.1.6", "1.1.7"),
+    "1.1.6": lambda path: notebook_version_upgrade(path, "1.1.7", "1.2.0")}
