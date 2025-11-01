@@ -137,7 +137,7 @@ class CodeLinter:
                     tokens_and_style.append((token, Style.VARS))
                     local_vars.append(token)
                     index += 1
-                elif last_function == "function" or last_function == "func" and token not in string.punctuation.replace("_",""):
+                elif (last_function == "function" or last_function == "func") and token not in string.punctuation.replace("_",""):
                     if curr_func.current_parameter().name == "name":
                         tokens_and_style.append((token, Style.CUSTOM_FUNC))
                         custom_funcs.append(token)
@@ -157,6 +157,8 @@ class CodeLinter:
                         if not func_stack.is_empty():
                             func_stack.pop()
                             curr_func = None
+                            if last_function == "func" or last_function == "function":
+                                custom_funcs_vars.pop()
                             last_function = ""
                             if not func_stack.is_empty():
                                 curr_func = func_stack.peek()
@@ -257,7 +259,6 @@ class CodeLinter:
                         curr_func.discard_parameter()
 
                         if curr_func.current_parameter() and curr_func.current_parameter_datatype() == str:
-                            # if curr_func.func not in ['repeat', 'bwmm', 'xbwmm', 'wall', "xwall", 'blocks',"xblocks", "taps", "possibilities", "xpossibilities", "xzpossibilities"]:
                             in_string = True
             
                 elif curr_func and curr_func.after_keyword:
@@ -276,7 +277,6 @@ class CodeLinter:
 
                     curr_func.curr_param_name = last_nonspace_token
                     if curr_func.keyword_parameters_remaining[last_nonspace_token].annotation == str:
-                        # if curr_func.func not in ['repeat', 'bwmm', 'xbwmm', 'wall', "xwall", 'blocks',"xblocks", "taps", "possibilities", "xpossibilities", "xzpossibilities"]:
                         in_string = True
             
             elif token in ")}]":
@@ -291,6 +291,7 @@ class CodeLinter:
                         if not func_stack.is_empty():
                             func_stack.pop()
                             curr_func = None
+                            
                             if last_function == "func" or last_function == "function":
                                 custom_funcs_vars.pop()
                             last_function = ""
@@ -314,6 +315,7 @@ class CodeLinter:
                 last_nonspace_token = token
                 last_nonspace_token_index = index
 
+        # print(tokens_and_style)
         return tokens_and_style
 
     def getFunction(self, name: str):
