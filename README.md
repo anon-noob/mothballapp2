@@ -9,9 +9,6 @@ Mothball is a minecraft parkour calculator. That is literally it. Tell it what m
 ### Lowest momentum (x facing) triple neo?
 <img width="1128" height="425" alt="image" src="https://github.com/user-attachments/assets/776f492a-8634-44cf-a0d7-dfc31340731f" />
 
-### How many 1 block gaps?
-<img width="1211" height="745" alt="image" src="https://github.com/user-attachments/assets/81fd4bde-ddde-4d64-8eab-79966e3df636" />
-
 and many more things you can do.
 
 > [! NOTE]
