@@ -114,11 +114,11 @@ class BasePlayer:
             if char == "\\" and not follows_backslash:
                 follows_backslash = True
             else:
-                follows_backslash = False
-                if char == "n":
+                if follows_backslash and char == "n":
                     chars[i] = "\n"
                 else:
                     chars[i] = char
+                follows_backslash = False
         return "".join(chars)
 
     def safe_eval(self, expr: str, datatype: type, locals_dict: dict):
