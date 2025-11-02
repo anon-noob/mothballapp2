@@ -97,10 +97,12 @@ class CodeLinter:
         local_vars = [] + list(mxz.PlayerSimulationXZ().local_vars)
         custom_funcs = []
         custom_funcs_vars = []
+        last_token_was_function = False
 
         in_curly_brackets = False
         
         for token in listOfTokens:
+            b=False 
             if token == "\n":
                 curr_line += 1
             
@@ -135,7 +137,7 @@ class CodeLinter:
             elif in_string and token not in "(,#=}" and not in_curly_brackets:
                 if last_function == "var" and token not in string.punctuation.replace("_","") and curr_func.current_parameter().name == "variable_name":
                     tokens_and_style.append((token, Style.VARS))
-                    local_vars.append(token)
+                    local_vars.append(token) if token not in local_vars else None
                     index += 1
                 elif (last_function == "function" or last_function == "func") and token not in string.punctuation.replace("_",""):
                     if curr_func.current_parameter().name == "name":
@@ -214,10 +216,13 @@ class CodeLinter:
                 tokens_and_style.append((token, self.word_to_index[token]))
                 index += 1
                 last_function = token
+                b = True
             
             elif token in custom_funcs:
                 tokens_and_style.append((token, Style.CUSTOM_FUNC))
                 index += 1
+                last_function = token
+                b = True
 
             elif custom_funcs_vars and token in custom_funcs_vars[-1]:
                 tokens_and_style.append((token, Style.CUSTOM_FUNC_PARAMETER))
@@ -236,7 +241,7 @@ class CodeLinter:
                 if token == "[":
                     in_square_brackets = True
                 elif token == "(":
-                    if last_function:
+                    if last_function and last_token_was_function:
                         func_stack.push(self.getFunction(last_function))
                         curr_func = func_stack.peek()
                         if curr_func.current_parameter() and curr_func.current_parameter_datatype() == str: 
@@ -253,13 +258,15 @@ class CodeLinter:
 
                 if curr_func and not curr_func.after_keyword:
                     if curr_func.current_parameter() and curr_func.current_parameter().kind == inspect.Parameter.VAR_POSITIONAL:
-                        if curr_func.current_parameter().annotation == str and curr_func.func not in ["taps"]:
+                        if curr_func.current_parameter().annotation == str:
                             in_string = True
                     else:
                         curr_func.discard_parameter()
 
                         if curr_func.current_parameter() and curr_func.current_parameter_datatype() == str:
                             in_string = True
+                        
+
             
                 elif curr_func and curr_func.after_keyword:
                     curr_func.discard_parameter(curr_func.curr_param_name)
@@ -297,7 +304,7 @@ class CodeLinter:
                             last_function = ""
                             if not func_stack.is_empty():
                                 curr_func = func_stack.peek()
-                                last_function = curr_func.func
+                                last_function = curr_func.func # THIS ASSUMES THE NAME OF THE FUNC IS ONE VALID ALIAS
                     elif token == "}":
                         in_curly_brackets = not in_curly_brackets
                 else:
@@ -314,8 +321,8 @@ class CodeLinter:
             if not token.isspace():
                 last_nonspace_token = token
                 last_nonspace_token_index = index
+            last_token_was_function = b
 
-        # print(tokens_and_style)
         return tokens_and_style
 
     def getFunction(self, name: str):
