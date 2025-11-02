@@ -106,7 +106,7 @@ class BasePlayer:
     
     @staticmethod
     def clean_backslashes(string: str):
-        "Replaces backslashes if possible. Anything with `\\0` followed by a char will be replaced."
+        "Replaces backslashes if possible. Anything with `\\` followed by a char will be replaced."
         chars = [""] * len(string)
         follows_backslash = False
         prev_char = ""
@@ -285,7 +285,7 @@ class BasePlayer:
                 self.run(runnable)
     
     @record_to_call_stack
-    def printdisplay(self, string: str = "", /):
+    def print(self, string: str = "", /):
         if self.reverse: # who is using this anyway
             string = self.formatted(string)
             string = "".join([x for x in reversed(string)])
@@ -727,7 +727,11 @@ class BasePlayer:
                     d[k.name] = k.default
             x = self.local_vars | {}
             self.local_vars = self.local_vars | d
-            self.simulate(func.sequence, self.local_vars, suppress_exception=False)
+            self.simulate(func.sequence, False ,self.local_vars, suppress_exception=False)
+            for i in x:
+                if i in self.local_vars:
+                    x[i] = self.local_vars[i]
+            
             self.local_vars = x
         else:
             func(self, *args, **kwargs)
@@ -763,7 +767,7 @@ class BasePlayer:
             s += ss + "\n"
         return s
     
-    FUNCTIONS = {"function": function, "func":function, "print": printdisplay, "repeat": repeat, "r": repeat, "setprecision":setprecision, "precision":setprecision, "pre":setprecision, "ballhelp": ballhelp, "help": ballhelp, "var": var}
+    FUNCTIONS = {"function": function, "func":function, "print": print, "repeat": repeat, "r": repeat, "setprecision":setprecision, "precision":setprecision, "pre":setprecision, "ballhelp": ballhelp, "help": ballhelp, "var": var}
     ALIASES = {"function": ["function", "func"], "print": ["print"], "repeat": ["repeat", "r"], "setprecision": ["setprecision", "pre", "precision"], "ballhelp":["ballhelp", "help"], "var": ["var"]}
     
 
