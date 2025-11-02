@@ -1,11 +1,9 @@
-from math import sin, cos, atan2 as arctan, sqrt, copysign, degrees as deg
 import os
 from numpy import float32 as f32
 from ExprEval import evaluate
 import re
 import inspect
 from collections import Counter
-from pprint import pp
 import functools
 from Enums import ExpressionType
 import json
@@ -109,7 +107,6 @@ class BasePlayer:
         "Replaces backslashes if possible. Anything with `\\` followed by a char will be replaced."
         chars = [""] * len(string)
         follows_backslash = False
-        prev_char = ""
         for i, char in enumerate(string):
             if char == "\\" and not follows_backslash:
                 follows_backslash = True
@@ -254,7 +251,7 @@ class BasePlayer:
             elif arg_name == "*":
                 curr_type = inspect.Parameter.KEYWORD_ONLY
             else:
-                dtype = mapping.get(dtype, MothballSequence)
+                dtype = mapping.get(dtype, inspect.Parameter.empty)
                 if default:
                     p.append(inspect.Parameter(arg_name, curr_type, default=dtype(default), annotation=dtype))
                 else:
@@ -435,7 +432,7 @@ class BasePlayer:
 
         # Regex to change '|' into 'x(0) z(0)'
         replace_bar_regex = r"(\|)"
-        string = re.sub(replace_bar_regex, "x(0) z(0)", string)
+        string = re.sub(replace_bar_regex, " x(0) z(0) ", string)
         
         for char in string + splitters[0]:
             if strict_whitespace:
@@ -653,9 +650,13 @@ class BasePlayer:
 
             datatype = list(can_be_positional.values())[i]
             if datatype == inspect.Parameter.empty:
-                datatype = str
-
-            converted_value = self.safe_eval(args[i], datatype, locals)
+                try:
+                    converted_value = self.safe_eval(args[i], float, locals)
+                except:
+                    converted_value = self.safe_eval(args[i], str, locals)
+                    
+            else:
+                converted_value = self.safe_eval(args[i], datatype, locals)
 
             if list(can_be_positional)[i] == "duration" and func.__name__ not in self.local_funcs:
                 if converted_value is not None and converted_value < 0:

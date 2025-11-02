@@ -222,7 +222,7 @@ class CodeLinter:
                 tokens_and_style.append((token, Style.CUSTOM_FUNC))
                 index += 1
                 last_function = token
-                b = True
+                # b = True
 
             elif custom_funcs_vars and token in custom_funcs_vars[-1]:
                 tokens_and_style.append((token, Style.CUSTOM_FUNC_PARAMETER))
@@ -242,7 +242,7 @@ class CodeLinter:
                     in_square_brackets = True
                 elif token == "(":
                     if last_function and last_token_was_function:
-                        func_stack.push(self.getFunction(last_function))
+                        func_stack.push(self.getFunction(last_function, custom_funcs))
                         curr_func = func_stack.peek()
                         if curr_func.current_parameter() and curr_func.current_parameter_datatype() == str: 
                             in_string = True
@@ -325,11 +325,13 @@ class CodeLinter:
 
         return tokens_and_style
 
-    def getFunction(self, name: str):
+    def getFunction(self, name: str, custom_funcs: list):
         """
         Returns the Mothball function object given the function's `name` or alias.
         """
-        if self.mode == CellType.XZ:
+        if name in custom_funcs:
+            return name
+        elif self.mode == CellType.XZ:
             return mxz.PlayerSimulationXZ.FUNCTIONS[name]
         elif self.mode == CellType.Y:
             return my.PlayerSimulationY.FUNCTIONS[name]
