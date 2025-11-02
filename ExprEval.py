@@ -141,7 +141,9 @@ def evaluate(expression, variables: dict=None):
     # print(expression)
     tokens = _tokenize(expression)
     try:
-        result =  _evaluate(tokens, variables)
+        result=  _evaluate(tokens, variables)
+        if result.is_integer():
+            return int(result)
         return result
     except Exception as e:
         raise SyntaxError(f"{e} in expression '{expression}'")
