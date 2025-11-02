@@ -142,7 +142,7 @@ def evaluate(expression, variables: dict=None):
     tokens = _tokenize(expression)
     try:
         result=  _evaluate(tokens, variables)
-        if result.is_integer():
+        if isinstance(result, float) and result.is_integer():
             return int(result)
         return result
     except Exception as e:
