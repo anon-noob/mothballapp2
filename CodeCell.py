@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import QHBoxLayout, QPushButton, QWidget, QComboBox, QShort
 import os, json
 
 class Worker(QObject):
-    finished = pyqtSignal(list, dict)
+    finished = pyqtSignal(list, dict, int)
 
     def __init__(self, input_str, simulation_type):
         super().__init__()
@@ -32,14 +32,14 @@ class Worker(QObject):
         try:
             if self.simulation_type == CellType.XZ:
                 self.p = mxz.PlayerSimulationXZ()
-                self.p.simulate(self.input_str)
-                self.finished.emit(self.p.output, self.p.macros)
+                self.p.simulate(self.input_str, suppress_exception=False)
+                self.finished.emit(self.p.output, self.p.macros, 1)
             elif self.simulation_type == CellType.Y:
                 self.p = my.PlayerSimulationY()
-                self.p.simulate(self.input_str)
-                self.finished.emit(self.p.output, {})
+                a = self.p.simulate(self.input_str, suppress_exception= False)
+                self.finished.emit(self.p.output, {}, 1)
         except Exception as e:
-            self.finished.emit([f"Error occurred: {str(e)}"], {})
+            self.finished.emit([(ExpressionType.GENERAL_LABEL, (f"Error occurred: {str(e)}",))], {}, 0)
         self.isrunning = False
 
     def cancel(self):
@@ -247,6 +247,7 @@ class SimulationSection(Cell):
         self.run_shortcut.activated.disconnect()
         self.run_button.clicked.connect(self.cancel)
 
+        self.setStatus(self.RUNNING)
         self.t.start()
 
     def cancel(self):
@@ -257,7 +258,8 @@ class SimulationSection(Cell):
         self.run_shortcut.activated.connect(self.run_simulation)
         
 
-    def onSimulationCompletion(self, output, macros):
+    def onSimulationCompletion(self, output, macros, result: int):
+        "result = 1 means success, result = 0 means failure"
         self.output_field.renderTextfromOutput(self.linter, output)
         self.raw_output = output
         
@@ -276,6 +278,10 @@ class SimulationSection(Cell):
         self.run_button.clicked.disconnect()
         self.run_button.clicked.connect(self.run_simulation)
         self.run_shortcut.activated.connect(self.run_simulation)
+        if result: 
+            self.setStatus(self.SUCCESS)
+        else: 
+            self.setStatus(self.ERROR)
     
     def getCellData(self):
         data = {

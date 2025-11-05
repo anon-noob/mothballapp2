@@ -452,16 +452,19 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
             m = variables['num_ticks']
         except KeyError:
             self.toConsole(f"Error: Something went wrong, couldn't find 'num_ticks'")
+            self.setStatus(self.ERROR)
             return
         
         try:
             m = int(m)
         except ValueError:
             self.toConsole(f"Error: I don't understand what num_ticks={m} means. It should be a positive integer.")
+            self.setStatus(self.ERROR)
             return
         
         if not data or len(data[0]) < m:
             self.toConsole(f"Error: Drag and Accel data has fewer columns than num_ticks = {m}")
+            self.setStatus(self.ERROR)
             return
         
         constraints = self.constraints_model.getData()
@@ -478,6 +481,7 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
 
         self.run_button.setDisabled(True)
 
+        self.setStatus(self.RUNNING)
         self.the_thread.start()
 
     def onCompletion(self, res, constraint_values, postprocess_dict):
@@ -486,6 +490,7 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
         self.run_button.setEnabled(True)
         if isinstance(res, str):
             self.toConsole(f"{res} {constraint_values}")
+            self.setStatus(self.ERROR)
             return
 
         pts = postprocess_dict['points']
@@ -536,6 +541,11 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
         for i,j in zip(x_velocities, z_velocities):
             lines.append(f"  {i}, {j}")
         self.toConsole("\n".join(lines))
+
+        if success:
+            self.setStatus(self.SUCCESS)
+        else:
+            self.setStatus(self.ERROR)
 
     def getCellData(self):
         data = {

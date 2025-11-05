@@ -13,6 +13,7 @@ from Linters import CodeLinter, MDLinter
 from typing import Literal
 import os, sys
 from Enums import *
+import datetime
 
 
 if getattr(sys, "frozen", False):
@@ -24,6 +25,9 @@ class Cell(QWidget):
     """
     Base `Cell` class, contains the left side panel framework and an empty main layout
     """
+    RUNNING = 0
+    ERROR = 1
+    SUCCESS = 2
     def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, copy_callback, cellType: CellType):
         super().__init__(parent)
         self.cellType = cellType
@@ -41,6 +45,7 @@ class Cell(QWidget):
         self.side_panel_layout = QGridLayout(self.side_panel)
         self.side_panel_layout.setContentsMargins(0, 0, 0, 0)
         self.side_panel_layout.setSpacing(2)
+        self.status_button = QPushButton("")
         self.up_button = QPushButton("↑")
         self.down_button = QPushButton("↓")
         self.run_button = QPushButton("▶")
@@ -68,10 +73,11 @@ class Cell(QWidget):
         self.add_optimize_button.setToolTip("Add Optimization Section Below")
         self.copy_button.setToolTip("Copy this current cell")
 
-        l = [self.up_button, self.down_button, self.run_button, self.add_xz_button, self.add_y_button, self.add_text_button, self.add_optimize_button, self.delete_button, self.copy_button]
+        l = [self.status_button, self.up_button, self.down_button, self.run_button, self.add_xz_button, self.add_y_button, self.add_text_button, self.add_optimize_button, self.delete_button, self.copy_button]
         for b in l:
             b.setFixedSize(40,40)
 
+        self.side_panel_layout.addWidget(self.status_button, 0, 0)
         self.side_panel_layout.addWidget(self.run_button, 0, 1)
         self.side_panel_layout.addWidget(self.add_xz_button, 1, 0)
         self.side_panel_layout.addWidget(self.add_y_button, 2, 0)
@@ -93,6 +99,36 @@ class Cell(QWidget):
         self.add_text_button.clicked.connect(lambda: add_callback(self, CellType.TEXT))
         self.add_optimize_button.clicked.connect(lambda: add_callback(self, CellType.OPTIMIZE))
         self.copy_button.clicked.connect(lambda: copy_callback(self))
+
+        self.execution_time = None
+        self.start_execution_time = None
+        self.end_execution_time = None
+
+    def setStatus(self, status: int):
+        match status:
+            case self.RUNNING:
+                self.status_button.setText("...")
+                self.status_button.setToolTip(f"Running... (started at {self.start_execution_time})")
+                self.status_button.setStyleSheet("QPushButton {color: yellow} QToolTip {color:white}")
+                self.start_execution_time = datetime.datetime.now()
+            case self.ERROR:
+                try:
+                    self.status_button.setText("❌")
+                except:
+                    self.status_button.setText("X")
+                self.end_execution_time = datetime.datetime.now()
+                self.execution_time = self.end_execution_time - self.start_execution_time
+                self.status_button.setToolTip(f"Exection Failed in {self.execution_time} (ended at {self.end_execution_time})")
+                self.status_button.setStyleSheet("QPushButton {color: red} QToolTip {color:white}")
+            case self.SUCCESS:
+                try:
+                    self.status_button.setText("✔")
+                except:
+                    self.status_button.setText("O")
+                self.end_execution_time = datetime.datetime.now()
+                self.execution_time = self.end_execution_time - self.start_execution_time
+                self.status_button.setToolTip(f"Exection Succeeded in {self.execution_time} (ended at {self.end_execution_time})")
+                self.status_button.setStyleSheet("QPushButton {color: green} QToolTip {color:white}")
 
 class CellLexer(QsciLexerCustom):
     "Lexer for notebook cells, both code and text cells. The actual lexing is manually done at `CodeCell` and `TextCell`."
