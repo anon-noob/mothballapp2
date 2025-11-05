@@ -822,6 +822,9 @@ class PlayerSimulationXZ(BasePlayer):
         else:
             player.simulate("sj.wa")
         
+
+
+        # print(abs(deg(arctan(-player.vx, player.vz))))
         return abs(deg(arctan(-player.vx, player.vz)))
 
     # RETURNERS:
@@ -1165,9 +1168,7 @@ class PlayerSimulationXZ(BasePlayer):
         """
         self.add_to_output(ExpressionType.TEXT, string_or_num="Jump Dimension Info")
         self.add_to_output(ExpressionType.TEXT, string_or_num=f"\tA {x} × {z} block jump is equivalent to")
-
         self.add_to_output(ExpressionType.TEXT, string_or_num=f"\t{self.truncate_number(PlayerSimulationXZ.dist_to_block(sqrt(PlayerSimulationXZ.block_to_dist(x)**2 + PlayerSimulationXZ.block_to_dist(z)**2)))} block jump.")
-
         self.add_to_output(ExpressionType.TEXT, string_or_num=f"\tAngle: {self.truncate_number(deg(arctan(PlayerSimulationXZ.block_to_dist(z), PlayerSimulationXZ.block_to_dist(x))))}")
     
     
@@ -1176,6 +1177,7 @@ class PlayerSimulationXZ(BasePlayer):
         "Copies the player"
         p = PlayerSimulationXZ()
         p.angle_queue = player.angle_queue
+        p.turn_queue = player.turn_queue
         p.rotation = player.rotation
         p.state = player.state
         p.default_ground_slip = player.default_ground_slip
@@ -1192,21 +1194,6 @@ class PlayerSimulationXZ(BasePlayer):
 
     @BasePlayer.record_to_call_stack
     def taps(self, *seq_or_num: MothballSequence):
-        """
-        Runs each sequence until the player fully stops **on the ground**, or based on the most recent modifiers used. If a number is passed, execute the previous sequence that many times.
-        
-        Sequences can be provided as standalone arguments which will run once, or it can have a number following it, indicating how many times to execute it.
-
-        NOTE 1: Sneak delay is toggled off while executing taps.
-
-        NOTE 2: To do air taps, provide all necessary air ticks, for example `taps(stj sa sta(10))` is not the same as `taps(sa)`
-
-        Example: `taps(sneak, 3)`. Execute `sneak` and stop moving until the player is stationary, for a total of 3 times. In parkour notation, this is equivalent to "3st W" or "3 shift tap W"
-
-        Example: `taps(walk, stj sneakair sta(10), 2)` executes `walk` once and `stj sneakair sta(10)` twice. In parkour notation, "1ut W 2ast W".
-        
-        Example: `taps(walk[water](5))` walk while in water for 5t, then stops in water since the player was in water.
-        """
         d = {}
         last_seq = ""
         after_num = False
@@ -1234,10 +1221,9 @@ class PlayerSimulationXZ(BasePlayer):
                     if self.modifiers & i:
                         modifier_list.append(j)
                 modifiers = ",".join(modifier_list)
-                # self.modifiers
                 while self.vx != 0 or self.vz != 0:
-                    self.simulate(f"stop[{modifiers}]", return_defaults=False)
-                    # self.stop()
+                    self.inputs = ''
+                    self.stop()
         if had_sneak_delay:
             self.sneak_delay = True
         
@@ -1495,7 +1481,7 @@ if __name__ == "__main__":
     # s = 'angleinfo(-45.01)'
     # s = 'pre(16) r(s[ss] outvz,3) r(st[ss] outvz, 3)'
     # s = 'w.s[wt](5) var(spd, outz outvz(-0.0615)) | z(-spd) sj sa45[wt] sa45(9) sa45[wt](2) sj45(12) outz(6, offset)'
-    a.simulate('print(nice \nidea)')
+    a.simulate('sj.wa vec vz(0) vx(0) z(0) stfj vec vz(0) vx(0) z(0)')
 
 
     a.show_output()
