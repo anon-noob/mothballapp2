@@ -159,7 +159,7 @@ class CodeLinter:
                         if not func_stack.is_empty():
                             func_stack.pop()
                             curr_func = None
-                            if last_function == "func" or last_function == "function":
+                            if (last_function == "func" or last_function == "function") and custom_funcs_vars:
                                 custom_funcs_vars.pop()
                             last_function = ""
                             if not func_stack.is_empty():
@@ -299,7 +299,7 @@ class CodeLinter:
                             func_stack.pop()
                             curr_func = None
                             
-                            if last_function == "func" or last_function == "function":
+                            if (last_function == "func" or last_function == "function") and custom_funcs_vars:
                                 custom_funcs_vars.pop()
                             last_function = ""
                             if not func_stack.is_empty():
