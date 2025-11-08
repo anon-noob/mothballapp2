@@ -27,13 +27,13 @@ import ReferencePage
 from Enums import CellType, TextCellState
 from version import __version__
 import MacroViewer
+from UndoRedoCell import ActionStack
 
 # Reorganize the help page
 # Fix settings
-# Add other remaining colors
 # Something is wrong with action stack when undoing towards the end
 
-# Linting in documentation with custom functions
+# Default settings for each simulation (version, pre, etc)
 
 # Debian Linux fix: run in console `sudo apt-get install libxcb-xinerama0`
 
@@ -43,117 +43,6 @@ Assertion [lengthStyle == 0 || (lengthStyle > 0 && lengthStyle + position <= sty
 
 Aborted
 """
-
-
-class ActionStack:
-    """
-    Keeps track of GUI changes, mainly adding, removing, and moving cells. `undo` executes the action, `redo` executes the opposite action. 
-    """
-    DELETE_ACTION = 0
-    CREATE_ACTION = 1
-    MOVE_ACTION = 2
-
-    UNDO = 3
-    REDO = 4
-
-    class DeleteCellAction:
-        def __init__(self, index: int):
-            self.action = ActionStack.DELETE_ACTION
-            self.index = index
-        def __repr__(self):
-            return f"Delete(index={self.index})"
-    class CreateCellAction:
-        def __init__(self, index: int, data: dict):
-            self.action = ActionStack.CREATE_ACTION
-            self.data = data
-            self.index = index
-        def __repr__(self):
-            return f"Create(insert_at_index={self.index}, data={self.data})"
-    class MoveCellAction:
-        def __init__(self, source: int, direction: Literal[-1,1]):
-            self.action = ActionStack.MOVE_ACTION
-            self.source = source
-            self.direction = direction
-        def __repr__(self):
-            return f"Move(src={self.source}, direction={self.direction})"
-
-    def __init__(self, parent: "MainWindow"):
-        self.parent = parent # GUI
-        self.undoStack: list[Union[ActionStack.DeleteCellAction, ActionStack.CreateCellAction, ActionStack.MoveCellAction]] = []
-        self.redoStack: list[Union[ActionStack.DeleteCellAction, ActionStack.CreateCellAction, ActionStack.MoveCellAction]] = []
-
-    def addDeleteAction(self, index: int):
-        "When the user adds a cell, push a `delete` action to the `undoStack`"
-        self.undoStack.append(ActionStack.DeleteCellAction(index))
-        self.redoStack = []
-
-    def addCreateAction(self, index: int, data):
-        "When the user deletes a cell, push a `create` action to the `undoStack`"
-        self.undoStack.append(ActionStack.CreateCellAction(index, data))
-        self.redoStack = []
-
-    def addMoveAction(self, source: int, direction: int):
-        "When the user moves a cell, push a `move` action to the `undoStack`"
-        self.undoStack.append(ActionStack.MoveCellAction(source, direction))
-        self.redoStack = []
-
-    def executeAction(self, undo_or_redo: Literal[3,4]):
-        if undo_or_redo == self.UNDO:
-            popping = self.undoStack
-            adding = self.redoStack
-        elif undo_or_redo == self.REDO:
-            popping = self.redoStack
-            adding = self.undoStack
-        
-        if not popping:
-            return
-        action = popping.pop()
-        match action.action:
-            case self.DELETE_ACTION: # pop the delete action, add the create action
-                data = self.parent.removeCell(action.index, addActionStack=False)
-                adding.append(ActionStack.CreateCellAction(action.index, data))
-
-            case self.CREATE_ACTION: # pop the create action, add the delete action
-                t = action.data["cell_type"]
-                if t == CellType.TEXT:
-                    cell = self.parent.addCell(action.index, cellType=action.data['cell_type'], addActionStack=False)
-                    cell.setupCell(action.data)
-                    QTimer.singleShot(100, lambda: self.continueProcess(cell))
-                    adding.append(ActionStack.DeleteCellAction(action.index))
-                elif t == CellType.XZ or t == CellType.Y:
-                    cell = self.parent.addCell(action.index, cellType=action.data["cell_type"], addActionStack=False)
-                    cell.setupCell(action.data)
-                    QTimer.singleShot(100, lambda: self.continueProcess(cell))
-                    adding.append(ActionStack.DeleteCellAction(action.index))
-                elif t == CellType.OPTIMIZE:
-                    cell = self.parent.addCell(action.index, cellType=action.data["cell_type"], addActionStack=False)
-                    cell.setupCell(action.data)
-
-            case self.MOVE_ACTION: # pop the move action, add the same move action
-                self.parent.moveCell(action.source, action.direction, addActionStack=False)
-                adding.append(ActionStack.MoveCellAction(action.source, action.direction))
-
-    def undo(self):
-        self.executeAction(self.UNDO)
-
-    def redo(self):
-        self.executeAction(self.REDO)
-
-    def reset(self):
-        self.undoStack = []
-        self.redoStack = []
-    
-    def __repr__(self):
-        return f"""ActionStack-> UndoStack:{self.undoStack}\n              RedoStack:{self.redoStack}"""
-    
-    def continueProcess(self, cell):
-        """
-        Resize cells after processing all events.
-        """
-        cell.input_field.adjustHeight()
-        cell.adjust_output_height()
-        QApplication.processEvents()
-
 #######################################
 #            MAIN WINDOW              #
 #######################################
@@ -232,6 +121,7 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.scroll_area)
         
         self.setCentralWidget(central_widget)  # Set central widget
+        self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         
 
@@ -251,6 +141,14 @@ class MainWindow(QMainWindow):
         self.addCell()  # Add the first section by default
     
         QTimer.singleShot(0, self.restoreWorkFromCrash)
+
+        self.resize_big_shortcut = QShortcut(QKeySequence.StandardKey.ZoomIn, self, context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.resize_small_shortcut = QShortcut(QKeySequence.StandardKey.ZoomOut, self, context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self.resize_big_shortcut.activated.connect(self.resizeBig)
+        self.resize_small_shortcut.activated.connect(lambda: print("BYE"))
+
+    def resizeBig(self):
+        pass
 
     def restoreWorkFromCrash(self):
         with open(FileHandler.getPathToLastState(), "r") as f:
@@ -423,9 +321,11 @@ class MainWindow(QMainWindow):
     
     def undo(self):
         self.actionStack.undo()
-    
+        QApplication.processEvents()
+        
     def redo(self):
         self.actionStack.redo()
+        QApplication.processEvents()
 
     def openSettings(self):
         """
@@ -541,6 +441,9 @@ class MainWindow(QMainWindow):
             try:
                 c = self.addCell(cellType=cell.cell_type)
                 c.setupCell(cell.__dict__)
+                if c.cellType != CellType.OPTIMIZE:
+                    QTimer.singleShot(0,c.adjust_output_height)
+                
             except Exception as e:
                 print(e)
 
@@ -552,19 +455,7 @@ class MainWindow(QMainWindow):
             self.setWindowTitle(f"Mothball Notebook v{self.version} - " + fileName)
             self.unsaved_changes = False
 
-
         self.actionStack.reset()
-        QApplication.processEvents()
-        QTimer.singleShot(100, self.continueOpenFileProcess)
-
-    def continueOpenFileProcess(self):
-        """
-        Resize cells after processing all events.
-        """
-        for cell in self.CELLS:
-            if cell.cellType != CellType.OPTIMIZE:
-                cell.input_field.adjustHeight()
-                cell.adjust_output_height()
         QApplication.processEvents()
 
     def clearAllCells(self):
