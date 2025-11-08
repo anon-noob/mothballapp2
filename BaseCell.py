@@ -4,7 +4,7 @@ Also contains `QsciScintilla` editor, subclassed by `CodedEditor`, and a `QsciLe
 Also contains `RenderViewer`, used to render Mothball code outputs and markdown text.
 """
 
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QPushButton,QHBoxLayout,QTextBrowser,QAction, QShortcut
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QPushButton,QHBoxLayout,QTextBrowser,QAction, QShortcut, QApplication
 from PyQt5.QtGui import QColor, QFont, QKeySequence
 from PyQt5.QtCore import Qt
 from PyQt5.Qsci import QsciLexerCustom, QsciScintilla
@@ -180,6 +180,7 @@ class CodeEdit(QsciScintilla):
     def __init__(self, generalOptions: dict, colorOptions: dict, textOptions: dict, parent):
         super().__init__(parent)
         self.mainLexer = CellLexer(generalOptions, colorOptions, textOptions)
+        self.needsResize = False
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setBraceMatching(QsciScintilla.StrictBraceMatch)
         self.setWrapMode(QsciScintilla.WrapWord)
@@ -190,16 +191,18 @@ class CodeEdit(QsciScintilla):
         self.commentAction = QAction('Comment', self)
         self.commentAction.setShortcut(QKeySequence("Ctrl+Shift+/"))
         self.commentAction.triggered.connect(self.comment)
-
         self.commentShortcut = QShortcut(QKeySequence("Ctrl+Shift+/"), self)
         self.commentShortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self.commentShortcut.activated.connect(self.comment)
+
+        self.SCN_PAINTED.connect(self.adjustHeight) # I am hoping this operation is cheap enough
+
 
     def resizeEvent(self, e):
         self.adjustHeight()
         return super().resizeEvent(e)
     
-    def adjustHeight(self):
+    def adjustHeight(self): # The "cheap" operation in question
         "Adjust height based on visible lines, including word wrapped lines"
         logical_lines = max(1,self.lines())
         new_height = 0
@@ -222,10 +225,15 @@ class CodeEdit(QsciScintilla):
         text = self.selectedText()
         if not text:
             return
-        if text.startswith("#") and text.endswith("#"):
-            self.replaceSelectedText(f'{text[1:len(text)-1]}')
-        else:
+        
+        a = text.find('#')
+        b = text.rfind('#')
+        if (a == -1 or b == -1):
             self.replaceSelectedText(f'#{text}#')
+        elif ((text[0:a] and not text[0:a].isspace()) or (text[b+1:] and not text[b+1:].isspace())):
+            self.replaceSelectedText(f'#{text}#')
+        else:
+            self.replaceSelectedText(text[0:a] + text[a+1:b] + text[b+1:])
 
 
 
