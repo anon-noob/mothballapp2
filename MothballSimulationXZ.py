@@ -6,7 +6,7 @@ from Enums import ExpressionType
 from collections import deque
 
 class Tick:
-    def __init__(self, w: bool, a: bool, s: bool, d: bool, sneak: bool, sprint: bool, space: bool, right_click: bool, last_turn: float):
+    def __init__(self, w: bool, a: bool, s: bool, d: bool, sneak: bool, sprint: bool, space: bool, right_click: bool, last_turn: float, x: float = None, z: float = None, vx: float = None, vz: float = None):
         self.w = w
         self.a = a
         self.s = s
@@ -16,9 +16,15 @@ class Tick:
         self.space = space
         self.right_click = right_click
         self.last_turn = last_turn
+        self.x = x
+        self.z = z
+        self.vx = vx
+        self.vz = vz
     
     def __repr__(self):
-        return f"Tick({self.w=},{self.a=},{self.s=},{self.d=},{self.sneak=},{self.sprint=},{self.space=},{self.right_click=},{self.last_turn=})"
+        keys = f"Keys: ({'w' if self.w else ''}{'a' if self.a else ''}{'s' if self.s else ''}{'d' if self.d else ''})"
+        mvt = f"Mvt: ({self.x}, {self.z}, {self.vx}, {self.vz})"
+        return f"Tick({keys} {mvt})"
 
 class PlayerSimulationXZ(BasePlayer):
     pi = 3.14159265358979323846
@@ -267,7 +273,7 @@ class PlayerSimulationXZ(BasePlayer):
 
             self.inertialistener_helper()
 
-            self.history.append(Tick('w' in self.inputs, 'a' in self.inputs, 's' in self.inputs, 'd' in self.inputs, is_sneaking, is_sprinting, self.state == self.JUMP, bool(self.modifiers & self.BLOCK), self.last_turn))
+            self.history.append(Tick('w' in self.inputs, 'a' in self.inputs, 's' in self.inputs, 'd' in self.inputs, is_sneaking, is_sprinting, self.state == self.JUMP, bool(self.modifiers & self.BLOCK), self.last_turn, self.x, self.z, self.vx, self.vz))
     
     def move_new(self, duration: int, rotation: f32 = None, rotation_offset: float = 0.0, slip: f32 = None, is_sprinting: bool = False, is_sneaking: bool = False, speed: int = None, slow: int = None, state: Literal["ground", "air", "jump"] = "ground"):
         """
@@ -1481,7 +1487,9 @@ if __name__ == "__main__":
     # s = 'angleinfo(-45.01)'
     # s = 'pre(16) r(s[ss] outvz,3) r(st[ss] outvz, 3)'
     # s = 'w.s[wt](5) var(spd, outz outvz(-0.0615)) | z(-spd) sj sa45[wt] sa45(9) sa45[wt](2) sj45(12) outz(6, offset)'
-    a.simulate('sj.wa vec vz(0) vx(0) z(0) stfj vec vz(0) vx(0) z(0)')
+    a.simulate('sj(7) sa.wd(5) s.wd vec')
+
+    print(a.history)
 
 
     a.show_output()
