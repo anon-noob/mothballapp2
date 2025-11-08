@@ -42,7 +42,8 @@ class PlayerSimulationXZ(BasePlayer):
     mm_to_dist = dist_to_block = lambda mm: (mm + copysign(f32(0.6), mm))
     dist_to_mm = block_to_dist = lambda dist: (dist - copysign(f32(0.6), dist))
 
-    sprintjump_boost = f32(0.2)
+    old_sprintjump_boost = f32(0.2)
+    new_sprintjump_boost = 0.2
 
     # Player States Enums
     JUMP = 0
@@ -147,7 +148,7 @@ class PlayerSimulationXZ(BasePlayer):
         elif self.modifiers & self.LAVA:
             slip=f32(0.5/0.91)
         
-        sj_boost = self.sprintjump_boost
+        sj_boost = self.old_sprintjump_boost
         if self.previous_slip is None:
             self.previous_slip = self.default_ground_slip
 
@@ -292,7 +293,7 @@ class PlayerSimulationXZ(BasePlayer):
         elif self.modifiers & self.LAVA:
             slip=f32(0.5/0.91)
         
-        sj_boost = float(self.sprintjump_boost)
+        sj_boost = self.new_sprintjump_boost
         if self.previous_slip is None:
             self.previous_slip = self.default_ground_slip
 
@@ -423,7 +424,7 @@ class PlayerSimulationXZ(BasePlayer):
 
             self.inertialistener_helper()
 
-            self.history.append(Tick('w' in self.inputs, 'a' in self.inputs, 's' in self.inputs, 'd' in self.inputs, is_sneaking, is_sprinting, self.state == self.JUMP, bool(self.modifiers & self.BLOCK), self.last_turn))
+            self.history.append(Tick('w' in self.inputs, 'a' in self.inputs, 's' in self.inputs, 'd' in self.inputs, is_sneaking, is_sprinting, self.state == self.JUMP, bool(self.modifiers & self.BLOCK), self.last_turn, self.x, self.z, self.vx, self.vz))
 
     def get_inertia_speed(self):
         "Get the speed of hitting inertia, depending on whether the player is midair, on ground, and with what slipperiness."
