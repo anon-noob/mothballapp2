@@ -500,7 +500,7 @@ class MainWindow(QMainWindow):
         
             if reply == QMessageBox.Yes:
                 self.saveFile()
-            for page in (self.about_page, self.wordle_page, self.help_page, self.settings_page):
+            for page in (self.about_page, self.wordle_page, self.help_page, self.settings_page, self.macro_viewer):
                 if page is not None and page.isVisible():
                     page.close()
             
