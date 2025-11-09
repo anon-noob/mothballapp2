@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTableView, QVBoxLayout, QWidget, QMenu, QFileDialog, QMessageBox, QTabWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTableView, QVBoxLayout, QWidget, QMenu, QFileDialog, QMessageBox, QTabWidget, QHBoxLayout, QPushButton, QTextEdit
 from PyQt5.QtCore import QAbstractTableModel, Qt
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QFont
 import json
 import FileHandler
 from Enums import MacroFileExtension
@@ -43,6 +43,7 @@ class MacroFileGrid(QAbstractTableModel):
                 for l in i:
                     x.append(y.get(l, l))
                 self.formatted_data.append(x)
+        
     
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
@@ -76,7 +77,112 @@ class MacroFileGrid(QAbstractTableModel):
     def columnCount(self, parent=None):
         if not self.formatted_data:
             return 0
-        return len(self.formatted_data[0])
+        return len(self.formatted_data[0])            
+
+
+    def toMothball(self, strict_sprint: bool):
+        # WASD Space Sprint Sneak Yaw Pitch
+        cmds = []
+        turns = []
+        jump_duration = 12
+        current_airtime = 0
+        in_air = False
+
+        for i in self.formatted_data[1:]:
+            # sneak?, walk/sprint?, jump?, '.', inputs?, args?
+            
+            p = ['','','','.','','']
+            w,a,s,d, space, sprint, sneak, yaw, pitch = i
+            turns.append(round(float(yaw),3))
+
+            w = w != "X"
+            a = a != "X"
+            s = s != "X"
+            d = d != "X"
+            space = space != "X" 
+            sprint = sprint != "X" 
+            sneak = sneak != "X" 
+
+            if sneak:
+                p[0] = "sn"
+            if sprint:
+                p[1] = "s"
+            elif not sneak:
+                p[1] = "w"
+            if space:
+                p[2] = "j"
+                in_air = True
+                current_airtime = 1
+            else:
+                if in_air and current_airtime + 1 <= jump_duration:
+                    current_airtime += 1
+                    p[2] = "a"
+                elif in_air and current_airtime + 1 > jump_duration:
+                    in_air = False
+            
+            if w and not s:
+                p[4] = "w"
+            elif s and not w:
+                p[4] = "s"
+            if a and not d:
+                p[5] = "a"
+            elif d and not a:
+                p[5] = "d"
+            
+            if p[4] == 'w' and not p[5]:
+                p[4] = ''
+                p[3] = ''
+            
+            cmds.append(''.join(p))
+
+            
+
+
+        # compression
+        turns2 = {}
+        last_nonzero = 0
+        encountered_zero = False
+        for i,turn in enumerate(turns):
+            if last_nonzero != i and turn and not encountered_zero:
+                turns2[last_nonzero].append(str(turn))
+            else:
+                if turn:
+                    last_nonzero = i
+                    turns2[last_nonzero] = [str(turn)]
+                    encountered_zero = False
+                else:
+                    encountered_zero = True
+        
+        # Insert
+        newcmds = []
+        for i,x in enumerate(cmds):
+            if i in turns2:
+                if len(turns2[i]) == 1:
+                    newcmds.append(f"turn({turns2[i][0]})")
+                else:
+                    newcmds.append(f"tq({','.join(turns2[i])})")
+            newcmds.append(x)
+
+        cmds2 = []
+        prev = newcmds[0]
+        count = 1
+        for i in newcmds[1:]:
+            if i == prev:
+                count += 1
+            elif i != prev:
+                if count > 1:
+                    cmds2.append(prev + f"({count})")
+                else:
+                    cmds2.append(prev)
+                count = 1
+                prev = i
+        else:
+            if count > 1:
+                cmds2.append(prev + f"({count})")
+            else:
+                cmds2.append(prev)
+
+        return cmds2
     
 class MacroViewer(QMainWindow):
     def __init__(self):
@@ -121,6 +227,12 @@ class MacroViewer(QMainWindow):
         self.tabWidget.removeTab(index)
     
     def addTab(self, filename, data):
+
+        w = QWidget()
+        l = QHBoxLayout()
+        w.setLayout(l)
+
+
         table = QTableView()
         table.setStyleSheet("""
     QHeaderView::section {
@@ -152,9 +264,36 @@ class MacroViewer(QMainWindow):
         table.horizontalHeader().setStretchLastSection(False)
         table.resizeColumnsToContents()
 
-        self.tabWidget.addTab(table, basename)
-        self.opened_files.append(basename)  
-    
+        l.addWidget(table)
+
+        rs = QVBoxLayout()
+
+        btn2 = QPushButton("Strict Sprint")
+        btn2.setCheckable(True)
+        btn2.setStyleSheet("QPushButton::checked {background-color: #2980b9}")
+        rs.addWidget(btn2)
+
+        btn = QPushButton("Convert to Mothball")
+        rs.addWidget(btn)
+
+        output_field = QTextEdit()
+        output_field.setFont(QFont("Consolas", 14))
+        rs.addWidget(output_field)
+        l.addLayout(rs)
+
+        btn.clicked.connect(lambda _,m=model,o=output_field,strict_sprint=btn2.isChecked(): self.getMothballString(m,o, strict_sprint))
+
+        l.setStretchFactor(table, 2)
+        l.setStretchFactor(rs,1)
+
+        self.tabWidget.addTab(w, basename)
+        self.opened_files.append(basename)
+
+    def getMothballString(self, model, output_field, strict_sprint: bool):
+        a = model.toMothball(strict_sprint)
+        output_field.setText(" ".join(a))
+        
+
     def createMenus(self):
         menuBar = self.menuBar()
         fileMenu = QMenu("&File", self)
