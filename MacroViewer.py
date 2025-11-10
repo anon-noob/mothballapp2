@@ -115,7 +115,7 @@ class MacroFileGrid(QAbstractTableModel):
 
             if sneak:
                 p[0] = "sn"
-            if sprint:
+            if sprint and w:
                 p[1] = "s"
             elif not sneak and (w or a or s or d):
                 p[1] = "w"
