@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTableView, QVBoxLayout, QWidget, QMenu, QFileDialog, QMessageBox, QTabWidget, QHBoxLayout, QPushButton, QTextEdit
+from PyQt5.QtWidgets import QMainWindow, QTableView, QVBoxLayout, QWidget, QMenu, QFileDialog, QMessageBox, QTabWidget, QHBoxLayout, QPushButton, QTextEdit, QLabel, QLineEdit
 from PyQt5.QtCore import QAbstractTableModel, Qt
 from PyQt5.QtGui import QColor, QFont
 import json
@@ -80,35 +80,47 @@ class MacroFileGrid(QAbstractTableModel):
         return len(self.formatted_data[0])            
 
 
-    def toMothball(self, strict_sprint: bool):
+    def toMothball(self, strict_sprint: bool, no_sprint_sneak: bool, jump_duration: int):
+        # strict sprint: unsprinting in a macro will unsprint in mothball
+        # no sneak sprint: any sneak is walk, not sprint
+        # this needs serious refactoring hELP
+        # strict sprint
+        n = []
+        prev_sprint = False
+        for i in self.formatted_data[1:]:
+            w,a,s,d, space, sprint, sneak, yaw, pitch = i
+            sp = (True if (not strict_sprint and prev_sprint and w != "X") else sprint != "X")
+            n.append([w != "X", a != "X", s != "X", d != "X", space != "X", sp, sneak != "X", yaw, pitch])
+            prev_sprint = sp
+
+        # no sprint sneak
+        m = []
+        for i in n:
+            w,a,s,d, space, sprint, sneak, yaw, pitch = i
+            m.append([w,a,s,d, space, (False if no_sprint_sneak and sneak else sprint), sneak, yaw, pitch])
+        
+
         # WASD Space Sprint Sneak Yaw Pitch
         cmds = []
         turns = []
-        jump_duration = 12
         current_airtime = 0
         in_air = False
 
-        for i in self.formatted_data[1:]:
-            # sneak?, walk/sprint?, jump?, '.', inputs?, args?
+        for i in m:
+            # sneak?, walk/sprint/stop?, jump?, '.', forward?, strafe?
             
             p = ['','','','.','','']
             w,a,s,d, space, sprint, sneak, yaw, pitch = i
             turns.append(round(float(yaw),3))
 
-            w = w != "X"
-            a = a != "X"
-            s = s != "X"
-            d = d != "X"
-            space = space != "X" 
-            sprint = sprint != "X" 
-            sneak = sneak != "X" 
-
             if sneak:
                 p[0] = "sn"
             if sprint:
                 p[1] = "s"
-            elif not sneak:
+            elif not sneak and (w or a or s or d):
                 p[1] = "w"
+            elif not (w or a or s or d):
+                p[1] = "st"
             if space:
                 p[2] = "j"
                 in_air = True
@@ -129,7 +141,7 @@ class MacroFileGrid(QAbstractTableModel):
             elif d and not a:
                 p[5] = "d"
             
-            if p[4] == 'w' and not p[5]:
+            if p[4] != 's' and not p[5]:
                 p[4] = ''
                 p[3] = ''
             
@@ -138,7 +150,7 @@ class MacroFileGrid(QAbstractTableModel):
             
 
 
-        # compression
+        # compression turns
         turns2 = {}
         last_nonzero = 0
         encountered_zero = False
@@ -163,6 +175,7 @@ class MacroFileGrid(QAbstractTableModel):
                     newcmds.append(f"tq({','.join(turns2[i])})")
             newcmds.append(x)
 
+        # compress movement cmds
         cmds2 = []
         prev = newcmds[0]
         count = 1
@@ -189,6 +202,12 @@ class MacroViewer(QMainWindow):
         super().__init__()
         self.setWindowTitle("Macro Viewer")
         self.opened_files = []
+
+        self.setStyleSheet("""QToolTip { 
+                           background-color: #2e2e2e; 
+                           color: white; 
+                           border: black solid 1px
+                           }""")
 
         self.tabWidget = QTabWidget()
         self.tabWidget.setStyleSheet("""
@@ -266,31 +285,51 @@ class MacroViewer(QMainWindow):
 
         l.addWidget(table)
 
-        rs = QVBoxLayout()
+        rightside = QVBoxLayout()
 
-        btn2 = QPushButton("Strict Sprint")
-        btn2.setCheckable(True)
-        btn2.setStyleSheet("QPushButton::checked {background-color: #2980b9}")
-        rs.addWidget(btn2)
+        nss_btn = QPushButton("No Sprint Sneak")
+        nss_btn.setCheckable(True)
+        nss_btn.setToolTip("When toggled, any sneak tick is unsprinted.")
+        nss_btn.setStyleSheet("QPushButton::checked {background-color: #2980b9} QToolTip {background-color: #2e2e2e; color:white}")
+        rightside.addWidget(nss_btn)
 
-        btn = QPushButton("Convert to Mothball")
-        rs.addWidget(btn)
+        ss_btn = QPushButton("Strict Sprint")
+        ss_btn.setCheckable(True)
+        ss_btn.setToolTip("When toggled, it will match sprint and unsprint ticks directly, even if it is not possible in game.")
+        ss_btn.setStyleSheet("QPushButton::checked {background-color: #2980b9} QToolTip {background-color: #2e2e2e; color:white}")
+        rightside.addWidget(ss_btn)
+
+        jump_duration_layout = QHBoxLayout()
+        label = QLabel("Jump Duration")
+        label.setToolTip("The default duration of a jump. For example, a jump normally lasts 12 ticks.")
+        jump_duration_layout.addWidget(label)
+        jump_duration_input = QLineEdit()
+        jump_duration_input.setText("12")
+        jump_duration_layout.addWidget(jump_duration_input)
+        rightside.addLayout(jump_duration_layout)
+
+        convert = QPushButton("Convert to Mothball")
+        rightside.addWidget(convert)
 
         output_field = QTextEdit()
         output_field.setFont(QFont("Consolas", 14))
-        rs.addWidget(output_field)
-        l.addLayout(rs)
+        rightside.addWidget(output_field)
+        l.addLayout(rightside)
 
-        btn.clicked.connect(lambda _,m=model,o=output_field,strict_sprint=btn2.isChecked(): self.getMothballString(m,o, strict_sprint))
-
+        convert.clicked.connect(lambda _,m=model,o=output_field,strict_sprint=ss_btn, no_sprint_sneak=nss_btn, j=jump_duration_input: self.getMothballString(m,o, strict_sprint, no_sprint_sneak,j))
         l.setStretchFactor(table, 2)
-        l.setStretchFactor(rs,1)
+        l.setStretchFactor(rightside,1)
 
         self.tabWidget.addTab(w, basename)
         self.opened_files.append(basename)
 
-    def getMothballString(self, model, output_field, strict_sprint: bool):
-        a = model.toMothball(strict_sprint)
+    def getMothballString(self, model, output_field, strict_sprint, no_sprint_sneak, jump_duration):
+        duration = jump_duration.text()
+        try:
+            duration = max(0,int(duration))
+        except:
+            duration = 12
+        a = model.toMothball(strict_sprint.isChecked(), no_sprint_sneak.isChecked(), duration)
         output_field.setText(" ".join(a))
         
 
