@@ -534,7 +534,7 @@ class MainWindow(QMainWindow):
             self.macro_viewer.activateWindow()
         else:
             self.macro_viewer = MacroViewer.MacroViewer()
-            self.macro_viewer.resize(650, 650)
+            self.macro_viewer.resize(1000, 800)
             self.macro_viewer.show()
 
         if filename is not None and macrodata is not None and macroType is not None:
