@@ -1183,8 +1183,8 @@ class PlayerSimulationXZ(BasePlayer):
     def copy_player(player: "PlayerSimulationXZ"):
         "Copies the player"
         p = PlayerSimulationXZ()
-        p.angle_queue = player.angle_queue
-        p.turn_queue = player.turn_queue
+        p.angle_queue = player.angle_queue.copy() # copy the q, not the refence
+        p.turn_queue = player.turn_queue.copy()   # copy the q, not the refence
         p.rotation = player.rotation
         p.state = player.state
         p.default_ground_slip = player.default_ground_slip
