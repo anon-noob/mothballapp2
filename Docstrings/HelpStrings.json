@@ -101,6 +101,10 @@
     "setvy": "Set the player's y velocity",
     "up": "Move up (in a block). This function should be accomodated with a movement modifier such as water, ladder, lava.",
     "down": "Move down (in a block). This function should be accomodated with a movement modifier such as water, ladder, lava.",
+    "jumpboost": "Sets the player's jump boost potion effect, ranging from 0 (no jump boost) to 256 (max jump boost). Jump boost past 128 is calculated as (jumpboost-256).",
+    "jumpstrength": "Sets the player's jump strength attribute, ranging from 0 to 32",
+    "gravity": "Sets the player's gravity attribute, ranging from -1 to 1",
+    "slowfall": "Toggle on the slow falling poion effect with `true` or off with `false`. If toggled, gravity will be capped to 0.01b/t if the player is moving downwards",
     "height":"Calculate the change in y position assuming jumping with a given ceiling (example, 3 block ceiling) with some jump boost. If inertia is not provided, it will use the current inertia threshold.",
     "duration":"Calclate the number of ticks it takes to jump and land to the floor (example, floor = -8) given a ceiling (example, 3 block ceiling) with some jump boost. If inertia is not provided, it will use the current inertia threshold.",
     "blip":"Calculates at most `blip` blips, blipping with the blip height (or the height difference between the higher and lower blocks). If inertia is not provided, it will use the current inertia threshold. If init_height is not given, it will default to start on the higher block. If init_vy is not given, it will use the standard jump velocity formulas, including jump boost. Note that these kinds of blips are only useful in minecraft versions 1.8."
