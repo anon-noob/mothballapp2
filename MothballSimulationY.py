@@ -26,7 +26,7 @@ class PlayerSimulationY(BasePlayer):
         "stoppers": [],
         "returners": ["outty", "outsty", "outy", "outvy", "help", "duration", "height", "blip", "print"],
         "calculators": ["repeat", "r", "poss", "inertialistener", "il"],
-        "setters": ["setposy", "sety", "y", "setvy", "vy", "inertia","setceiling", "ceil", "precision", "setprecision", 'pre', 'addposy', 'addy', 'addvy']
+        "setters": ["setposy", "sety", "y", "setvy", "vy", "inertia","setceiling", "ceil", "precision", "setprecision", 'pre', 'addposy', 'addy', 'addvy', 'jumpboost', 'jb', 'jumpstrength', 'js', 'gravity', 'grav', 'slowfall', 'sf']
     }
 
     def __init__(self) -> None:
@@ -43,8 +43,14 @@ class PlayerSimulationY(BasePlayer):
         self.ceiling = None
         self.hit_ceiling = False
 
-    def move(self, duration, jump_boost = 0, up = False, down = False, state = GROUND):
-        
+        self.jump_boost = 0
+        self.jump_strength = 0.42 # the vy on jump tick
+        self.gravity = 0.08
+
+        self.slow_falling = False
+
+    def move(self, duration, jump_boost = None, jump_strength = None, gravity = None, slow_falling = None, up = False, down = False, state = GROUND):
+
         for _ in range(duration):
             
             self.y += self.vy # (Pre order)
@@ -58,7 +64,11 @@ class PlayerSimulationY(BasePlayer):
                 self.vy = 0
 
             if state == self.JUMP:
-                self.vy = 0.42 + 0.1 * jump_boost
+                if jump_boost is None:
+                    jump_boost = self.jump_boost
+                if jump_strength is None:
+                    jump_strength = self.jump_strength
+                self.vy = jump_strength + 0.1 * (jump_boost if jump_boost <= 128 else jump_boost-256)
                 # self.y = 0.0
 
             elif self.modifiers & self.WATER:
@@ -80,9 +90,16 @@ class PlayerSimulationY(BasePlayer):
                     self.vy = a # Going down
             
             else:
+                if gravity is None:
+                    gravity = self.gravity
+                if slow_falling is None:
+                    slow_falling = self.slow_falling
                 if state == self.SLIME:
                     self.vy = -self.vy
-                self.vy = (self.vy - 0.08) * 0.98
+                if slow_falling and self.vy <= 0:
+                    self.vy = (self.vy - min(0.01, gravity)) * 0.98
+                else:
+                    self.vy = (self.vy - gravity) * 0.98
                 if self.modifiers & self.LADDER:
                     if up:
                         self.vy = 0.12 * 0.98
@@ -122,49 +139,51 @@ class PlayerSimulationY(BasePlayer):
     def get_inertia_speed(self):
         return self.inertia_threshold / f32(0.91)
     
-    def jump(self, duration: int = 1, jump_boost: int = 0):
-        self.move(1, state = self.JUMP, jump_boost = jump_boost)
-        self.move(duration - 1, state = self.AIR)
+    def jump(self, duration: int = 1, /, jump_boost: int = None, jump_strength: float = None, *, gravity: float = None, slow_falling: bool = None):
+        if duration > 0:
+            self.move(1, state = self.JUMP, jump_boost = jump_boost, jump_strength = jump_strength)
+            self.move(duration - 1, state = self.AIR, gravity = gravity, slow_falling = slow_falling)
 
-    def air(self, duration: int = 1):
-        self.move(duration, state=self.AIR)
+    def air(self, duration: int = 1, /, *, gravity: float = None, slow_falling: bool = None):
+        self.move(duration, state=self.AIR, gravity = gravity, slow_falling = slow_falling)
 
-    def outy(self, centered_at: float = 0.0, label: str = "outy"):
+    def outy(self, centered_at: float = 0.0, /, label: str = "outy"):
         self.last_returned_value = self.add_to_output(ExpressionType.Z_LABEL, label, self.y, centered_at)
 
-    def outvy(self, centered_at: float = 0.0, label: str = "vy"):
+    def outvy(self, centered_at: float = 0.0, /, label: str = "vy"):
         self.last_returned_value = self.add_to_output(ExpressionType.Z_LABEL, label, self.vy, centered_at)
     
-    def setposy(self, value: float):
+    def setposy(self, value: float, /):
         self.y = value
     
-    def inertia(self, value: float):
+    def inertia(self, value: float, /):
         self.inertia_threshold = value
 
-    def outty(self, centered_at: float = 0, label: str = "top y"):
+    def outty(self, centered_at: float = 0, /, label: str = "top y"):
         self.last_returned_value = self.add_to_output(ExpressionType.Z_LABEL, label, self.y + 1.8, centered_at)
     
-    def outsty(self, centered_at: float = 0, label: str = "top y (sneak)"):
+    def outsty(self, centered_at: float = 0, /, label: str = "top y (sneak)"):
         self.last_returned_value = self.add_to_output(ExpressionType.Z_LABEL, label, self.y + 1.5, centered_at)
     
-    def slime(self, height: float = 0.0):
+    def slime(self, height: float = 0.0, /):
         self.move(1, state=self.SLIME)
         self.y = height
 
-    def setceiling(self, height: float = 0.0):
+    def setceiling(self, height: float = 0.0, /):
         if height == 0.0:
             self.ceiling = None
-        if height < 1.5:
+        elif height < 1.5:
             raise ValueError("Ceiling height is too low") # This will change with the scale attribute later on
-        self.ceiling = height
+        else:
+            self.ceiling = height
 
     def setvy(self, value: float, /):
         self.vy = value
     
-    def up(self, duration: int = 1):
+    def up(self, duration: int = 1, /):
         self.move(duration, up=True)
     
-    def down(self, duration: int = 1):
+    def down(self, duration: int = 1, /):
         self.move(duration, down=True)
     
     def possibilities(self, sequence: MothballSequence):
@@ -180,12 +199,38 @@ class PlayerSimulationY(BasePlayer):
 
     def addvy(self, value: float, /):
         self.vy += value
+
+    def jumpboost(self, value: int, /):
+        if value < 0 or 256 < value:
+            raise ValueError(f"jumpboost() takes an integer between 0 and 256 inclusive, not {value}")
+        self.jump_boost = value
+
+    def jumpstrength(self, value: float, /):
+        if value < 0 or 32 < value:
+            raise ValueError(f"jumpstrength() takes a float between 0 and 32 inclusive, not {value}")
+        self.jump_strength = value
+
+    def setgravity(self, value: float, /):
+        if value < -1 or 1 < value:
+            raise ValueError(f"gravity() takes a float between -1 and 1 inclusive, not {value}")
+        self.gravity = value
+
+    def slowfalling(self, toggle: bool, /):
+        self.slow_falling = toggle
     
-    def duration(self, floor: float = 0.0, ceiling: float = 0.0, /, inertia: float = None, jump_boost: int = 0):
+    def duration(self, floor: float = 0.0, ceiling: float = 0.0, /, *, inertia: float = None, jump_boost: int = None, jump_strength: float = None, gravity: float = None, slow_falling: bool = None):
         if inertia is None:
             inertia = self.inertia_threshold
+        if jump_boost is None:
+            jump_boost = self.jump_boost
+        if jump_strength is None:
+            jump_strength = self.jump_strength
+        if gravity is None:
+            gravity = self.gravity
+        if slow_falling is None:
+            slow_falling = self.slow_falling
         
-        vy = 0.42 + 0.1 * jump_boost
+        vy = jump_strength + 0.1 * (jump_boost if jump_boost <= 128 else jump_boost-256)
         y = 0
         ticks = 0
 
@@ -194,7 +239,10 @@ class PlayerSimulationY(BasePlayer):
             if ceiling != 0.0 and y > ceiling - 1.8:
                 y = ceiling - 1.8
                 vy = 0
-            vy = (vy - 0.08) * 0.98
+            if slow_falling and vy <= 0:
+                vy = (vy - min(0.01, gravity)) * 0.98
+            else:
+                vy = (vy - gravity) * 0.98
             if abs(vy) < inertia:
                 vy = 0
             ticks += 1
@@ -206,11 +254,19 @@ class PlayerSimulationY(BasePlayer):
         ceiling = f' {ceiling}bc' if ceiling != 0.0 else ''
         self.add_to_output(ExpressionType.GENERAL_LABEL, f"Duration of a {floor}b{ceiling} jump: {ticks} ticks")
 
-    def height(self, duration: int = 12, ceiling: float = 0.0, /, inertia: float = None, jump_boost: int = 0):
+    def height(self, duration: int = 12, ceiling: float = 0.0, /, *, inertia: float = None, jump_boost: int = None, jump_strength: float = None, gravity: float = None, slow_falling: bool = None):
         if inertia is None:
             inertia = self.inertia_threshold
+        if jump_boost is None:
+            jump_boost = self.jump_boost
+        if jump_strength is None:
+            jump_strength = self.jump_strength
+        if gravity is None:
+            gravity = self.gravity
+        if slow_falling is None:
+            slow_falling = self.slow_falling
         
-        vy = 0.42 + 0.1 * jump_boost
+        vy = jump_strength + 0.1 * (jump_boost if jump_boost <= 128 else jump_boost-256)
         y = 0
         ticks = 0
 
@@ -219,7 +275,10 @@ class PlayerSimulationY(BasePlayer):
             if ceiling != 0.0 and y > ceiling - 1.8:
                 y = ceiling - 1.8
                 vy = 0
-            vy = (vy - 0.08) * 0.98
+            if slow_falling and vy <= 0:
+                vy = (vy - min(0.01, gravity)) * 0.98
+            else:
+                vy = (vy - gravity) * 0.98
             if abs(vy) < inertia:
                 vy = 0
             ticks += 1
@@ -232,7 +291,7 @@ class PlayerSimulationY(BasePlayer):
         if init_height is None:
             init_height = blip_height
         if init_vy is None:
-            init_vy = 0.42 + 0.1 * jump_boost    
+            init_vy = 0.42 + 0.1 * (jump_boost if jump_boost <= 128 else jump_boost-256) 
         if inertia is None:
             inertia = self.inertia_threshold
         
@@ -306,6 +365,10 @@ class PlayerSimulationY(BasePlayer):
         "possibilities": possibilities, "poss": possibilities,
         "up": up,
         "down": down,
+        "jumpboost": jumpboost, "jb": jumpboost,
+        "jumpstrength": jumpstrength, "js": jumpstrength,
+        "setgravity": setgravity, "gravity": setgravity, "grav": setgravity, "g": setgravity,
+        "slowfall": slowfalling, "sf": slowfalling,
         "duration": duration,
         "height": height,
         "blip": blip
@@ -327,7 +390,7 @@ class PlayerSimulationY(BasePlayer):
 if __name__ == "__main__":
     p = PlayerSimulationY()
     # s = "jump(15) outy slime outy a(7) outy"
-    s = "pre(7) blip(10,px,px)"
+    s = "jb(251) dur(0)"
     # s = "jump"
     # s = "print(helo worlD) outy outvy"
     p.simulate(s)
