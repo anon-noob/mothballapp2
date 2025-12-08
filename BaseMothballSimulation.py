@@ -24,6 +24,10 @@ class MothballSequence(str):
     "Subclass of str, flag for a mothball sequence instead of a generic string."
     pass
 
+class NameString(str):
+    "Subclass of str, meant for arguments that are used to name something"
+    pass
+
 class BasePlayer:
     class CustomMothballFunction:
         def __init__(self, name: str, sequence: MothballSequence, arguments: list[inspect.Parameter]):
@@ -67,8 +71,8 @@ class BasePlayer:
         self.previously_sneaking = False
         self.previously_in_web = False
 
-        self.local_vars = {"px": 0.0625}
-        self.local_funcs = {}
+        self.local_vars: dict[str, int | float] = {"px": 0.0625}
+        self.local_funcs: dict[str, BasePlayer.CustomMothballFunction] = {}
 
         self.output: list[tuple[ExpressionType, tuple]] = []
 
@@ -101,22 +105,6 @@ class BasePlayer:
             return True
         except ValueError: 
             return False
-    
-    @staticmethod
-    def clean_backslashes(string: str):
-        "Replaces backslashes if possible. Anything with `\\` followed by a char will be replaced."
-        chars = [""] * len(string)
-        follows_backslash = False
-        for i, char in enumerate(string):
-            if char == "\\" and not follows_backslash:
-                follows_backslash = True
-            else:
-                if follows_backslash and char == "n":
-                    chars[i] = "\n"
-                else:
-                    chars[i] = char
-                follows_backslash = False
-        return "".join(chars)
 
     def safe_eval(self, expr: str, datatype: type, locals_dict: dict):
         "Evaluate and convert `expr` to `datatype`. If `datatype = str`, it returns the `expr` as normal."
@@ -132,8 +120,39 @@ class BasePlayer:
             result = evaluate(expr, locals_dict)
             converted_value = datatype(result) if result is not None else None
             return converted_value
-        else: # strings
+        
+        elif datatype == str:
+            result = []
+            in_string = False
+            follows_slash = False
+            for char in expr:
+                if char == "\\":
+                    follows_slash = True
+                    continue
+
+                if char == '"' and not follows_slash:
+                    in_string = not in_string
+
+                elif char in '{}' and follows_slash:
+                    result.append("\\")
+                    result.append(char)
+
+                elif char == 'n' and follows_slash:
+                    result.append("\n")
+
+                elif in_string:
+                    result.append(char)
+                
+                elif not in_string and not char.isspace():
+                    raise SyntaxError(f"Invalid string: {expr}\nStrings must be delimited by double quotes, e.g. \"hello\".\nTo insert values, place them inside curly brackets {{}}, such as \"a pixel is {{px}} blocks\"")
+
+                follows_slash = False
+            return self.formatted("".join(result))
+        
+        else:
             return expr
+    
+        
 
     def add_to_output(self, expression_type: ExpressionType, label: str = '', string_or_num: str | float = '', num2: float = 0, strip_label: bool = True):
         if strip_label:
@@ -143,28 +162,23 @@ class BasePlayer:
                 if num2:
                     expression_type += 1 # changes ExpressionType Flag
                     nn = string_or_num - num2
-                    self.output.append((expression_type, 
-                                    (BasePlayer.clean_backslashes(self.formatted(label)), ": ", self.truncate_number(num2), " - " if nn <= 0 else " + ", self.truncate_number(abs(nn)))))
+                    self.output.append((expression_type, (label, ": ", self.truncate_number(num2), " - " if nn <= 0 else " + ", self.truncate_number(abs(nn)) )))
                     return nn
                 else:
-                    self.output.append((expression_type, 
-                                    (BasePlayer.clean_backslashes(self.formatted(label)), ": ", self.truncate_number(string_or_num))))
+                    self.output.append((expression_type, (label, ": ", self.truncate_number(string_or_num) )))
                     return string_or_num
 
             case ExpressionType.TEXT:
                 if strip_label:
                     string_or_num = string_or_num.strip()
-                self.output.append((expression_type, 
-                                    (BasePlayer.clean_backslashes(self.formatted(string_or_num)),)))
+                self.output.append((expression_type, (string_or_num,)))
             case ExpressionType.WARNING:
-                self.output.append((expression_type, 
-                                    ("Warning", ": ", BasePlayer.clean_backslashes(self.formatted(string_or_num.strip())))))
+                self.output.append((expression_type, ("Warning", ": ", string_or_num.strip() )))
             case ExpressionType.Z_INERTIA_HIT | ExpressionType.X_INERTIA_HIT | ExpressionType.Z_INERTIA_MISS | ExpressionType.X_INERTIA_MISS:
                 a = abs(abs(string_or_num) - abs(num2))
-                self.output.append((expression_type, 
-                                    (BasePlayer.clean_backslashes(self.formatted(label)), ": ", self.truncate_number(string_or_num), " (", self.truncate_number(a), ")")))
+                self.output.append((expression_type, (label, ": ", self.truncate_number(string_or_num), " (", self.truncate_number(a), ")" )))
             case ExpressionType.GENERAL_LABEL:
-                self.output.append((expression_type, (BasePlayer.clean_backslashes(self.formatted(label)),)))
+                self.output.append((expression_type, (label, )))
     
     def truncate_number(self, value: float):
         "Round decimals to `self.precision` decimal places"
@@ -177,9 +191,13 @@ class BasePlayer:
         item_to_eval = ""
         in_expr = False
         depth = 0
+        follows_slash = False
 
         for char in string:
-            if char == "{":
+            if char == "\\":
+                follows_slash = True
+                continue
+            if char == "{" and not follows_slash:
                 in_expr = not in_expr
                 if not in_expr:
                     item_to_eval = ""
@@ -188,7 +206,7 @@ class BasePlayer:
                     item_to_eval += char
                 depth += 1
 
-            elif char == "}":
+            elif char == "}" and not follows_slash:
                 if depth == 0:
                     raise SyntaxError("Unmatched Brackets")
 
@@ -212,6 +230,7 @@ class BasePlayer:
                 item_to_eval += char
             else:
                 formatted_string += char
+            follows_slash = False
         
         if depth != 0:
             raise SyntaxError("Unmatched Brackets")
@@ -228,7 +247,7 @@ class BasePlayer:
     ###########################################################################
 
     @record_to_call_stack
-    def function(self, name: str, *args: str, code: MothballSequence, docstring:str=""):
+    def function(self, name: NameString, *args: NameString, code: MothballSequence, docstring:str=""):
         "Create a custom function"
         curr_type = inspect.Parameter.POSITIONAL_OR_KEYWORD
         parameters = []
@@ -288,8 +307,8 @@ class BasePlayer:
             string = "".join([x for x in reversed(string)])
         self.add_to_output(ExpressionType.TEXT, string_or_num=string)
     
-    @record_to_call_stack
-    def var(self, variable_name: str, value: MothballSequence = None, /):
+    @record_to_call_stack # its set to MothballSequence so safe_eval doesn't attempt to parse it
+    def var(self, variable_name: NameString, value: MothballSequence = None, /):
         """
         Assigns `value` to `variable_name`
         
@@ -315,11 +334,9 @@ class BasePlayer:
         try: 
             final_value = evaluate(value, self.local_vars)
         except:
-            try:
-                self.simulate(value, False, self.local_vars, suppress_exception=False)
-                final_value = self.last_returned_value
-            except:
-                pass
+            final_value = self.safe_eval(value, str, locals_dict=self.local_vars)
+            if not final_value:
+                raise ValueError(f"Unable to deduce the value of '{value}'")
         
         self.local_vars[variable_name] = final_value
     
@@ -332,25 +349,56 @@ class BasePlayer:
     @record_to_call_stack
     def ballhelp(self, func: MothballSequence):
         "Gets help about function `func`"
+        is_custom_func = False
         f = self.FUNCTIONS.get(func)
         if f is None:
             f = self.local_funcs.get(func)
             if f is None:
                 raise NameError(f"Function {func} not found")
-            
-        aliases = ', '.join(self.ALIASES.get(f.__name__, "None"))
-        f_sig = inspect.signature(f).parameters
+            else:
+                is_custom_func = True
+                f_sig = f.positional_only + f.positional_or_keyword + f.keyword_only + f.var_positional
+        else:
+            f_sig = inspect.signature(f).parameters.values()
+
+        aliases = self.ALIASES.get(f.__name__, "")
+        if not aliases:
+            aliases = f.__name__
+        else:
+            aliases = ', '.join(aliases)
         self.add_to_output(ExpressionType.TEXT, string_or_num=f"Help with {f.__name__}:")
         self.add_to_output(ExpressionType.TEXT, string_or_num=f"  Aliases: {aliases}", strip_label=False)
         self.add_to_output(ExpressionType.TEXT, string_or_num=f"  Arguments:", strip_label=False)
         
-
-        for y in f_sig.values(): # PLEASE ADD * and /
+        prev_kind = None
+        for y in f_sig: # PLEASE ADD * and /
             if y.name != "self":
-                self.add_to_output(ExpressionType.TEXT, string_or_num=f"    {y.name}: {y.annotation.__name__}", strip_label=False)
+                if y.kind == inspect.Parameter.VAR_POSITIONAL:
+                    varargsymbol = "*"
+                elif y.kind == inspect.Parameter.VAR_KEYWORD:
+                    varargsymbol = "**"
+                else:
+                    varargsymbol = ""
+                if y.default == inspect.Parameter.empty:
+                    self.add_to_output(ExpressionType.TEXT, string_or_num=f"    {varargsymbol}{y.name}: {y.annotation.__name__}", strip_label=False)
+                else:
+                    self.add_to_output(ExpressionType.TEXT, string_or_num=f"    {varargsymbol}{y.name}: {y.annotation.__name__} = {'_' if not y.default else y.default}", strip_label=False)
+                kind = y.kind
+                if y.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD and prev_kind == inspect.Parameter.POSITIONAL_ONLY:
+                    self.add_to_output(ExpressionType.TEXT, string_or_num=f"    /,", strip_label=False)
+                elif y.kind == inspect.Parameter.KEYWORD_ONLY and prev_kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
+                    self.add_to_output(ExpressionType.TEXT, string_or_num=f"    *,", strip_label=False)
+                elif y.kind == inspect.Parameter.KEYWORD_ONLY and prev_kind == inspect.Parameter.POSITIONAL_ONLY:
+                    self.add_to_output(ExpressionType.TEXT, string_or_num=f"    /,", strip_label=False)
+                    self.add_to_output(ExpressionType.TEXT, string_or_num=f"    *,", strip_label=False)
+                
+                prev_kind = kind
         
-        
-        docstring = HELP_DOCSTRINGS.get(f.__name__, f"{f.__name__} does not have a docstring. If you see this message, please annoy @anonnoob (see the about page)")
+        if is_custom_func:
+            default = "This is because this was a custom defined function without a docstring written for it."
+        else:
+            default = "If you see this message, please annoy @anonnoob (see the about page)"
+        docstring = HELP_DOCSTRINGS.get(f.__name__, f"{f.__name__} does not have a docstring. {default}")
         self.add_to_output(ExpressionType.TEXT, string_or_num=docstring)
 
     def get_suggestions(self, string: str):
@@ -385,19 +433,23 @@ class BasePlayer:
 
         return matches_start + matches_part + matches_char_count
     
-    def remove_comments(self, string: str):
+    def remove_comments_and_check_strings(self, string: str):
         "Removes comments delimited by `#`"
-        result = ""
+        result = []
         in_comment = False
         follows_slash = False
+        in_string = False
 
         for char in string:
-            if char == "#" and not follows_slash:
+            if char == '"' and not follows_slash:
+                in_string = not in_string
+
+            if char == "#" and not follows_slash and not in_string:
                 in_comment = not in_comment
                 continue
 
             if not in_comment:
-                result += char
+                result.append(char)
 
             if char == "\\" and not follows_slash:
                 follows_slash = True
@@ -405,7 +457,10 @@ class BasePlayer:
             else:
                 follows_slash = False
         
-        return result
+        if in_string:
+            raise SyntaxError('Unmatched quotes (")')
+
+        return "".join(result)
 
     def parse(self, string: str, splitters: tuple = ("\n", " ", "\r", "\t"), strict_whitespace: bool = True) -> list: 
         """
@@ -419,7 +474,7 @@ class BasePlayer:
 
         result = []
         token = ""
-        stack = []
+        stack = [] # parenthesis
         current = 0
         high = len(string)
         expecting_whitespace = False
@@ -427,8 +482,9 @@ class BasePlayer:
         matches_next_element = lambda e: ((e == ")" and stack[-1] == "(") or (e == "]" and stack[-1] == "["))
 
         follows_slash = False
+        in_string = False
 
-        string = self.remove_comments(string)
+        string = self.remove_comments_and_check_strings(string)
 
         # Regex to change '|' into 'x(0) z(0)'
         replace_bar_regex = r"(\|)"
@@ -437,7 +493,6 @@ class BasePlayer:
         for char in string + splitters[0]:
             if strict_whitespace:
                 if expecting_whitespace and not char.isspace():
-                    # print(char)
                     if char in ")]":
                         raise SyntaxError(f"Unmatched brackets at character {current}: {string[max(0, current-5):min(high, current + 5)]}")
                     else:
@@ -453,10 +508,13 @@ class BasePlayer:
                 follows_slash = True
                 token += char
                 continue
+                
+            elif char == '"' and not follows_slash:
+                in_string = not in_string
 
-            elif (char == "(" or char == "[") and not follows_slash:
+            elif (char == "(" or char == "[") and not follows_slash and not in_string:
                 stack.append(char)
-            elif (char == ")" or char == "]") and not follows_slash:
+            elif (char == ")" or char == "]") and not follows_slash and not in_string:
                 if not stack:
                     raise SyntaxError(f"Unmatched brackets at character {current}: {string[max(0, current-5):min(high, current + 5)]}")
                 if not matches_next_element(char):
@@ -470,7 +528,7 @@ class BasePlayer:
                     current += 1
                     continue
 
-            if char in splitters and not stack and not follows_slash:
+            if char in splitters and not stack and not follows_slash and not in_string:
                 token = token.strip()
                 result.append(token) if token else None
                 token = ""
@@ -663,9 +721,9 @@ class BasePlayer:
                     raise ValueError(f"Positional argument 'duration' should be a non-negative integer")
                 elif converted_value is None:
                     converted_value = 1
-            elif list(can_be_positional)[i] == "label":
-                if converted_value is None:
-                    converted_value = func.__name__
+            # elif list(can_be_positional)[i] == "label":
+            #     if converted_value is None:
+            #         converted_value = func.__name__
 
 
             converted_args.append(converted_value)
@@ -691,11 +749,10 @@ class BasePlayer:
             if datatype is None:
                 raise TypeError(f"{func.__name__} has no keyword argument '{kw}'")
             
-            elif datatype in [int, float, f32]:
-                converted_kwargs[kw] = self.safe_eval(value, datatype, locals)
-            else:
+            converted_kwargs[kw] = self.safe_eval(value, datatype, locals)
+            # else:
 
-                converted_kwargs[kw] = datatype(value)
+                # converted_kwargs[kw] = datatype(value)
                 
         
         return converted_args, converted_kwargs
@@ -714,6 +771,7 @@ class BasePlayer:
         args = token["args"]
         kwargs = token["kwargs"]
 
+       
         if isinstance(func, BasePlayer.CustomMothballFunction):
             # print(func.sequence)
             d = {}
@@ -776,7 +834,8 @@ if __name__ == "__main__":
     a = BasePlayer()
     # import time
     # m = time.perf_counter()
-    a.simulate("""r(var(p, 10) pre(p),1)""")
+    a.simulate(r'func(test, mity, code=print("hi {mity}"))   test(3) test("this")   help(test) help(print)')
+    # print(a.local_funcs)
     # n = time.perf_counter()
     # print(n-m)
     b=a.show_output()
