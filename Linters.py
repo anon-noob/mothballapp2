@@ -88,8 +88,8 @@ class CodeLinter:
         in_comment = False
         last_function = ""
         depth = 0
-        func_stack = FunctionStack()
-        curr_func = func_stack.peek()
+        # func_stack = FunctionStack()
+        # curr_func = func_stack.peek()
         in_string = False
         last_nonspace_token = ""
         last_nonspace_token_index = -1
@@ -98,11 +98,14 @@ class CodeLinter:
         custom_funcs = []
         custom_funcs_vars = []
         last_token_was_function = False
-
         in_curly_brackets = False
-        
+        func_kwarg_names = []
+        declaring_variable = False
+        declaring_function_name = False
+        declaring_function_parameters = False
+
         for token in listOfTokens:
-            b=False 
+            set_last_token_was_function=False 
             if token == "\n":
                 curr_line += 1
             
@@ -134,46 +137,54 @@ class CodeLinter:
                         last_nonspace_token_index = index
                     continue
             
-            elif in_string and token not in "(,#=}" and not in_curly_brackets:
-                if last_function == "var" and token not in string.punctuation.replace("_","") and curr_func.current_parameter().name == "variable_name":
-                    tokens_and_style.append((token, Style.VARS))
-                    local_vars.append(token) if token not in local_vars else None
+            elif declaring_variable and not token.isspace():
+                tokens_and_style.append((token, Style.VARS))
+                declaring_variable = False
+                index += 1
+                local_vars.append(token)
+                last_nonspace_token = token
+                last_nonspace_token_index = index
+                continue
+
+            elif declaring_function_name and not token.isspace():
+                declaring_function_name = False
+                declaring_function_parameters = True
+                index += 1
+                custom_funcs.append(token)
+                tokens_and_style.append((token, Style.CUSTOM_FUNC))
+                last_nonspace_token = token
+                last_nonspace_token_index = index
+                continue
+
+            elif declaring_function_parameters and not token in " \n\t\r,=()}{}":
+                index += 1
+                tokens_and_style.append((token, Style.CUSTOM_FUNC_PARAMETER))
+                custom_funcs_vars[-1].append(token)
+                last_nonspace_token = token
+                last_nonspace_token_index = index
+                continue
+
+            elif in_string and not in_curly_brackets:
+                if token == '"':
+                    tokens_and_style.append((token, Style.STRING))
                     index += 1
-                elif (last_function == "function" or last_function == "func") and token not in string.punctuation.replace("_",""):
-                    if curr_func.current_parameter().name == "name":
-                        tokens_and_style.append((token, Style.CUSTOM_FUNC))
-                        custom_funcs.append(token)
-                    elif curr_func.current_parameter().name == "args":
-                        tokens_and_style.append((token, Style.CUSTOM_FUNC_PARAMETER))
-                        custom_funcs_vars[-1].append(token)
-                    index += 1
-                elif token == ")":
-                    index += 1
-                    if self.matchParenthesis(local_parenthesis_stack, token):
-                        depth -= 1
-                        tokens_and_style.append((token, self.bracket_colors[depth % 3]))
-                        local_parenthesis_stack.pop()
-                        ind = local_parenthesis_stack_index.pop()
-                        tokens_and_style[ind] = (tokens_and_style[ind][0], self.bracket_colors[depth % 3])
-                        in_string = False
-                        if not func_stack.is_empty():
-                            func_stack.pop()
-                            curr_func = None
-                            if (last_function == "func" or last_function == "function") and custom_funcs_vars:
-                                custom_funcs_vars.pop()
-                            last_function = ""
-                            if not func_stack.is_empty():
-                                curr_func = func_stack.peek()
-                                last_function = curr_func.func
-                    else:
-                        tokens_and_style.append((token, Style.ERROR))
-                elif token == "{":
+                    in_string = False
+                elif token == '{':
+                    in_curly_brackets = not in_curly_brackets
                     tokens_and_style.append((token, Style.ERROR))
-                    index += 1
                     depth += 1
+                    index += 1
                     local_parenthesis_stack.append(token)
                     local_parenthesis_stack_index.append(index)
-                    in_curly_brackets = not in_curly_brackets
+                elif token == "}":
+                    if self.matchParenthesis(local_parenthesis_stack, token):
+                        local_parenthesis_stack.pop()
+                        ind = local_parenthesis_stack_index.pop()
+                        depth -= 1
+                        tokens_and_style.append((token, self.bracket_colors[depth % 3]))
+                        tokens_and_style[ind] = (tokens_and_style[ind][0], self.bracket_colors[depth % 3])
+                        index += 1
+                        in_curly_brackets = not in_curly_brackets
                 else:
                     tokens_and_style.append((token, Style.STRING))
                     index += 1
@@ -182,9 +193,16 @@ class CodeLinter:
                     last_nonspace_token_index = index
                 continue
 
+
+
             if token == "#":
                 in_comment = True
                 tokens_and_style.append((token, Style.COMMENT))
+                index += 1
+            
+            elif token == '"':
+                in_string = True
+                tokens_and_style.append((token, Style.STRING))
                 index += 1
 
             elif in_square_brackets:
@@ -216,13 +234,13 @@ class CodeLinter:
                 tokens_and_style.append((token, self.word_to_index[token]))
                 index += 1
                 last_function = token
-                b = True
+                set_last_token_was_function = True
+                func_kwarg_names = self.getFunctionKeywordArguments(token, custom_funcs)
             
             elif token in custom_funcs:
                 tokens_and_style.append((token, Style.CUSTOM_FUNC))
                 index += 1
                 last_function = token
-                # b = True
 
             elif custom_funcs_vars and token in custom_funcs_vars[-1]:
                 tokens_and_style.append((token, Style.CUSTOM_FUNC_PARAMETER))
@@ -241,51 +259,30 @@ class CodeLinter:
                 if token == "[":
                     in_square_brackets = True
                 elif token == "(":
-                    if last_function and last_token_was_function:
-                        func_stack.push(self.getFunction(last_function, custom_funcs))
-                        curr_func = func_stack.peek()
-                        if curr_func.current_parameter() and curr_func.current_parameter_datatype() == str: 
-                            in_string = True
-                        if last_function == "func" or last_function == "function":
-                            custom_funcs_vars.append([])
+                    if last_function == "var" and last_token_was_function:
+                        declaring_variable = True
+                    elif last_function == "func" or last_function == "function" and last_token_was_function:
+                        declaring_function_name = True
+                        custom_funcs_vars.append([])
+
                 elif token == "{":
                     in_curly_brackets = not in_curly_brackets
 
             elif token == ",": # NEXT PARAMETER
-                in_string = False
                 tokens_and_style.append((token, Style.DEFAULT))
                 index += 1
 
-                if curr_func and not curr_func.after_keyword:
-                    if curr_func.current_parameter() and curr_func.current_parameter().kind == inspect.Parameter.VAR_POSITIONAL:
-                        if curr_func.current_parameter().annotation == str:
-                            in_string = True
-                    else:
-                        curr_func.discard_parameter()
-
-                        if curr_func.current_parameter() and curr_func.current_parameter_datatype() == str:
-                            in_string = True
-                        
-
-            
-                elif curr_func and curr_func.after_keyword:
-                    curr_func.discard_parameter(curr_func.curr_param_name)
 
             elif token == "=": # KEYWORD ARGUMENT
                 in_string = False
                 tokens_and_style.append((token, Style.DEFAULT))
                 index += 1
-                if curr_func:
-                    curr_func.set_after_keyword()
-                if curr_func and last_nonspace_token in curr_func.keyword_parameters_remaining:
+                if func_kwarg_names and last_nonspace_token in func_kwarg_names:
                     text, style = tokens_and_style[last_nonspace_token_index]
                     tokens_and_style[last_nonspace_token_index] = (text, Style.KW_ARG)
+                    func_kwarg_names.remove(last_nonspace_token)
+                    declaring_function_parameters = False
 
-
-                    curr_func.curr_param_name = last_nonspace_token
-                    if curr_func.keyword_parameters_remaining[last_nonspace_token].annotation == str:
-                        in_string = True
-            
             elif token in ")}]":
                 if self.matchParenthesis(local_parenthesis_stack, token):
                     local_parenthesis_stack.pop()
@@ -295,17 +292,12 @@ class CodeLinter:
                     tokens_and_style[ind] = (tokens_and_style[ind][0], self.bracket_colors[depth % 3])
                     index += 1
                     if token == ")":
-                        if not func_stack.is_empty():
-                            func_stack.pop()
-                            curr_func = None
-                            
-                            if (last_function == "func" or last_function == "function") and custom_funcs_vars:
-                                custom_funcs_vars.pop()
-                            last_function = ""
-                            if not func_stack.is_empty():
-                                curr_func = func_stack.peek()
-                                last_function = curr_func.func # THIS ASSUMES THE NAME OF THE FUNC IS ONE VALID ALIAS
-                    elif token == "}":
+                        func_kwarg_names.clear()
+                        if last_function == "func" or last_function == "function":
+                            custom_funcs_vars.pop()
+                        last_function = ""
+
+                    if token == "}":
                         in_curly_brackets = not in_curly_brackets
                 else:
                     tokens_and_style.append((token, Style.ERROR))
@@ -321,20 +313,32 @@ class CodeLinter:
             if not token.isspace():
                 last_nonspace_token = token
                 last_nonspace_token_index = index
-            last_token_was_function = b
+            last_token_was_function = set_last_token_was_function
 
         return tokens_and_style
 
-    def getFunction(self, name: str, custom_funcs: list):
-        """
-        Returns the Mothball function object given the function's `name` or alias.
-        """
+    # def getFunction(self, name: str, custom_funcs: list):
+    #     """
+    #     Returns the Mothball function object given the function's `name` or alias.
+    #     """
+    #     if name in custom_funcs:
+    #         return name
+    #     elif self.mode == CellType.XZ:
+    #         return mxz.PlayerSimulationXZ.FUNCTIONS[name]
+    #     elif self.mode == CellType.Y:
+    #         return my.PlayerSimulationY.FUNCTIONS[name]
+
+    def getFunctionKeywordArguments(self, name: str, custom_funcs: list):
         if name in custom_funcs:
-            return name
+            return [] # maybe will allow custom funcs to have kwargs
         elif self.mode == CellType.XZ:
-            return mxz.PlayerSimulationXZ.FUNCTIONS[name]
+            f = mxz.PlayerSimulationXZ.FUNCTIONS[name]
+            sigs = [x for x,y in inspect.signature(f).parameters.items() if y.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD or y.kind == inspect.Parameter.KEYWORD_ONLY]
+            return sigs
         elif self.mode == CellType.Y:
-            return my.PlayerSimulationY.FUNCTIONS[name]
+            f = my.PlayerSimulationY.FUNCTIONS[name]
+            sigs = [x for x,y in inspect.signature(f).parameters.items() if y.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD or y.kind == inspect.Parameter.KEYWORD_ONLY]
+            return sigs
 
     def parseText(self):
         """
@@ -350,7 +354,7 @@ class CodeLinter:
                 results.append(item)
                 item = ""
             elif not follows_backslash:
-                if char in "(){}[]\\ .,/|-=+*#\n\t":
+                if char in '(){}[]\\ .",/|-=+*#\n\t':
                     if item:
                         results.append(item)
                     item = ""
@@ -741,7 +745,5 @@ class MDLinter:
             # tokens.append((line + "\n", Style.DEFAULT))
         # return tokens
 
-# a = MDLinter({},{},{})
-# print(a.parseTextToHighlight("""Hello and welcome!
-# to my greatest
-# achievement"""))
+# a = CodeLinter({},{},{}, CellType.XZ)
+# print(a.getFunctionKeywordArguments("poss", []))
