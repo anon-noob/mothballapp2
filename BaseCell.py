@@ -6,7 +6,7 @@ Also contains `RenderViewer`, used to render Mothball code outputs and markdown 
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QPushButton,QHBoxLayout,QTextBrowser,QAction, QShortcut, QApplication
 from PyQt5.QtGui import QColor, QFont, QKeySequence
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QEvent, QObject
 from PyQt5.Qsci import QsciLexerCustom, QsciScintilla
 from utils import *
 from Linters import CodeLinter, MDLinter
@@ -20,6 +20,23 @@ if getattr(sys, "frozen", False):
     base_path = sys._MEIPASS
 else:
     base_path = os.path.abspath(".")
+
+class KeyPressFilter(QObject):
+    def eventFilter(self, watched: CodeEdit, event: QEvent):
+        if watched.hasSelectedText() and event.type() == QEvent.Type.KeyPress:
+            if event.key() == Qt.Key.Key_ParenLeft:
+                watched.delimit("(", ")")
+                return True
+            elif event.key() == Qt.Key.Key_QuoteDbl:
+                watched.delimit('"')
+                return True
+            elif event.key() == Qt.Key.Key_BracketLeft:
+                watched.delimit('[',']')
+                return True
+            elif event.key() == Qt.Key.Key_BraceLeft:
+                watched.delimit('{','}')
+                return True
+        return super().eventFilter(watched, event)
 
 class Cell(QWidget):
     """
@@ -190,12 +207,15 @@ class CodeEdit(QsciScintilla):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.commentAction = QAction('Comment', self)
         self.commentAction.setShortcut(QKeySequence("Ctrl+Shift+/"))
-        self.commentAction.triggered.connect(self.comment)
+        self.commentAction.triggered.connect(lambda: self.delimit("#"))
         self.commentShortcut = QShortcut(QKeySequence("Ctrl+Shift+/"), self)
         self.commentShortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        self.commentShortcut.activated.connect(self.comment)
+        self.commentShortcut.activated.connect(lambda: self.delimit("#"))
 
-        self.SCN_PAINTED.connect(self.adjustHeight) # I am hoping this operation is cheap enough
+        self.SCN_PAINTED.connect(self.adjustHeight) # I am hoping this operation is cheap enough (its fine it is cached anyway)
+        
+        self.eventfilter = KeyPressFilter(self)
+        self.installEventFilter(self.eventfilter)
 
 
     def resizeEvent(self, e):
@@ -221,19 +241,23 @@ class CodeEdit(QsciScintilla):
 
         menu.exec_(event.globalPos())
 
-    def comment(self):
+    def delimit(self, left_delimiter: str, right_delimiter: str = None):
+        if right_delimiter is None:
+            right_delimiter = left_delimiter
         text = self.selectedText()
         if not text:
             return
         
-        a = text.find('#')
-        b = text.rfind('#')
+        a = text.find(left_delimiter)
+        b = text.rfind(right_delimiter)
         if (a == -1 or b == -1):
-            self.replaceSelectedText(f'#{text}#')
+            self.replaceSelectedText(f'{left_delimiter}{text}{right_delimiter}')
         elif ((text[0:a] and not text[0:a].isspace()) or (text[b+1:] and not text[b+1:].isspace())):
-            self.replaceSelectedText(f'#{text}#')
+            self.replaceSelectedText(f'{left_delimiter}{text}{right_delimiter}')
         else:
             self.replaceSelectedText(text[0:a] + text[a+1:b] + text[b+1:])
+    
+
 
 
 
