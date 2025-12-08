@@ -333,7 +333,8 @@ settings_version_map = {
     "1.1.5": lambda: settings_version_upgrade("1.1.5", "1.1.6"),
     "1.1.6": lambda: settings_version_upgrade("1.1.6", "1.1.7"),
     "1.1.7": lambda: settings_version_upgrade("1.1.7", "1.2.0"),
-    "1.2.0": lambda: settings_version_upgrade("1.2.0", "1.2.1")}
+    "1.2.0": lambda: settings_version_upgrade("1.2.0", "1.2.1"),
+    "1.2.0": lambda: settings_version_upgrade("1.2.1", "1.2.2")}
 
 def notebook_version_upgrade(path: str, original_version: str, to_version: str, func = None):
     with open(path) as f:
@@ -357,4 +358,5 @@ notebooks_version_map = {
     "1.1.5": lambda path: notebook_version_upgrade(path, "1.1.5", "1.1.6"),
     "1.1.6": lambda path: notebook_version_upgrade(path, "1.1.6", "1.1.7"),
     "1.1.7": lambda path: notebook_version_upgrade(path, "1.1.7", "1.2.0"),
-    "1.2.0": lambda path: notebook_version_upgrade(path, "1.2.0", "1.2.1")}
+    "1.2.0": lambda path: notebook_version_upgrade(path, "1.2.0", "1.2.1"),
+    "1.2.0": lambda path: notebook_version_upgrade(path, "1.2.1", "1.2.2")}
