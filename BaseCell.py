@@ -205,6 +205,8 @@ class CodeEdit(QsciScintilla):
         self.textChanged.connect(self.adjustHeight)
         self.setEolMode(QsciScintilla.EolMode.EolUnix)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setCaretForegroundColor(QColor(Qt.GlobalColor.white))
+
         self.commentAction = QAction('Comment', self)
         self.commentAction.setShortcut(QKeySequence("Ctrl+Shift+/"))
         self.commentAction.triggered.connect(lambda: self.delimit("#"))
