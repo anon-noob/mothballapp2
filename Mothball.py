@@ -142,10 +142,10 @@ class MainWindow(QMainWindow):
     
         QTimer.singleShot(0, self.restoreWorkFromCrash)
 
-        self.resize_big_shortcut = QShortcut(QKeySequence.StandardKey.ZoomIn, self, context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        self.resize_small_shortcut = QShortcut(QKeySequence.StandardKey.ZoomOut, self, context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        self.resize_big_shortcut.activated.connect(self.resizeBig)
-        self.resize_small_shortcut.activated.connect(lambda: print("BYE"))
+        # self.resize_big_shortcut = QShortcut(QKeySequence.StandardKey.ZoomIn, self, context=Qt.ShortcutContext.WidgetWithChildrenShortcut) # conflicts with optimization cell add/delete row/column
+        # self.resize_small_shortcut = QShortcut(QKeySequence.StandardKey.ZoomOut, self, context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        # self.resize_big_shortcut.activated.connect(self.resizeBig)
+        # self.resize_small_shortcut.activated.connect(lambda: print("BYE"))
 
     def resizeBig(self):
         pass
@@ -553,7 +553,7 @@ if __name__ == "__main__":
     crash_handler = CrashHandler.CrashHandler(window)
     sys.excepthook = crash_handler.f
 
-    window.resize(1200, 800)
+    window.resize(1400, 1000)
     window.setMinimumSize(600,400)
     window.show()
     sys.exit(app.exec())
