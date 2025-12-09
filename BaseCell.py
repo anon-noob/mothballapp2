@@ -22,7 +22,7 @@ else:
     base_path = os.path.abspath(".")
 
 class KeyPressFilter(QObject):
-    def eventFilter(self, watched: CodeEdit, event: QEvent):
+    def eventFilter(self, watched, event: QEvent):
         if watched.hasSelectedText() and event.type() == QEvent.Type.KeyPress:
             if event.key() == Qt.Key.Key_ParenLeft:
                 watched.delimit("(", ")")
