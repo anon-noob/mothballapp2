@@ -1183,8 +1183,8 @@ class PlayerSimulationXZ(BasePlayer):
     def copy_player(player: "PlayerSimulationXZ"):
         "Copies the player"
         p = PlayerSimulationXZ()
-        p.angle_queue = player.angle_queue.copy() # copy the q, not the refence
-        p.turn_queue = player.turn_queue.copy()   # copy the q, not the refence
+        p.angle_queue = player.angle_queue
+        p.turn_queue = player.turn_queue
         p.rotation = player.rotation
         p.state = player.state
         p.default_ground_slip = player.default_ground_slip
@@ -1270,7 +1270,7 @@ class PlayerSimulationXZ(BasePlayer):
         vz = self.optimize(None, zmm, sequence, PlayerSimulationXZ.mm_to_dist)
 
 
-        self.simulate(f" z(0) vz({vz}) outvz(label=Vz Needed) {sequence} zmm(label=Zmm Used) ", return_defaults=False)
+        self.simulate(f" z(0) vz({vz}) outvz(label=\"Vz Needed\") {sequence} zmm(label=\"Zmm Used\") ", return_defaults=False)
 
         if abs(PlayerSimulationXZ.dist_to_mm(self.z) - zmm) > 1e-5:
             self.add_to_output(ExpressionType.WARNING, string_or_num="encountered inertia on Z while optimizing!")
@@ -1281,7 +1281,7 @@ class PlayerSimulationXZ(BasePlayer):
         vz = self.optimize(None, z, sequence)
 
 
-        self.simulate(f" z(0) vz({vz}) outvz(label=Vz Needed) {sequence} outz(label=Z dist)")
+        self.simulate(f" z(0) vz({vz}) outvz(label=\"Vz Needed\") {sequence} outz(label=\"Z dist\")")
         
 
         if abs(self.z - z) > 1e-5:
@@ -1293,7 +1293,7 @@ class PlayerSimulationXZ(BasePlayer):
         vz = self.optimize(None, zb, sequence, PlayerSimulationXZ.block_to_dist)
 
 
-        self.simulate(f" z(0) vz({vz}) outvz(label=Vz Needed) {sequence} zb(label=Z blocks)")
+        self.simulate(f" z(0) vz({vz}) outvz(label=\"Vz Needed\") {sequence} zb(label=\"Z blocks\")")
         
 
         if abs(PlayerSimulationXZ.dist_to_block(self.z) - zb) > 1e-5:
@@ -1305,7 +1305,7 @@ class PlayerSimulationXZ(BasePlayer):
         vx = self.optimize(xmm, None, sequence, PlayerSimulationXZ.mm_to_dist)
 
 
-        self.simulate(f" x(0) vx({vx}) outvx(label=Vx Needed) {sequence} xmm(label=Xmm Used) ", return_defaults=False)
+        self.simulate(f" x(0) vx({vx}) outvx(label=\"Vx Needed\") {sequence} xmm(label=\"Xmm Used\") ", return_defaults=False)
 
 
         if abs(PlayerSimulationXZ.dist_to_mm(self.x) - xmm) > 1e-5:
@@ -1317,7 +1317,7 @@ class PlayerSimulationXZ(BasePlayer):
         vx = self.optimize(x, None, sequence)
 
 
-        self.simulate(f" x(0) vx({vx}) outvx(label=Vx Needed) {sequence} outx(label=X dist)")
+        self.simulate(f" x(0) vx({vx}) outvx(label=\"Vx Needed\") {sequence} outx(label=\"X dist\")")
         
 
         if abs(self.x - x) > 1e-5:
@@ -1329,7 +1329,7 @@ class PlayerSimulationXZ(BasePlayer):
         vx = self.optimize(xb, None, sequence, PlayerSimulationXZ.block_to_dist)
 
 
-        self.simulate(f" x(0) vx({vx}) outvx(label=Vx Needed) {sequence} xb(label=X blocks)")
+        self.simulate(f" x(0) vx({vx}) outvx(label=\"Vx Needed\") {sequence} xb(label=\"X blocks\")")
         
 
         if abs(PlayerSimulationXZ.dist_to_block(self.x) - xb) > 1e-5:
@@ -1488,7 +1488,7 @@ if __name__ == "__main__":
     # s = 'angleinfo(-45.01)'
     # s = 'pre(16) r(s[ss] outvz,3) r(st[ss] outvz, 3)'
     # s = 'w.s[wt](5) var(spd, outz outvz(-0.0615)) | z(-spd) sj sa45[wt] sa45(9) sa45[wt](2) sj45(12) outz(6, offset)'
-    a.simulate('sj(7) sa.wd(5) s.wd vec')
+    a.simulate('bwmm(1, sj45(12))')
 
     print(a.history)
 
