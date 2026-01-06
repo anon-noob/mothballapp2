@@ -43,61 +43,74 @@ class Optimizer:
         names = []
         for i, j in enumerate(iterable, 1):
             active, name, mode, t1, op, t2, comparison, num = j
+            
             if active == "no":
                 continue
-            if not t1 and not t2:
-                continue
-            try: t1 = int(evaluate(t1, self.variables))
+            try:
+                if t1 == '':
+                    t1 = None
+                else:
+                    t1 = int(evaluate(t1, self.variables))
             except Exception as e:
                 t1 = None
-            try: t2 = int(evaluate(t2, self.variables))
+            try:
+                if t2 == '':
+                    t2 = None
+                else:
+                    t2 = int(evaluate(t2, self.variables))
             except Exception as e:
                 t2 = None
-            if t1 is None and t2 is None:
+            if t1 is None and t2 is None: # empty values
                 continue
-            if t2 is None and t1 is not None:
+            if t2 is not None and t1 is None: # set t1 to contain the value, t2 to be empty
                 t1, t2 = t2, t1
             if not name:
                 name = f"Constraint {i}"
             names.append(name)
             
+            # print(f"{mode} {t1} {op} {t2} {comparison} {num}")
+
             num = evaluate(num, self.variables)
-            if mode == 'F':
+
+            # NOTE: currently you can make constraints to compare against F[0], but F[0] can also have a set value
+            # whereas X[0] and Z[0] should only be used for comparisons, and not be assigned a specific number (aka an initial starting coord)
+            # subject to change!
+
+            if mode == 'F': # facing
                 num = num % 360
                 if num > 180:
                     num = num - 360
                 num*= np.pi/180
-                two_pi = 2*np.pi
                 if comparison== ">" or comparison == ">=":
                     if op == "-":
-                        if t2:
+                        if t2 is not None:
                             c.append({'type': 'ineq', 'fun': (lambda t1=t1, t2=t2, num=num: lambda F: F[t1] - F[t2] - num)()})
                         else:
                             c.append({'type': 'ineq', 'fun': (lambda t1=t1, num=num: lambda F: F[t1] - num)()})
                     elif op == "+":
-                        if t2:
+                        if t2 is not None:
                             c.append({'type': 'ineq', 'fun': (lambda t1=t1, t2=t2, num=num: lambda F: F[t1] + F[t2] - num)()})
                         else:
                             c.append({'type': 'ineq', 'fun': (lambda t1=t1, num=num: lambda F: F[t1] - num)()})
                 elif comparison == "=":
                     if op == '-':
-                        if t2:
+                        if t2 is not None:
                             c.append({'type': 'eq', 'fun': (lambda t1=t1, t2=t2, num=num: lambda F: F[t1] - F[t2] - num)()})
                         else:
                             c.append({'type': 'eq', 'fun': (lambda t1=t1, num=num: lambda F: F[t1] - num)()})
                     elif op == "+":
-                        if t2:
+                        if t2 is not None:
                             c.append({'type': 'eq', 'fun': (lambda t1=t1, t2=t2, num=num: lambda F: F[t1] + F[t2] - num)()})
                         else:
                             c.append({'type': 'eq', 'fun': (lambda t1=t1, num=num: lambda F: F[t1] - num)()})
                 else:
                     if op == "-":
-                        if t2:
+                        if t2 is not None:
                             c.append({'type': 'ineq', 'fun': (lambda t1=t1, t2=t2, num=num: lambda F: -F[t1] + F[t2] + num)()})
                         else:
                             c.append({'type': 'ineq', 'fun': (lambda t1=t1, num=num: lambda F: -F[t1] + num)()})
                     elif op == "+":
-                        if t2:
+                        if t2 is not None:
                             c.append({'type': 'ineq', 'fun': (lambda t1=t1, t2=t2, num=num: lambda F: -F[t1] - F[t2] + num)()})
                         else:
                             c.append({'type': 'ineq', 'fun': (lambda t1=t1, num=num: lambda F: -F[t1] + num)()})
