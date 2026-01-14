@@ -1,6 +1,10 @@
 [update info here (I AM LAZY)]
 for now, see the mothball or mothballapp repo for more info.
 
+# Alternative Sources
+How to use the turn optimizer: https://www.youtube.com/watch?v=f8LD98lJKw4
+
+# What is this "Mothball"??
 Mothball is a minecraft parkour calculator. That is literally it. Tell it what movement you want to do, and it outputs the relevant position and velocity (or whatever other things you want).
 
 ### Is a 5 block jump possible? 
