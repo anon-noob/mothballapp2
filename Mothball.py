@@ -131,7 +131,6 @@ class MainWindow(QMainWindow):
         self.empty_add_optimize_button.clicked.connect(lambda: self.addCell(cellType=CellType.OPTIMIZE))
 
         self.createMenus()
-        self.unsaved_changes = False
 
         self.undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
         self.undo_shortcut.activated.connect(self.undo)
@@ -141,6 +140,7 @@ class MainWindow(QMainWindow):
         self.addCell()  # Add the first section by default
     
         QTimer.singleShot(0, self.restoreWorkFromCrash)
+        self.unsaved_changes = False
 
         # self.resize_big_shortcut = QShortcut(QKeySequence.StandardKey.ZoomIn, self, context=Qt.ShortcutContext.WidgetWithChildrenShortcut) # conflicts with optimization cell add/delete row/column
         # self.resize_small_shortcut = QShortcut(QKeySequence.StandardKey.ZoomOut, self, context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
