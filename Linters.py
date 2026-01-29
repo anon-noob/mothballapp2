@@ -303,7 +303,7 @@ class CodeLinter:
                     tokens_and_style.append((token, Style.ERROR))
                     index += 1
             
-            elif token.isnumeric():
+            elif token.isnumeric() or (len(token) >= 2 and token[0:len(token)-1].isnumeric() and (token[-1] == "e" or token[-1] == "E"))::
                 tokens_and_style.append((token, Style.NUMBERS))
                 index += 1
             
