@@ -225,6 +225,7 @@ class OptimizationSection(Cell):
     MIN = 'min'
     def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, copy_callback):
         super().__init__(parent, generalOptions, colorOptions, textOptions, remove_callback, add_callback, move_callback, change_callback, copy_callback, CellType.OPTIMIZE)
+        self.setFixedHeight(900)
         self.mode = CellType.OPTIMIZE
         self.p = parent # The main Mothball instance 
         self.worker = None
@@ -252,12 +253,10 @@ class OptimizationSection(Cell):
         vsplitter.setStretchFactor(0, 2)
         vsplitter.setStretchFactor(1, 1)
         self.main_layout.addWidget(splitter)
-        self.setStyleSheet("QPushButton{background-color: " + "#1d1d1d}")
         
         # Help Button (TO CHANGE)
         self.help_button = QPushButton("Help")
         self.help_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.help_button.setStyleSheet("background-color: #363636")
         self.help_button.setToolTip("It's ok to ask for help! :D")
         self.help_button.clicked.connect(self.displayHelp)
         self.top_panel.addWidget(self.help_button, stretch=0)
@@ -268,7 +267,6 @@ class OptimizationSection(Cell):
         self.choose_axis_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.choose_axis_button.clicked.connect(self.toggleAxis)
         self.choose_axis_button.setToolTip("The target axis to optimize, either X or Z.")
-        self.choose_axis_button.setStyleSheet("background-color: #363636")
         self.top_panel.addWidget(self.choose_axis_button, stretch=0)
 
         # Maximize or Minimize
@@ -277,26 +275,32 @@ class OptimizationSection(Cell):
         self.choose_max_or_min_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.choose_max_or_min_button.clicked.connect(self.toggleMode)
         self.choose_max_or_min_button.setToolTip("Try to find the max or min.")
-        self.choose_max_or_min_button.setStyleSheet("background-color: #363636")
         self.top_panel.addWidget(self.choose_max_or_min_button, stretch=0)
 
 
         self.left_content_layout.addLayout(self.top_panel)
 
-
-        # self.variables_layout = QHBoxLayout()
-        # self.variable_buttons_layout = QVBoxLayout()
-        # self.var_add_button = QPushButton("+")
-        # self.var_add_button.setToolTip("Add a column for a new variable. (Ctrl Shift +)")
-        # self.var_delete_button = QPushButton("-")
-        # self.var_delete_button.setToolTip("Delete the columns associated with the currently selected cells. (Ctrl -)")
-        # self.var_add_button.setFixedSize(30,30)
-        # self.var_delete_button.setFixedSize(30,30)
-        # self.variable_buttons_layout.addWidget(self.var_add_button)
-        # self.variable_buttons_layout.addWidget(self.var_delete_button)
-        # self.variables_layout.addLayout(self.variable_buttons_layout)
-        
+       
         # Box for setting variables
+        varslayout = QHBoxLayout()
+        varslayout.setSpacing(0)
+        varslayout.setContentsMargins(0,0,0,0)
+
+        twobtnslayout = QVBoxLayout()
+        varslayout.addLayout(twobtnslayout)
+        addvarbtn = QPushButton("+")
+        addvarbtn.setFixedSize(20,20)
+        addvarbtn.setStyleSheet("background-color: #1d1d1d")
+
+        delvarbtn = QPushButton("-")
+        delvarbtn.setFixedSize(20,20)
+        delvarbtn.setStyleSheet("background-color: #1d1d1d")
+
+        twobtnslayout.addWidget(addvarbtn)
+        twobtnslayout.addWidget(delvarbtn)
+
+
+
         self.var_box = QTableView()
         self.var_box.setHorizontalHeader(None)
         style = "QHeaderView::section {background-color: "+"#363636" + ";color: white;font-weight: bold;} QTableCornerButton::section {background-color: #2e2e2e;}"
@@ -316,8 +320,6 @@ class OptimizationSection(Cell):
         self.var_box.resizeRowsToContents()
         self.var_box.resizeColumnsToContents()
 
-        # self.var_add_button.clicked.connect(self.add_variable)
-        # self.var_delete_button.clicked.connect(self.delete_variable)
 
         row_count = self.var_box_model.rowCount()
         row_height = self.var_box.rowHeight(0)
@@ -332,24 +334,29 @@ class OptimizationSection(Cell):
         self.var_box.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.var_box.horizontalHeader().setMinimumWidth(100)
 
-        # self.variables_layout.addWidget(self.var_box)
+        addvarbtn.clicked.connect(self.var_box_model.add)
+        delvarbtn.clicked.connect(self.delete_variable)
 
-        # self.left_content_layout.addLayout(self.variables_layout)
-        self.left_content_layout.addWidget(self.var_box)
+        # self.left_content_layout.addWidget(self.var_box)
+        varslayout.addWidget(self.var_box)
+        self.left_content_layout.addLayout(varslayout)
         
 
-        # View Constants
-        # self.drag_and_accel_layout = QHBoxLayout()
-        # self.drag_and_accel_button_layout = QVBoxLayout()
-        # self.drag_and_accel_add_button = QPushButton("+")
-        # self.drag_and_accel_add_button.setToolTip("Add a column for a new variable. (Ctrl Shift +)")
-        # self.drag_and_accel_delete_button = QPushButton("-")
-        # self.drag_and_accel_delete_button.setToolTip("Delete the columns associated with the currently selected cells. (Ctrl -)")
-        # self.drag_and_accel_add_button.setFixedSize(30,30)
-        # self.drag_and_accel_delete_button.setFixedSize(30,30)
-        # self.drag_and_accel_button_layout.addWidget(self.drag_and_accel_add_button)
-        # self.drag_and_accel_button_layout.addWidget(self.drag_and_accel_delete_button)
-        # self.drag_and_accel_layout.addLayout(self.drag_and_accel_button_layout)
+        # Drag and Accel tables
+        dalayout = QHBoxLayout()
+        dalayout.setSpacing(0)
+        dalayout.setContentsMargins(0,0,0,0)
+
+        twobtnslayout1 = QVBoxLayout()
+        dalayout.addLayout(twobtnslayout1)
+        adddragbtn = QPushButton("+")
+        deldragbtn = QPushButton("-")
+        adddragbtn.setFixedSize(20,20)
+        deldragbtn.setFixedSize(20,20)
+        adddragbtn.setStyleSheet("background-color: #1d1d1d")
+        deldragbtn.setStyleSheet("background-color: #1d1d1d")
+        twobtnslayout1.addWidget(adddragbtn)
+        twobtnslayout1.addWidget(deldragbtn)
 
         self.drag_and_accel_table = QTableView()
         self.drag_and_accel_table.setStyleSheet(style)
@@ -358,7 +365,6 @@ class OptimizationSection(Cell):
         self.drag_and_accel_model.basicSetup([[f'F{i}' for i in range(12)], [0.546, 0.546] + [0.91]*10, [0.546, 0.546]+[0.91]*10, ['init', 0.3274]+[0.026]*10])
         self.drag_and_accel_table.setModel(self.drag_and_accel_model)
         self.drag_and_accel_model.setIndexedRows(0,'F')
-        # self.drag_and_accel_model.setConstantRows(0)
         self.drag_and_accel_model.setDefaultValues(['','0.91','0.91','0.026'])
         total_height = (self.drag_and_accel_table.rowHeight(0) * self.drag_and_accel_model.rowCount()) + 2
         self.drag_and_accel_table.setFixedHeight(total_height)
@@ -369,32 +375,30 @@ class OptimizationSection(Cell):
         self.drag_and_accel_table.horizontalHeader().setDefaultSectionSize(100)
         self.drag_and_accel_model.dataChanged.connect(change_callback)
         
-        # self.drag_and_accel_add_button.clicked.connect(self.add_drag)
-        # self.drag_and_accel_delete_button.clicked.connect(self.delete_drag)
+        adddragbtn.clicked.connect(self.drag_and_accel_model.add)
+        deldragbtn.clicked.connect(self.delete_drag)
 
-        # self.drag_and_accel_layout.addWidget(self.drag_and_accel_table)
-        # self.left_content_layout.addLayout(self.drag_and_accel_layout)
-
-        self.left_content_layout.addWidget(self.drag_and_accel_table)
+        # self.left_content_layout.addWidget(self.drag_and_accel_table)
+        dalayout.addWidget(self.drag_and_accel_table)
+        self.left_content_layout.addLayout(dalayout)
+        
 
         # Constraints
-        # self.constraints_layout = QHBoxLayout()
-        # self.constraints_button_layout = QVBoxLayout()
-        # self.constraints_add_button = QPushButton("+")
-        # self.constraints_delete_button = QPushButton("-")
-        # self.constraints_moveup_button = QPushButton("↑")
-        # self.constraints_movedown_button = QPushButton("↓")
-        # self.constraints_add_button.setFixedSize(30,30)
-        # self.constraints_delete_button.setFixedSize(30,30)
-        # self.constraints_moveup_button.setFixedSize(30,30)
-        # self.constraints_movedown_button.setFixedSize(30,30)
-        # self.constraints_button_layout.addWidget(self.constraints_add_button)
-        # self.constraints_button_layout.addWidget(self.constraints_delete_button)
-        # self.constraints_button_layout.addWidget(self.constraints_moveup_button)
-        # self.constraints_button_layout.addWidget(self.constraints_movedown_button)
-        # self.constraints_layout.addLayout(self.constraints_button_layout)
+        conlayout = QHBoxLayout()
+        conlayout.setSpacing(0)
+        conlayout.setContentsMargins(0,0,0,0)
 
-
+        twobtnslayout2 = QVBoxLayout()
+        conlayout.addLayout(twobtnslayout2)
+        addconbtn = QPushButton("+")
+        delconbtn = QPushButton("-")
+        addconbtn.setFixedSize(20,20)
+        delconbtn.setFixedSize(20,20)
+        addconbtn.setStyleSheet("background-color: #1d1d1d")
+        delconbtn.setStyleSheet("background-color: #1d1d1d")
+        twobtnslayout2.addWidget(addconbtn)
+        twobtnslayout2.addWidget(delconbtn)
+        
         self.constraints_table = QTableView()
         self.constraints_table.horizontalHeader().setStretchLastSection(True)
         self.constraints_table.setStyleSheet(style)
@@ -419,14 +423,12 @@ class OptimizationSection(Cell):
         self.constraints_table.setMinimumHeight(300)
         self.constraints_model.dataChanged.connect(change_callback)
 
-        # self.constraints_layout.addWidget(self.constraints_table)
+        addconbtn.clicked.connect(self.constraints_model.add)
+        delconbtn.clicked.connect(self.delete_constraint)
 
-        # self.constraints_add_button.clicked.connect(self.add_constraint)
-        # self.constraints_delete_button.clicked.connect(self.delete_constraint)
-
-        # self.left_content_layout.addLayout(self.constraints_layout)
-
-        self.left_content_layout.addWidget(self.constraints_table)
+        # self.left_content_layout.addWidget(self.constraints_table)
+        conlayout.addWidget(self.constraints_table)
+        self.left_content_layout.addLayout(conlayout)
 
 
         # View results
@@ -488,7 +490,7 @@ class OptimizationSection(Cell):
         self.console.setText("""This is the optimization cell, meant for finding optimal angle sequences.
 Set the axis (X or Z) to optimize for, and set the mode (max or min).
 
-There are 3 tables provided. Press Ctrl Plus (or Ctrl Shift =) to add a row/column. Delete a row/column by highlighting part of the row(s)/column(s) you want to delete, then press Ctrl minus (Ctrl -).
+There are 3 tables provided. Press the '+' button, or Ctrl Plus (or Ctrl Shift =) to add a row/column. Delete a row/column by highlighting part of the row(s)/column(s) you want to delete, then press the '-' button, or Ctrl minus (Ctrl -).
                                    
 The first table is where you set the variables and their numeric values. These variables can then be used for the bottom 2 tables. The variables `init` and `num_ticks` cannot be deleted. You must use `num_ticks` to set the number of ticks you are optimizing for, which must be less than or equal to the number of columns on the 2nd table. `init` is optional, and stands for the initial speed, defaulting to 0.
 
