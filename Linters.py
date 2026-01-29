@@ -293,7 +293,7 @@ class CodeLinter:
                     index += 1
                     if token == ")":
                         func_kwarg_names.clear()
-                        if last_function == "func" or last_function == "function":
+                        if last_function == "func" or last_function == "function" and custom_funcs_vars:
                             custom_funcs_vars.pop()
                         last_function = ""
 
