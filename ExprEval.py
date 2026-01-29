@@ -3,7 +3,7 @@ import re
 
 def _tokenize(expression):
     token_specification = [
-        ('NUMBER', r'\d+(\.\d+)?e-\d+|\d+(\.\d+)?e\d+|\d+\.\d+|\d+\.|\.\d+|\d+'),  # Integer or decimal number
+        ('NUMBER', r'\d+(\.\d+)?[eE]-\d+|\d+(\.\d+)?[eE]\d+|\d+\.\d+|\d+\.|\.\d+|\d+'),  # Integer or decimal number
         ('PLUS', r'\+'),              # Addition (+)
         ('MINUS', r'-'),              # Subtraction (-)
         ('POW', r'\*\*'),             # Exponent (**)
@@ -147,6 +147,9 @@ def evaluate(expression, variables: dict=None):
         return result
     except Exception as e:
         raise SyntaxError(f"{e} in expression '{expression}'")
+
+if __name__ == "__main__":
+    print(evaluate(""))
 
 # print(evaluate("2**(3-1)/(2+6)") == 0.5)
 # print(evaluate("-3*(1+2)") == -9)
