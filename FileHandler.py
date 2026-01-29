@@ -276,8 +276,8 @@ def versionIsOutdated(version_str: str):
     Version is in the format `major.minor.patch`, where `major`, `minor`, `patch` are integers.
     """
     
-    original_version = [int(x) for x in VERSION.split(".")]
-    compared_to = [int(x) for x in version_str.split(".")]
+    original_version = [int(x) for x in VERSION.strip("vV").split(".")]
+    compared_to = [int(x) for x in version_str.strip("vV").split(".")]
 
     for i,j in zip(original_version, compared_to):
         if i > j:
@@ -301,10 +301,6 @@ def settings_version_upgrade(original_version: str, to_version: str, func = None
         c['Version'] = original_version
     if not ('Version' in t):
         t['Version'] = original_version
-
-    # assert g['Version'] == original_version
-    # assert c['Version'] == original_version
-    # assert t['Version'] == original_version
 
     g['Version'] = to_version
     c['Version'] = to_version
@@ -334,7 +330,8 @@ settings_version_map = {
     "1.1.6": lambda: settings_version_upgrade("1.1.6", "1.1.7"),
     "1.1.7": lambda: settings_version_upgrade("1.1.7", "1.2.0"),
     "1.2.0": lambda: settings_version_upgrade("1.2.0", "1.2.1"),
-    "1.2.0": lambda: settings_version_upgrade("1.2.1", "1.2.2")}
+    "1.2.0": lambda: settings_version_upgrade("1.2.1", "1.2.2"),
+    "1.2.0": lambda: settings_version_upgrade("1.2.1", "1.2.3")}
 
 def notebook_version_upgrade(path: str, original_version: str, to_version: str, func = None):
     with open(path) as f:
@@ -359,4 +356,5 @@ notebooks_version_map = {
     "1.1.6": lambda path: notebook_version_upgrade(path, "1.1.6", "1.1.7"),
     "1.1.7": lambda path: notebook_version_upgrade(path, "1.1.7", "1.2.0"),
     "1.2.0": lambda path: notebook_version_upgrade(path, "1.2.0", "1.2.1"),
-    "1.2.0": lambda path: notebook_version_upgrade(path, "1.2.1", "1.2.2")}
+    "1.2.0": lambda path: notebook_version_upgrade(path, "1.2.1", "1.2.2"),
+    "1.2.0": lambda path: notebook_version_upgrade(path, "1.2.1", "1.2.3"),}
