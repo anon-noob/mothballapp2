@@ -392,6 +392,3 @@ notebooks_version_map = {
     "1.2.1": lambda path: notebook_version_upgrade(path, "1.2.1", "1.2.2"),
     "1.2.2": lambda path: notebook_version_upgrade(path, "1.2.2", "1.2.3"),
     "1.2.3": lambda path: notebook_version_upgrade(path, "1.2.3", "1.2.4", v1_2_3_to_v1_2_4_settings)}
-
-
-notebooks_version_map["1.2.3"](r"C:\Users\bryan\Documents\Mothball\Notebooks\h2h.json")
