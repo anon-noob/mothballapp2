@@ -21,14 +21,15 @@ class PlotWidget(FigureCanvasQTAgg):
         self.ax.tick_params(colors="white")
         self.ax.xaxis.label.set_color("white")
         self.ax.yaxis.label.set_color("white")
-        self.ax.xaxis.set_major_locator(MultipleLocator(0.5))
-        self.ax.xaxis.set_minor_locator(MultipleLocator(0.125))
-        self.ax.yaxis.set_major_locator(MultipleLocator(0.5))
-        self.ax.yaxis.set_minor_locator(MultipleLocator(0.125))
+
+        # maybe make this customizable
+        self.ax.xaxis.set_major_locator(MultipleLocator(0.25))
+        self.ax.xaxis.set_minor_locator(MultipleLocator(0.0625))
+        self.ax.yaxis.set_major_locator(MultipleLocator(0.25))
+        self.ax.yaxis.set_minor_locator(MultipleLocator(0.0625))
         self.ax.grid(which="both", linestyle="--", linewidth=0.5, color='white')
 
     def addMainLine(self, x, y):
-        # print(self.mainline)
         if self.mainline:
             self.mainline[0].remove()
         self.mainline = self.ax.plot(x,y, marker="o", linestyle="-", color="lime")
