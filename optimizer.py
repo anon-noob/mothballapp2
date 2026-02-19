@@ -12,7 +12,7 @@ class Optimizer:
         
         self.imux = np.array([0.546, 0.546] + [0.91]*10)
         self.imuz = np.array([0.546, 0.546] + [0.91]*10)
-        self.mmu  = np.array([0.31, 0.3274] + [0.026]*10)
+        self.mmu  = np.array([self.init, 0.3274] + [0.026]*10)
 
         self.initial_guess = 0
 
@@ -116,6 +116,54 @@ class Optimizer:
                             c.append({'type': 'ineq', 'fun': (lambda t1=t1, num=num: lambda F: -F[t1] + num)()})
 
                 continue
+            
+            if mode == 'FC': # facing
+                if t2 is None:
+                    raise Exception("t2 is needed for FC type constraints")
+                if t1 == t2:
+                    raise Exception("t1 and t2 are equal in an FC type constraint")
+                
+                pairs = []
+                if t1 > t2:
+                    while t1 != t2:
+                        pairs.append((t1,t1-1))
+                        t1 -= 1
+                else:
+                    while t1 != t2:
+                        pairs.append((t1, t1+1))
+                        t1 += 1
+                
+                num = num % 360
+                if num > 180:
+                    num = num - 360
+                num*= np.pi/180
+                if comparison== ">" or comparison == ">=":
+                    if op == "-":
+                        for tick1, tick2 in pairs:
+                            c.append({'type': 'ineq', 'fun': (lambda t1=tick1, t2=tick2, num=num: lambda F: F[t1] - F[t2] - num)()})
+                    elif op == "+":
+                        for tick1, tick2 in pairs:
+                            c.append({'type': 'ineq', 'fun': (lambda t1=tick1, t2=tick2, num=num: lambda F: F[t1] + F[t2] - num)()})
+                elif comparison == "=":
+                    if op == '-':
+                        for tick1, tick2 in pairs:
+                            c.append({'type': 'eq', 'fun': (lambda t1=tick1, t2=tick2, num=num: lambda F: F[t1] - F[t2] - num)()})
+                    elif op == "+":
+                        for tick1, tick2 in pairs:
+                            c.append({'type': 'eq', 'fun': (lambda t1=tick1, t2=tick2, num=num: lambda F: F[t1] + F[t2] - num)()})
+                else:
+                    if op == "-":
+                        for tick1, tick2 in pairs:
+                            c.append({'type': 'ineq', 'fun': (lambda t1=tick1, t2=tick2, num=num: lambda F: -F[t1] + F[t2] + num)()})
+                    elif op == "+":
+                        for tick1, tick2 in pairs:
+                            c.append({'type': 'ineq', 'fun': (lambda t1=tick1, t2=tick2, num=num: lambda F: -F[t1] - F[t2] + num)()})
+                for i in range(len(pairs)-1):
+                    names.append(name + f" ({i})")
+                continue
+
+
+
 
             if mode == 'X':
                 func = self.X
@@ -159,27 +207,40 @@ class Optimizer:
 
         self.constraints = [names, c]
 
+    
     def X(self, F, t):
         if t <= 0:
             return 0.0
+
         s = 0.0
-        for i in range(1, t+1):
-            inner = 0.0
-            for j in range(i, t+1):
-                inner += np.prod(self.imux[i-1:j-1])
-            s += self.mmu[i-1] * np.sin(F[i-1]) * inner
+        s_next = 0.0
+
+        for i in range(t, 0, -1):
+            if i == t:
+                S_i = 1.0
+            else:
+                S_i = 1.0 + self.imux[i-1] * s_next
+
+            s += self.mmu[i-1] * np.sin(F[i-1]) * S_i
+            s_next = S_i
+
         return s
     
     def Z(self, F, t):
         if t <= 0:
             return 0.0
         s = 0.0
-        for i in range(1, t+1):
-            inner = 0.0
-            for j in range(i, t+1):
-                inner += np.prod(self.imuz[i-1:j-1])
-            s += self.mmu[i-1] * np.cos(F[i-1]) * inner
+        s_next = 0.0
+        for i in range(t, 0, -1):
+            if i == t:
+                s_i = 1.0
+            else:
+                s_i = 1.0 + self.imuz[i-1] * s_next
+            
+            s += self.mmu[i-1] * np.cos(F[i-1]) * s_i
+            s_next = s_i
         return s
+
 
     def objectiveX(self, F):
         return self.X(F, self.n)
@@ -193,9 +254,15 @@ class Optimizer:
     def objectiveNegZ(self, F):
         return -self.Z(F, self.n)
 
-    def optimize(self, axis_to_optimize: OptimizeCellAxis, max_or_min: str):
-        x0 = np.array([self.initial_guess for _ in range(self.n)], dtype=float)
-        # x0 = np.zeros(self.n, dtype=float)
+    def optimize(self, axis_to_optimize: OptimizeCellAxis, max_or_min: str, init_guess: list[float]):
+        # x0 = np.array([self.initial_guess for _ in range(self.n)], dtype=float)
+        if len(init_guess) == 0:
+            init_guess = [0]
+        if len(init_guess) < self.n:
+            init_guess = init_guess + ([init_guess[-1]] * (self.n - len(init_guess)))
+        elif len(init_guess) > self.n:
+            init_guess = init_guess[0:self.n]
+        x0 = np.array(init_guess)
         
         if axis_to_optimize == OptimizeCellAxis.X:
             if max_or_min == 'min':
