@@ -85,7 +85,7 @@ class SimulationSection(Cell):
 
         self.edit_name_field = QLineEdit("Unnamed Cell")
         self.edit_name_field.hide()
-        self.edit_name_field.returnPressed.connect(self.saveCellName)
+        self.edit_name_field.editingFinished.connect(self.saveCellName)
         tophlayout.addWidget(self.edit_name_field)
 
 
