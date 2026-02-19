@@ -258,12 +258,12 @@ def loadFile(filepath):
             elif a['cell_type'] == CellType.OPTIMIZE:
                 entries[i] = AngleOptimizerCell(**a)
             else:
-                entries[i] = CodeCell('',CellType.XZ,"# OOPS! I couldn't load this file!",None,False,[])
+                entries[i] = CodeCell('',CellType.XZ,"# OOPS! I couldn't load this file!\nI couldn't recognize this cell type.",None,False,[])
         except Exception as e:
             try:
                 entries[i] = CodeCell('',CellType.XZ,a['code'],None,False,[])
             except Exception as ee:
-                entries[i] = CodeCell('',CellType.XZ,"# OOPS! I couldn't load this file!",None,False,[])
+                entries[i] = CodeCell('',CellType.XZ,f"# OOPS! I couldn't load this file! Something went wrong!\n{e}",None,False,[])
 
         i += 1
 
@@ -330,8 +330,9 @@ settings_version_map = {
     "1.1.6": lambda: settings_version_upgrade("1.1.6", "1.1.7"),
     "1.1.7": lambda: settings_version_upgrade("1.1.7", "1.2.0"),
     "1.2.0": lambda: settings_version_upgrade("1.2.0", "1.2.1"),
-    "1.2.0": lambda: settings_version_upgrade("1.2.1", "1.2.2"),
-    "1.2.0": lambda: settings_version_upgrade("1.2.1", "1.2.3")}
+    "1.2.1": lambda: settings_version_upgrade("1.2.1", "1.2.2"),
+    "1.2.2": lambda: settings_version_upgrade("1.2.2", "1.2.3"),
+    "1.2.3": lambda: settings_version_upgrade("1.2.3", "1.2.4")}
 
 def notebook_version_upgrade(path: str, original_version: str, to_version: str, func = None):
     with open(path) as f:
@@ -348,6 +349,38 @@ def notebook_version_upgrade(path: str, original_version: str, to_version: str, 
     
     return d
 
+def v1_2_3_to_v1_2_4_settings(d):
+    index = 0
+    while str(index) in d:
+        if d[str(index)]['cell_type'] == CellType.OPTIMIZE:
+            x = d[str(index)]
+            
+            # remove init_guess from the variables
+            if "init_guess" in x["variables"][0]:
+                i = x["variables"][0].index("init_guess")
+                del x["variables"][0][i]
+                value = x["variables"][1][i]
+                x['init_guess'] = [float(value)]
+                del x["variables"][1][i]
+            
+            if "points" in x:
+                a = x['points'][0]
+                b = x['points'][1]
+                x["xpoints"] = a
+                x["zpoints"] = b
+                del x['points']
+            
+            x['xshift'] = 0
+            x['zshift'] = 0
+
+            x['message'] = ''
+            x['angles'] = []
+            x['constraint_values'] = []
+            x['lines'] = []
+        index += 1
+    
+    return d
+
 
 notebooks_version_map = {
     "1.1.3": lambda path: notebook_version_upgrade(path, "1.1.3", "1.1.4"),
@@ -356,5 +389,9 @@ notebooks_version_map = {
     "1.1.6": lambda path: notebook_version_upgrade(path, "1.1.6", "1.1.7"),
     "1.1.7": lambda path: notebook_version_upgrade(path, "1.1.7", "1.2.0"),
     "1.2.0": lambda path: notebook_version_upgrade(path, "1.2.0", "1.2.1"),
-    "1.2.0": lambda path: notebook_version_upgrade(path, "1.2.1", "1.2.2"),
-    "1.2.0": lambda path: notebook_version_upgrade(path, "1.2.1", "1.2.3"),}
+    "1.2.1": lambda path: notebook_version_upgrade(path, "1.2.1", "1.2.2"),
+    "1.2.2": lambda path: notebook_version_upgrade(path, "1.2.2", "1.2.3"),
+    "1.2.3": lambda path: notebook_version_upgrade(path, "1.2.3", "1.2.4", v1_2_3_to_v1_2_4_settings)}
+
+
+notebooks_version_map["1.2.3"](r"C:\Users\bryan\Documents\Mothball\Notebooks\h2h.json")
