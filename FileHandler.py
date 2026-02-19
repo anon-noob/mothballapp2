@@ -263,7 +263,7 @@ def loadFile(filepath):
             try:
                 entries[i] = CodeCell('',CellType.XZ,a['code'],None,False,[])
             except Exception as ee:
-                entries[i] = CodeCell('',CellType.XZ,f"# OOPS! I couldn't load this file! Something went wrong!\n{e}",None,False,[])
+                entries[i] = CodeCell('',CellType.XZ,f"# OOPS! I couldn't load this file! Something went wrong!\n{e}\n{ee}",None,False,[])
 
         i += 1
 
@@ -349,19 +349,20 @@ def notebook_version_upgrade(path: str, original_version: str, to_version: str, 
     
     return d
 
-def v1_2_3_to_v1_2_4_settings(d):
+def v1_2_3_to_v1_2_4_notebook(d):
     index = 0
     while str(index) in d:
         if d[str(index)]['cell_type'] == CellType.OPTIMIZE:
             x = d[str(index)]
             
             # remove init_guess from the variables
+            value = 0
             if "init_guess" in x["variables"][0]:
                 i = x["variables"][0].index("init_guess")
                 del x["variables"][0][i]
                 value = x["variables"][1][i]
-                x['init_guess'] = [float(value)]
                 del x["variables"][1][i]
+            x['init_guess'] = [float(value)]
             
             if "points" in x:
                 a = x['points'][0]
@@ -391,4 +392,4 @@ notebooks_version_map = {
     "1.2.0": lambda path: notebook_version_upgrade(path, "1.2.0", "1.2.1"),
     "1.2.1": lambda path: notebook_version_upgrade(path, "1.2.1", "1.2.2"),
     "1.2.2": lambda path: notebook_version_upgrade(path, "1.2.2", "1.2.3"),
-    "1.2.3": lambda path: notebook_version_upgrade(path, "1.2.3", "1.2.4", v1_2_3_to_v1_2_4_settings)}
+    "1.2.3": lambda path: notebook_version_upgrade(path, "1.2.3", "1.2.4", v1_2_3_to_v1_2_4_notebook)}
