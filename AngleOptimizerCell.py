@@ -527,11 +527,17 @@ class OptimizationSection(Cell):
 
     def shift_points(self, axis: str):
         "axis is either 'x' or 'z'"
+
+        d = {'px': 0.0625}
+        for i in range(len(self.xpoints)):
+            d[f"x{i}"] = self.xpoints[i]
+            d[f"z{i}"] = self.zpoints[i]
+
         if axis == "x":
             shifter = self.xpoints + []
-            stationary = self.zpoints + []
+            stationary = [z + self.zshift for z in self.zpoints]
             try:
-                shift_by = evaluate(self.shift_x_lineedit.text())
+                shift_by = evaluate(self.shift_x_lineedit.text(), d)
                 self.xshift = shift_by
                 if abs(shift_by) > 10:
                     shift_by = 0
@@ -544,9 +550,9 @@ class OptimizationSection(Cell):
             self.draw_lines_widget.update_main_trajectory(shifter, stationary)
         else: # axis is z
             shifter = self.zpoints + []
-            stationary = self.xpoints + []
+            stationary = [x + self.xshift for x in self.xpoints]
             try:
-                shift_by = evaluate(self.shift_z_lineedit.text())
+                shift_by = evaluate(self.shift_z_lineedit.text(), d)
                 self.zshift = shift_by
                 if abs(shift_by) > 10:
                     shift_by = 0
@@ -696,6 +702,7 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
         name, value = constraint_values
         self.constraint_values = constraint_values
         offset = res.fun
+        self.offset = offset
         if self.axis_to_optimize == OptimizeCellAxis.X:
             offset = offset + self.xshift
         elif self.axis_to_optimize == OptimizeCellAxis.Z:
@@ -766,10 +773,10 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
         lines.append("")
         if self.axis_to_optimize == OptimizeCellAxis.X:
             if self.xpoints:
-                offset = self.xpoints[-1] + self.xshift
+                self.offset = self.xpoints[-1] + self.xshift
         else:
             if self.zpoints:
-                offset = self.zpoints[-1] + self.zshift
+                self.offset = self.zpoints[-1] + self.zshift
 
 
         lines.append(f"Position: {self.offset * -1 if self.max_or_min == 'max' else self.offset}")
