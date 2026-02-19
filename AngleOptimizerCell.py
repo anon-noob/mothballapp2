@@ -1,69 +1,57 @@
 from PyQt5.QtCore import Qt, QModelIndex, QObject, QThread, pyqtSignal
 from PyQt5.QtGui import QColor, QStandardItemModel, QStandardItem
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSplitter, QComboBox, QSizePolicy, QTextEdit, QItemDelegate, QTableView, QHeaderView
-from BaseCell import Cell
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSplitter, QComboBox, QSizePolicy, QTextEdit, QItemDelegate, QTableView, QHeaderView, QTabWidget, QLabel, QLineEdit, QGridLayout
+from BaseCell import Cell, QEvent
 from Enums import *
 import math
 import optimizer
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.ticker import MultipleLocator
-from matplotlib.figure import Figure
+from ExprEval import evaluate
+from PlotWidget import PlotWidget
+import EditPlotWidget
 
-class PlotWidget(FigureCanvas):
-    "Widget for displaying a plot"
-    def __init__(self, parent=None):
-        fig = Figure(figsize=(3.6, 1.6), facecolor="#393939") # in inches, change this to change initial setup
-        # fig = Figure(facecolor="#393939") # in inches, change this to change initial setup
-        self.ax = fig.add_subplot(111)
+# The idea for the layout
+# -----------------------------------
+# | Variables |                     |
+# -----------------------------------
+# -----------------------------------
+# | Drags     |                     |
+# -----------------------------------
+# -----------------------------------
+# | Constraints |                   |
+# -----------------------------------
+#
+# -----------------------------------
+# |       |                         |
+# | Graph |  Result Console         |
+# |       |                         |
+# -----------------------------------
 
-        super().__init__(fig)
-        self.setParent(parent)
-        self.setSizePolicy(self.sizePolicy().Expanding,self.sizePolicy().Expanding)
-        self.updateGeometry()
+class NoScrollTabWidget(QTabWidget):
+    def __init__(self, parent = None):
+        super().__init__(parent)
+        self.tabBar().installEventFilter(self)
 
-        # initial data ( prob add more random initial data)
-        X = [math.sin(k*math.pi/20) ** 3 for k in range(-20, 21)]
-        Y = [(1/16) * (13 * math.cos(i*math.pi/20) - 5 * math.cos(2*i*math.pi/20) - 2 * math.cos(3*i*math.pi/20) - math.cos(4*i*math.pi/20)) + 0.375 for i in range(-20, 21)]
-        
-        self.x = X
-        self.y = Y
-        self.plot()
 
-    def plot(self):
-        "Plot the graph with data given from `self.x`, `self.y`"
-        self.ax.clear()
-        self.ax.set_facecolor("#5B5B5B")
-        self.ax.tick_params(colors="white")
-        self.ax.xaxis.label.set_color("white")
-        self.ax.yaxis.label.set_color("white")
-
-        self.ax.plot(self.x, self.y, marker="o", linestyle="-", color='lime')
-
-        self.ax.xaxis.set_major_locator(MultipleLocator(0.5))
-        self.ax.xaxis.set_minor_locator(MultipleLocator(0.125))
-        self.ax.yaxis.set_major_locator(MultipleLocator(0.5))
-        self.ax.yaxis.set_minor_locator(MultipleLocator(0.125))
-
-        self.ax.grid(which="both", linestyle="--", linewidth=0.5, color='white')
-        self.draw()
-
-    def setData(self, x,y):
-        "Set the x and y coordinates"
-        self.x = x
-        self.y = y
-        self.plot()
+    def eventFilter(self, watched, event):
+        # Check if the event is a wheel event and the watched object is the tab bar
+        if watched == self.tabBar() and event.type() == QEvent.Wheel:
+            # Ignore the event to stop it from propagating and switching tabs
+            event.ignore()
+            return True
+        return super(NoScrollTabWidget, self).eventFilter(watched, event)
 
 class Worker(QObject):
     "Worker for executing angle optimizations using threading"
     finished = pyqtSignal(object, object, object)
 
-    def __init__(self, axis_to_optimize, max_or_min, variables: dict, data: list[list], constraints: list[list]):
+    def __init__(self, axis_to_optimize, max_or_min, variables: dict, data: list[list], constraints: list[list], init_guess: list[float]):
         super().__init__()
         self.axis_to_optimize = axis_to_optimize
         self.max_or_min = max_or_min
         self.variables = variables
         self.data = data
         self.constraints = constraints
+        self.init_guess = init_guess
         self.isrunning = False
 
     def run(self):
@@ -74,7 +62,7 @@ class Worker(QObject):
             a.setupConstants(self.data[1], self.data[2], self.data[3])
             a.setupConstraints(self.constraints)
             
-            res, c = a.optimize(self.axis_to_optimize, self.max_or_min)
+            res, c = a.optimize(self.axis_to_optimize, self.max_or_min, self.init_guess)
             d = a.postprocess()
             self.finished.emit(res, c, d)
         except Exception as e:
@@ -225,34 +213,34 @@ class OptimizationSection(Cell):
     MIN = 'min'
     def __init__(self, parent, generalOptions: dict, colorOptions: dict, textOptions: dict, remove_callback, add_callback, move_callback, change_callback, copy_callback):
         super().__init__(parent, generalOptions, colorOptions, textOptions, remove_callback, add_callback, move_callback, change_callback, copy_callback, CellType.OPTIMIZE)
-        self.setFixedHeight(900)
+        self.setMinimumHeight(1400)
         self.mode = CellType.OPTIMIZE
         self.p = parent # The main Mothball instance 
         self.worker = None
         self.the_thread = None
-        self.points = [[],[]]
 
-        self.left_content_layout = QVBoxLayout()
-        self.right_content_layout = QVBoxLayout()
+        self.xshift = 0.0
+        self.zshift = 0.0
+        self.xpoints = []
+        self.zpoints = []
+        self.angles = []
+
+        self.message = ""
+        self.success = False
+        self.offset = 0.0
+        self.constraint_values = []
+
+        self.init_guess = []
+
+
+        self.optimizer_cell_layout = QVBoxLayout()
+        self.top_layout = QVBoxLayout()
+        self.optimizer_cell_layout.addLayout(self.top_layout)
+        self.main_layout.addLayout(self.optimizer_cell_layout)
+
         self.top_panel = QHBoxLayout()
         self.top_panel.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.top_panel.setSizeConstraint(self.top_panel.SizeConstraint.SetFixedSize)
-        self.bottom_panel = QHBoxLayout()
-
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        vsplitter = QSplitter(Qt.Orientation.Vertical)
-        splitter.setStyleSheet("QSplitter::handle {background-color: "+"#595959"+"; border-radius: 3px}")
-        left_widget = QWidget()
-        left_widget.setLayout(self.left_content_layout)
-        right_widget = QWidget()
-        right_widget.setLayout(self.right_content_layout)
-        splitter.addWidget(left_widget)
-        splitter.addWidget(right_widget)
-        splitter.setStretchFactor(0, 2)
-        splitter.setStretchFactor(1, 1)
-        vsplitter.setStretchFactor(0, 2)
-        vsplitter.setStretchFactor(1, 1)
-        self.main_layout.addWidget(splitter)
         
         # Help Button (TO CHANGE)
         self.help_button = QPushButton("Help")
@@ -278,7 +266,7 @@ class OptimizationSection(Cell):
         self.top_panel.addWidget(self.choose_max_or_min_button, stretch=0)
 
 
-        self.left_content_layout.addLayout(self.top_panel)
+        self.top_layout.addLayout(self.top_panel)
 
        
         # Box for setting variables
@@ -309,10 +297,9 @@ class OptimizationSection(Cell):
         # Set the model first to get row count
         self.var_box_model = CustomItemModel(2,1,CustomItemModel.COLUMN, self.var_box)
         self.var_box_model.setVerticalHeaderLabels(["Variable", "Value"])
-        self.var_box_model.basicSetup([['init', 'num_ticks', 'init_guess', 'wad_spd', 'wdwa_spd', 'wdwa_angle'], [0.3, 12, 0, 0.3274, 0.3060548, 17.4786858]])
+        self.var_box_model.basicSetup([['init', 'num_ticks', 'wad_spd', 'wdwa_spd', 'wdwa_angle'], [0.3, 12, 0.3274, 0.3060548, 17.4786858]])
         self.var_box_model.setConstantIndexes(0,0) # cannot remove "init" (initial speed)
         self.var_box_model.setConstantIndexes(0,1) # cannot remove "num_ticks"
-        self.var_box_model.setConstantIndexes(0,2) # cannot remove "init_guess"
         self.var_box.setModel(self.var_box_model)
         self.var_box.horizontalHeader().hide()
         self.var_box_model.dataChanged.connect(change_callback)
@@ -339,7 +326,7 @@ class OptimizationSection(Cell):
 
         # self.left_content_layout.addWidget(self.var_box)
         varslayout.addWidget(self.var_box)
-        self.left_content_layout.addLayout(varslayout)
+        self.top_layout.addLayout(varslayout)
         
 
         # Drag and Accel tables
@@ -380,7 +367,7 @@ class OptimizationSection(Cell):
 
         # self.left_content_layout.addWidget(self.drag_and_accel_table)
         dalayout.addWidget(self.drag_and_accel_table)
-        self.left_content_layout.addLayout(dalayout)
+        self.top_layout.addLayout(dalayout)
         
 
         # Constraints
@@ -410,7 +397,7 @@ class OptimizationSection(Cell):
         self.constraints_table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.constraints_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.active = ComboBoxDelegate(['YES', 'no'])
-        self.constraintType = ComboBoxDelegate(["X","Z","F"])
+        self.constraintType = ComboBoxDelegate(["X","Z","F","FC"])
         self.operation = ComboBoxDelegate(['-','+'])
         self.comparison = ComboBoxDelegate(['>','<','='])
         self.constraints_table.setItemDelegateForColumn(0, self.active)
@@ -420,7 +407,7 @@ class OptimizationSection(Cell):
         self.constraints_model.basicSetup([["YES", "", "X", "", "-", "", ">", ""]])
         self.constraints_table.setModel(self.constraints_model)
         self.constraints_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.constraints_table.setMinimumHeight(300)
+        self.constraints_table.setMinimumHeight(470)
         self.constraints_model.dataChanged.connect(change_callback)
 
         addconbtn.clicked.connect(self.constraints_model.add)
@@ -428,22 +415,153 @@ class OptimizationSection(Cell):
 
         # self.left_content_layout.addWidget(self.constraints_table)
         conlayout.addWidget(self.constraints_table)
-        self.left_content_layout.addLayout(conlayout)
+        self.top_layout.addLayout(conlayout)
 
 
+        self.tabwidget = NoScrollTabWidget()
+        self.bottom_layout = QHBoxLayout()
+        self.optimizer_cell_layout.addLayout(self.bottom_layout)
+        self.bottom_layout.addWidget(self.tabwidget, 2)
+        
         # View results
+
+        # self.right_content_layout.addWidget(self.plot)
+
+        self.results_display_widget = QWidget()
+        self.results_display_layout = QHBoxLayout()
+        self.results_display_widget.setLayout(self.results_display_layout)
+        
         self.console = QTextEdit()
         self.console.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        vsplitter.addWidget(self.console)
+        self.results_display_layout.addWidget(self.console)
+        
 
         # View graph
         self.plot = PlotWidget()
-        vsplitter.addWidget(self.plot)
-        # self.right_content_layout.addWidget(self.plot)
+        self.bottom_layout.addWidget(self.plot, 1)
+        self.tabwidget.addTab(self.results_display_widget, "Results")
 
-        self.right_content_layout.addWidget(vsplitter)
+
+        self.results_settings_widget = QWidget()
+        self.results_settings_layout = QHBoxLayout()
+        self.results_settings_widget.setLayout(self.results_settings_layout)
+
+        self.set_settings_layout = QGridLayout()
+        self.shift_x_label = QLabel("Shift x")
+        self.shift_z_label = QLabel("Shift z")
+        self.shift_x_lineedit = QLineEdit()
+        self.shift_z_lineedit = QLineEdit()
+        self.shift_x_label.setToolTip("Shift's the optimized trajectory on x (horizontally).\nChanges the graph displayed and the numbers shown in results.\nFor example, if the original x value was 0.4 and you shift it by 0.1,\nthen the new x value is 0.4 + 0.1 = 0.5.\n\nNotes:\n - By default, the shift value is 0.\n - If if fails to parse the number, it will default to 0.\n - Maximum shift of 10 units both left and right.\n - Press Enter to confirm.")
+        self.shift_z_label.setToolTip("Shift's the optimized trajectory on z (vertically).\nChanges the graph displayed and the numbers shown in results.\nFor example, if the original z value was 0.2 and you shift it by -0.3,\nthen the new z value is 0.2 - 0.3 = -0.1.\n\nNotes:\n - By default, the shift value is 0.\n - If if fails to parse the number, it will default to 0.\n - Maximum shift of 10 units both up and down.\n - Press Enter to confirm.")
+        self.shift_x_lineedit.returnPressed.connect(lambda: self.shift_points('x'))
+        self.shift_z_lineedit.returnPressed.connect(lambda: self.shift_points('z'))
+
+        self.set_init_guess_label = QLabel("Initial Guess")
+        self.set_init_guess_label.setToolTip("Input numbers, comma separated.\nThese numbers represent your initial guess, or the initial point where you begin optimization.\nThese numbers should be angles (in degrees). By default, your initial guess is 0, and this is usually fine.\nOtherwise, you can provide as many predicted angles as you see fit.\nFor example, if you want to start the optimization at 60 degrees, followed by 20,\nthen input \"60,20\". Subsequent ticks assume the last valid value,\nso this is equivalent to \"60,20,20,20,...\"\nPress Enter to set the initial guess.\n - If you have constraints which explicity set angles on certain ticks,\n   recommend putting a 0 in place of it.")
+        self.set_init_guess_lineedit = QLineEdit()
+        self.set_init_guess_lineedit.returnPressed.connect(self.set_initial_guess)
+
+        self.results_settings_layout.addLayout(self.set_settings_layout)
+        
+        self.set_settings_layout.addWidget(self.shift_x_label, 0,0)
+        self.set_settings_layout.addWidget(self.shift_x_lineedit, 0,1)
+        self.set_settings_layout.addWidget(self.shift_z_label, 1,0)
+        self.set_settings_layout.addWidget(self.shift_z_lineedit, 1,1)
+        self.set_settings_layout.addWidget(self.set_init_guess_label, 2, 0)
+        self.set_settings_layout.addWidget(self.set_init_guess_lineedit, 2, 1)
+
+        self.tabwidget.addTab(self.results_settings_widget, "Fine Tuning")
+
+
+        self.draw_lines_widget = EditPlotWidget.EditPlotWidget()
+        self.draw_lines_widget.redrawNeeded.connect(self.attempt_to_graph)
+        self.draw_lines_widget.eraseNeeded.connect(self.erase_from_graph)
+        self.draw_lines_widget.hidingNeeded.connect(self.hide_from_graph)
+        
+
+        self.tabwidget.addTab(self.draw_lines_widget, "Draw Lines")
+        self.tabwidget.setStyleSheet("""
+            QTabBar::tab {
+                background: #3f3f3f;
+                color: white;
+                margin-right: 10px;
+                padding: 10px;
+            }
+
+            QTabBar::tab:selected {
+                background: #2980b9;
+                color: white;
+            }
+
+            QTabBar::tab:hover {
+                background: #5dade2;
+            }
+        """)
+
+
+        # self.right_content_layout.addWidget(vsplitter)
+
 
         self.run_button.clicked.connect(self.runSolver)
+    
+    def set_initial_guess(self):
+        text = self.set_init_guess_lineedit.text().strip()
+        angles = []
+        for x in text.split(","):
+            try:
+                angles.append(float(x))
+            except:
+                return
+        self.init_guess = angles
+
+    def erase_from_graph(self, id):
+        self.plot.clearDataAndReindex(id)
+    
+    def hide_from_graph(self, id):
+        self.plot.clearData(id, redraw=True)
+
+
+    def attempt_to_graph(self, id, color, x,y):
+        self.plot.addData(id, x,y, color)
+        return x,y
+
+    def shift_points(self, axis: str):
+        "axis is either 'x' or 'z'"
+        if axis == "x":
+            shifter = self.xpoints + []
+            stationary = self.zpoints + []
+            try:
+                shift_by = evaluate(self.shift_x_lineedit.text())
+                self.xshift = shift_by
+                if abs(shift_by) > 10:
+                    shift_by = 0
+            except:
+                shift_by = 0
+
+            for i in range(len(shifter)):
+                shifter[i] += shift_by
+            self.plot.addMainLine(shifter, stationary)
+            self.draw_lines_widget.update_main_trajectory(shifter, stationary)
+        else: # axis is z
+            shifter = self.zpoints + []
+            stationary = self.xpoints + []
+            try:
+                shift_by = evaluate(self.shift_z_lineedit.text())
+                self.zshift = shift_by
+                if abs(shift_by) > 10:
+                    shift_by = 0
+            except:
+                shift_by = 0
+
+            for i in range(len(shifter)):
+                shifter[i] += shift_by
+            self.plot.addMainLine(stationary, shifter)
+            self.draw_lines_widget.update_main_trajectory(shifter, stationary)
+
+        
+        self.updateMessage()
+        
+        self.draw_lines_widget.redraw_all()
     
     def add_variable(self):
         self.var_box_model.add()
@@ -499,7 +617,7 @@ The second table contains the drag and acceleration values. The values provided 
 The third table is where you put constraints. 
 Set `Use?` to `YES` to incorporate it for your calculation. 
 `Name` is optional. 
-`Type` is a constraint for `X`,`Z`, or `F`, which is your rotation (or facing). 
+`Type` is a constraint for `X`,`Z`, `F`, which is your rotation (or facing), and `FC`, which stands for Facing Chain. The constraint can be inputted as `FC n n+2 >` is shorthand for an example constraint, F(n) > F(n+1) > F(n+2)
 `t1` and `t2` indicate what ticks to compare. `t2` can be left empty.
 `+-` is the add/subtract operation. 
 `<=>` is for selecting the comparison.
@@ -509,6 +627,8 @@ A row should read like an inequality, for example, "Z(8) - Z(1) > 1.6".
 If you are incorporating inertia, be sure to add the constraint which restricts the distance traveled on the inertia tick. For example, "X(4) - X(3) < 0.005/0.91". Here, `0.005/0.91` is the speed needed to hit inertia.""")
 
     def runSolver(self):
+        if self.worker and self.worker.isrunning:
+            return
         names, values = self.var_box_model.getData()
         variables = {n:v for n,v in zip(names, values)}
         data = self.drag_and_accel_model.getData()
@@ -535,7 +655,7 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
         constraints = self.constraints_model.getData()
 
         self.the_thread = QThread()
-        self.worker = Worker(self.axis_to_optimize, self.max_or_min, variables, data, constraints)
+        self.worker = Worker(self.axis_to_optimize, self.max_or_min, variables, data, constraints, self.init_guess)
         self.worker.moveToThread(self.the_thread)
 
         self.the_thread.started.connect(self.worker.run)
@@ -561,15 +681,29 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
         pts = postprocess_dict['points']
         x_pts = [round(l[0],6) for l in pts]
         z_pts = [round(i[1],6) for i in pts]
-        self.points = [x_pts, z_pts]
-        self.plot.setData(x_pts, z_pts)
+        x_pts = [round(l[0] + self.xshift,6) for l in pts]
+        z_pts = [round(i[1] + self.zshift,6) for i in pts]
+
+        self.plot.addMainLine(x_pts, z_pts)
+        self.xpoints = x_pts
+        self.zpoints = z_pts
+        self.draw_lines_widget.update_main_trajectory(x_pts, z_pts)
+        self.draw_lines_widget.redraw_all()
 
         
 
         name, value = constraint_values
+        self.constraint_values = constraint_values
         offset = res.fun
+        if self.axis_to_optimize == OptimizeCellAxis.X:
+            offset = offset + self.xshift
+        elif self.axis_to_optimize == OptimizeCellAxis.Z:
+            offset = offset + self.zshift
         success = res.success
         message = res.message
+        self.message = message
+        self.success = success
+
         x = [round(math.degrees(p),3) for p in res.x]
         for i, angle in enumerate(x):
             # Range of angle is [-360, 360]
@@ -577,6 +711,7 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
                 x[i] = round(angle - 360,3)
             elif angle < -180:
                 x[i] = round(angle + 360,3)
+        self.angles = x
         consecutive_diffs = [round(x[l]-x[l-1],3) for l in range(1, len(x))]
         x_velocities = [round(x_pts[j]-x_pts[j-1],7) for j in range(1, len(x_pts))]
         z_velocities = [round(z_pts[j]-z_pts[j-1],7) for j in range(1, len(z_pts))]
@@ -611,6 +746,55 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
             self.setStatus(self.SUCCESS)
         else:
             self.setStatus(self.ERROR)
+    
+    def updateMessage(self):
+        x = self.angles
+        for i, angle in enumerate(x):
+            # Range of angle is [-360, 360]
+            if angle > 180:
+                x[i] = round(angle - 360,3)
+            elif angle < -180:
+                x[i] = round(angle + 360,3)
+        consecutive_diffs = [round(x[l]-x[l-1],3) for l in range(1, len(x))]
+        x_velocities = [round(self.xpoints[j]-self.xpoints[j-1],7) for j in range(1, len(self.xpoints))]
+        z_velocities = [round(self.zpoints[j]-self.zpoints[j-1],7) for j in range(1, len(self.zpoints))]
+
+        lines = []
+        lines.append(self.message)
+        lines.append(f"Success: {self.success}")
+        lines.append("")
+        if self.axis_to_optimize == OptimizeCellAxis.X:
+            if self.xpoints:
+                offset = self.xpoints[-1] + self.xshift
+        else:
+            if self.zpoints:
+                offset = self.zpoints[-1] + self.zshift
+
+
+        lines.append(f"Position: {self.offset * -1 if self.max_or_min == 'max' else self.offset}")
+        lines.append("")
+        lines.append(f"Angles: {x}")
+        lines.append(f"Turns: {consecutive_diffs}")
+        lines.append("")
+
+        if self.constraint_values:
+            name, value = self.constraint_values
+            if name and value:
+                lines.append(f"Constraint Values")
+                for n, v in zip(name, value):
+                    lines.append(f"{n}: {v}")
+            else:
+                lines.append("No Constraints")
+        
+        lines.append("")
+        lines.append("(X,Z) position")
+        for i,j in zip(self.xpoints, self.zpoints):
+            lines.append(f"  {round(i + self.xshift,7)}, {round(j + self.zshift,7)}")
+        lines.append("")
+        lines.append("(X,Z) velocities")
+        for i,j in zip(x_velocities, z_velocities):
+            lines.append(f"  {i}, {j}")
+        self.toConsole("\n".join(lines))
 
     def getCellData(self):
         data = {
@@ -621,12 +805,20 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
             "drags": self.drag_and_accel_model.getData(),
             "constraints": self.constraints_model.getData(),
             "output": self.console.toPlainText(),
-            "points": self.points
+            "message": self.message,
+            "xpoints": self.xpoints,
+            "zpoints": self.zpoints,
+            "xshift": self.xshift,
+            "zshift": self.zshift,
+            "init_guess": self.init_guess,
+            "angles": self.angles,
+            "constraint_values": self.constraint_values,
+            "lines": self.draw_lines_widget.get_all_line_data()
             }
         return data
 
     def setupCell(self, data):
-        if not all([x in ("cell_type", "axis","mode","variables","drags","constraints", "output", "points") for x in data]):
+        if not all([x in ("cell_type", "axis","mode","variables","drags","constraints", "output", "message", "xpoints", "zpoints", "xshift", "zshift", "init_guess","angles","constraint_values","lines") for x in data]):
             return
         if self.axis_to_optimize != data['axis']:
             self.choose_axis_button.click()
@@ -636,7 +828,24 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
         self.drag_and_accel_model.basicSetup(data['drags'])
         self.constraints_model.basicSetup(data['constraints'])
         self.toConsole(data['output'])
-        self.plot.setData(data['points'][0], data['points'][1])
+        self.message = data['message']
+        self.xshift = data['xshift']
+        self.zshift = data['zshift']
+        
+        self.shift_x_lineedit.setText(str(self.xshift))
+        self.shift_z_lineedit.setText(str(self.zshift))
+
+
+
+        self.plot.addMainLine(data['xpoints'], data['zpoints'])
+        self.init_guess = data['init_guess']
+
+        s = ", ".join([str(x) for x in self.init_guess])
+        self.set_init_guess_lineedit.setText(s)
+
+        self.angles = data['angles']
+        self.constraint_values = data['constraint_values']
+        self.draw_lines_widget.setup_lines(data['lines'])
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Backspace:
@@ -662,9 +871,12 @@ If you are incorporating inertia, be sure to add the constraint which restricts 
                     self.delete_drag()
                 elif focused == self.constraints_table:
                     self.delete_constraint()
+            elif event.key() == Qt.Key.Key_R:
+                self.runSolver()
                     
 
         return super().keyPressEvent(event)
+
 
 if __name__ == "__main__":
     from PyQt5.QtWidgets import QMainWindow, QApplication
