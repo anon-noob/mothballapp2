@@ -21,9 +21,9 @@ import EditPlotWidget
 # -----------------------------------
 #
 # -----------------------------------
-# |       |                         |
-# | Graph |  Result Console         |
-# |       |                         |
+# |                        |        |
+# | Result Tabs            | Graph  |
+# |                        |        |
 # -----------------------------------
 
 class NoScrollTabWidget(QTabWidget):
@@ -617,7 +617,8 @@ The second table contains the drag and acceleration values. The values provided 
 The third table is where you put constraints. 
 Set `Use?` to `YES` to incorporate it for your calculation. 
 `Name` is optional. 
-`Type` is a constraint for `X`,`Z`, `F`, which is your rotation (or facing), and `FC`, which stands for Facing Chain. The constraint can be inputted as `FC n n+2 >` is shorthand for an example constraint, F(n) > F(n+1) > F(n+2)
+`Type` is a constraint for `X`,`Z`, `F`, which is your rotation (or facing), and `FC`, which stands for Facing Chain. `FC` essentially acts like a normal `F` constraint, but generates constraints comparing all adjacent ticks in between with the same rules.
+For example, `FC 8 - 3 < 0` is shorthand for `F 8 - 7 < 0, F 7 - 6 < 0, ..., F 4 - 3 < 0`.
 `t1` and `t2` indicate what ticks to compare. `t2` can be left empty.
 `+-` is the add/subtract operation. 
 `<=>` is for selecting the comparison.
