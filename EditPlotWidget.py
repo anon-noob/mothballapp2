@@ -195,7 +195,7 @@ class Container(QWidget):
         self.setStatus(self.SUCCESS, "Successfully parsed coordinates")
 
     def getData(self):
-        return {"id": self.id, 
+        return {"id": self.id, # id might be irrelevant/not needed (?)
                 "color": self.combo_box.currentData(Qt.ItemDataRole.TextColorRole).name(),
                 "x": self.xpts,
                 "z": self.zpts,
@@ -206,26 +206,23 @@ class Container(QWidget):
                 }
 
 class EditPlotWidget(QMainWindow):
-
-    redrawNeeded = pyqtSignal(int, str, list, list)
-    eraseNeeded = pyqtSignal(int)
-    hidingNeeded = pyqtSignal(int)
+    # See the Container class for the representations
+    redrawNeeded = pyqtSignal(int, str, list, list) # simply redraw the graph
+    eraseNeeded = pyqtSignal(int) # id; erases the graph completely
+    hidingNeeded = pyqtSignal(int) # id; hides the graph but can be toggled back on with redrawNeeded
 
     def __init__(self):
         super().__init__()
         self.list_of_containers: list[Container] = []
-        self.xpts = []
-        self.zpts = []
+        self.xpts = [] # xpts and zpts are the main trajectory which are points that are already shifted (if at all). These lists are to
+        self.zpts = [] # be passed BY REFERENCE so as to update all this and all containers at once.
         self.count = 0
 
 
-        # Central widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # ---- Fixed top layout (NOT scrollable) ----
         hlayout = QHBoxLayout()
 
         self.add_entry = QPushButton("Add")
@@ -238,12 +235,10 @@ class EditPlotWidget(QMainWindow):
 
         main_layout.addLayout(hlayout)
 
-        # ---- Scroll Area ----
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         main_layout.addWidget(self.scroll_area)
 
-        # ---- Scrollable content widget ----
         self.draw_lines_widget = QWidget()
         self.scroll_area.setWidget(self.draw_lines_widget)
 
@@ -267,7 +262,7 @@ class EditPlotWidget(QMainWindow):
         container.hidden.connect(lambda i: self.hidingNeeded.emit(i))
         return container
 
-    def update_main_trajectory(self, x, z):
+    def update_main_trajectory(self, x, z): # reminder that this should be in place
         self.xpts.clear()
         self.zpts.clear()
         for a in x:
@@ -299,7 +294,7 @@ class EditPlotWidget(QMainWindow):
             container.zpts = c['z']
             container.isShown = c['display']
             container.setStatus(c['status'],c['message'])
-            container.textedit.setText(c['input']) # TODO: this triggers the attempt to grpah. This may be annoying as saving with an invalid state will simply not display the previous displayable graph
+            container.textedit.setText(c['input']) # TODO: this triggers the attempt to graph. This may be annoying as saving with an invalid state will simply not display the previous displayable graph since last exiting.
             
 
     
@@ -310,9 +305,9 @@ class EditPlotWidget(QMainWindow):
             w.adjust_height()
 
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = EditPlotWidget()
-    window.show()
-    sys.exit(app.exec_())
+# if __name__ == "__main__":
+#     app = QApplication(sys.argv)
+#     window = EditPlotWidget()
+#     window.show()
+#     sys.exit(app.exec_())
 
