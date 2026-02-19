@@ -26,7 +26,16 @@ class AngleOptimizerCell:
     drags: list[list]
     constraints: list[list]
     output: str
-    points: list[list[int],list[int]]
+    message: str
+    xpoints: list[float]
+    zpoints: list[float]
+    xshift: float
+    zshift: float
+    init_guess: list[float]
+    angles: list[float]
+    constraint_values: list[list]
+    lines: list[dict]
+
 
 @dataclass
 class File:
