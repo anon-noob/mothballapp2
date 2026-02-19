@@ -19,6 +19,7 @@ def _tokenize(expression):
     tok_regex = '|'.join(f'(?P<{pair[0]}>{pair[1]})' for pair in token_specification)
     r = []
     nest = 0
+    not_expecting_number_or_variable = False
     prevkind, prevvalue = None, None
     for match_object in re.finditer(tok_regex, expression):
         kind = match_object.lastgroup
@@ -44,6 +45,11 @@ def _tokenize(expression):
             r.append((kind, value))
 
         if kind != "WHITESPACE":
+
+            
+            if (prevkind == "ID" or prevkind == "NUMBER") and (kind == "NUMBER" and kind == "ID"):
+                raise SyntaxError(f"Invalid Expression, number and variable have no operation in between")
+
             prevkind, prevvalue = kind, value
     
     if nest:
@@ -148,18 +154,18 @@ def evaluate(expression, variables: dict=None):
     except Exception as e:
         raise SyntaxError(f"{e} in expression '{expression}'")
 
-if __name__ == "__main__":
-    print(evaluate(""))
+# if __name__ == "__main__":
+    # print(evaluate("0.1+0.2", {"p":3}))
 
-# print(evaluate("2**(3-1)/(2+6)") == 0.5)
-# print(evaluate("-3*(1+2)") == -9)
-# print(evaluate("-1+2**(4-8*p4x)", {'p4x':1/2}) == 0)
-# print(evaluate("2*(3-1)")==4)
-# print(evaluate('-3*-2+((2)')) # syntax error: unbalanced parenthesis
-# print(evaluate("2") == 2)
-# print(evaluate("2.2") == 2.2)
-# print(evaluate("2.") == 2)
-# print(evaluate(".2") == 0.2)
-# print(evaluate("(1-5)*0.1") == -0.4)
-# print(evaluate("0.1*(1-5)") == -0.4)
-# print(evaluate("(0.1)*(2-3)") == -0.1)
+    # print(evaluate("2**(3-1)/(2+6)") == 0.5)
+    # print(evaluate("-3*(1+2)") == -9)
+    # print(evaluate("-1+2**(4-8*p4x)", {'p4x':1/2}) == 0)
+    # print(evaluate("2*(3-1)")==4)
+    # # print(evaluate('-3*-2+((2)')) # syntax error: unbalanced parenthesis
+    # print(evaluate("2") == 2)
+    # print(evaluate("2.2") == 2.2)
+    # print(evaluate("2.") == 2)
+    # print(evaluate(".2") == 0.2)
+    # print(evaluate("(1-5)*0.1") == -0.4)
+    # print(evaluate("0.1*(1-5)") == -0.4)
+    # print(evaluate("(0.1)*(2-3)") == -0.1)
